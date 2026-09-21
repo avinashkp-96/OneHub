@@ -5,9 +5,21 @@ import { CategoriesPage } from './pages/CategoriesPage';
 // them alongside CategoriesPage as this grows past one screen.
 export default function App() {
   return (
-    <main>
-      <h1>OneHub Admin</h1>
-      <CategoriesPage />
-    </main>
+    <>
+      <header
+        style={{
+          background: 'var(--oh-primary)',
+          color: 'var(--oh-on-primary)',
+          padding: '16px 24px',
+          fontWeight: 700,
+          fontSize: '1.1rem',
+        }}
+      >
+        OneHub Admin
+      </header>
+      <main>
+        <CategoriesPage />
+      </main>
+    </>
   );
 }

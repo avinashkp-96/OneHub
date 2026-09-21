@@ -1,0 +1,110 @@
+/*
+  Same palette and rationale as packages/shared-flutter/lib/src/theme —
+  deep teal-blue primary, semantic status colors kept separate from the
+  primary/accent slots, Noto Sans for future regional-language coverage.
+  Keep this in sync with onehub_colors.dart / onehub_theme.dart by hand;
+  there's no shared token source yet (see CLAUDE.md known gaps).
+*/
+
+:root {
+  --oh-primary: #0e7c86;
+  --oh-primary-dark: #0a5a62;
+  --oh-on-primary: #ffffff;
+
+  --oh-success: #2e7d32;
+  --oh-warning: #f59e0b;
+  --oh-danger: #d32f2f;
+
+  --oh-surface: #f7f9f9;
+  --oh-surface-card: #ffffff;
+  --oh-border: #dbe4e4;
+  --oh-text: #101414;
+  --oh-text-muted: #5b6b6b;
+
+  --oh-radius: 12px;
+  --oh-font: 'Noto Sans', system-ui, -apple-system, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --oh-primary: #4fd3de;
+    --oh-primary-dark: #0e7c86;
+    --oh-on-primary: #04211f;
+
+    --oh-surface: #101414;
+    --oh-surface-card: #1a2020;
+    --oh-border: #2a3333;
+    --oh-text: #eef4f4;
+    --oh-text-muted: #a3b3b3;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--oh-font);
+  background: var(--oh-surface);
+  color: var(--oh-text);
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+section {
+  background: var(--oh-surface-card);
+  border: 1px solid var(--oh-border);
+  border-radius: var(--oh-radius);
+  padding: 24px;
+}
+
+input {
+  font-family: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--oh-border);
+  border-radius: 8px;
+  background: var(--oh-surface);
+  color: var(--oh-text);
+}
+
+button {
+  font-family: inherit;
+  font-weight: 600;
+  padding: 10px 16px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 8px;
+  background: var(--oh-primary);
+  color: var(--oh-on-primary);
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--oh-primary-dark);
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 16px;
+}
+
+li {
+  padding: 12px;
+  border-bottom: 1px solid var(--oh-border);
+  color: var(--oh-text-muted);
+}
+
+[role='alert'] {
+  color: var(--oh-danger);
+}

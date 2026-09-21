@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 import 'features/auth/login_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/requirements/incoming_requests_screen.dart';
@@ -12,7 +13,8 @@ class OneHubProviderApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'OneHub Provider',
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      theme: OneHubTheme.light(),
+      darkTheme: OneHubTheme.dark(),
       initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginScreen(),

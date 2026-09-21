@@ -33,6 +33,20 @@ JWT (access token only, no refresh token yet), mobile OTP for signup and passwor
 | Payment gateway (₹50 contact-unlock, subscriptions) | open | `BidsService.unlockContact` records a `Payment` row as `SUCCESS` unconditionally. Needs a real gateway integration before this is trustworthy. |
 | Push notifications | open | `NotificationsService` persists in-app records only; no push delivery yet. |
 
+## **Design**
+
+Material 3, one shared brand: deep teal-blue primary (`#0E7C86`), semantic
+success/warning/danger colors kept separate from the Material color slots
+(there's no built-in success/warning concept), Noto Sans for future
+regional-language coverage, rounded cards, full-width 48px-tall primary CTAs
+for outdoor/gloved-hand use. Same palette across the customer app, provider
+app, and admin panel, deliberately not differentiated by role — see the
+tradeoff note this was decided against differentiating by in-app color.
+
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`.
+- Admin web: `apps/admin-web/src/theme.css` (CSS custom properties), loaded once in `main.tsx`.
+- These two aren't generated from one shared source — keep them in sync by hand until a token pipeline exists.
+
 ## **Deployment**
 
 Not decided yet. Flag when a target (cloud provider, hosting) is chosen.
