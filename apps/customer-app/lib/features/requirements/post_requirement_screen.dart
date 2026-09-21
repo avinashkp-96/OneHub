@@ -76,11 +76,15 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(_error!, style: TextStyle(color: context.statusDanger)),
+                  ),
                 TextField(
                   controller: _description,
                   maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'What do you need done?', border: OutlineInputBorder()),
+                  decoration: const InputDecoration(labelText: 'What do you need done?'),
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
@@ -99,14 +103,24 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                 const SizedBox(height: 20),
                 Text('Select provider(s)', style: Theme.of(context).textTheme.titleMedium),
                 if (_providers.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 12),
-                    child: Text('No providers found nearby. Try widening your search.'),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(
+                      'No providers found nearby. Try widening your search.',
+                      style: TextStyle(color: context.statusWarning),
+                    ),
                   ),
                 for (final p in _providers)
                   CheckboxListTile(
                     title: Text(p.name),
-                    subtitle: Text('${p.averageRating.toStringAsFixed(1)}★${p.certified ? ' · Certified' : ''}'),
+                    subtitle: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(text: '${p.averageRating.toStringAsFixed(1)}★', style: TextStyle(color: context.statusWarning)),
+                          if (p.certified) const TextSpan(text: ' · Certified'),
+                        ],
+                      ),
+                    ),
                     value: _selectedProviderIds.contains(p.id),
                     onChanged: (checked) => setState(() {
                       if (checked == true) {
@@ -117,12 +131,18 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                     }),
                   ),
                 const SizedBox(height: 20),
-                FilledButton(
+                PrimaryCta(
                   onPressed: _sending ? null : _sendRequest,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: _sending ? const CircularProgressIndicator() : const Text('Send Request'),
-                  ),
+                  child: _sending
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                      : const Text('Send Request'),
                 ),
               ],
             ),

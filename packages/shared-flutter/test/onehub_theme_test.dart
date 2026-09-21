@@ -17,10 +17,30 @@ void main() {
     expect(dark.scaffoldBackgroundColor, isNot(equals(light.scaffoldBackgroundColor)));
   });
 
-  test('primary CTAs get a full-width minimum height for outdoor tap targets', () {
+  test('buttons get a 48px minimum height for outdoor tap targets, not forced full width', () {
     final theme = OneHubTheme.light();
     final buttonStyle = theme.filledButtonTheme.style;
     final minSize = buttonStyle?.minimumSize?.resolve({});
     expect(minSize?.height, 48);
+    expect(minSize?.width, isNot(double.infinity));
+  });
+
+  testWidgets('PrimaryCta stretches to the width its parent allows', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OneHubTheme.light(),
+        home: const Scaffold(
+          body: SizedBox(width: 300, child: PrimaryCta(onPressed: null, child: Text('Go'))),
+        ),
+      ),
+    );
+    final sizedBox = tester.widget<SizedBox>(find.byType(SizedBox).first);
+    expect(sizedBox.width, double.infinity);
+  });
+
+  test('app bars carry the brand color instead of the generic surface tint', () {
+    final theme = OneHubTheme.light();
+    expect(theme.appBarTheme.backgroundColor, theme.colorScheme.primary);
+    expect(theme.appBarTheme.foregroundColor, theme.colorScheme.onPrimary);
   });
 }

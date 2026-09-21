@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen).
 class DashboardScreen extends StatelessWidget {
@@ -6,13 +7,19 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final onPrimary = Theme.of(context).colorScheme.onPrimary;
     return Scaffold(
       appBar: AppBar(
         title: const Text('OneHub Provider'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Row(children: const [Text('Online'), Switch(value: true, onChanged: null)]),
+            child: Row(
+              children: [
+                Text('Online', style: TextStyle(color: onPrimary)),
+                Switch(value: true, onChanged: null, activeColor: context.statusSuccess),
+              ],
+            ),
           ),
         ],
       ),

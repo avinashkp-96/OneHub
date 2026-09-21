@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 
 // docx 2.4 — Provider Login. Must surface a blocked-with-status-message state
 // when the account is still "Pending Verification" (see AuthService.login on
@@ -24,7 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('OneHub for Providers', style: Theme.of(context).textTheme.headlineMedium),
+              Text(
+                'OneHub for Providers',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
               const SizedBox(height: 32),
               TextField(
                 controller: _mobileOrEmail,
@@ -37,11 +44,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(labelText: 'Password'),
               ),
               const SizedBox(height: 24),
-              FilledButton(
+              PrimaryCta(
                 // TODO: call ApiClient.post('/auth/provider/login', ...); show
                 // the "Pending Verification" message inline on a 401 with that reason.
                 onPressed: () => Navigator.of(context).pushReplacementNamed('/dashboard'),
-                child: const Padding(padding: EdgeInsets.all(12), child: Text('Login')),
+                child: const Text('Login'),
               ),
               const SizedBox(height: 12),
               TextButton(onPressed: () {}, child: const Text('Forgot Password?')),

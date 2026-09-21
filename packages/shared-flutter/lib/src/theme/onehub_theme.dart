@@ -28,6 +28,12 @@ abstract final class OneHubTheme {
       colorScheme: colorScheme,
       textTheme: textTheme,
       scaffoldBackgroundColor: brightness == Brightness.dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
+      appBarTheme: AppBarTheme(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 0,
+        centerTitle: false,
+      ),
       cardTheme: CardTheme(
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -36,15 +42,19 @@ abstract final class OneHubTheme {
           side: BorderSide(color: colorScheme.outlineVariant),
         ),
       ),
+      // A fixed 48px minimum height (not full width, by design — see
+      // PrimaryCta below for page-level CTAs) so every button is an easy
+      // outdoor tap target, whether it's a page-level CTA or one of a pair
+      // in a Row.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(48), // one clear primary CTA per screen, easy to tap outdoors
+          minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(48),
+          minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
@@ -59,6 +69,25 @@ abstract final class OneHubTheme {
         indicatorColor: colorScheme.primaryContainer,
         elevation: 0,
       ),
+    );
+  }
+}
+
+/// A page-level primary CTA ("Login", "Send Request", "Submit Bid") that
+/// spans the full width available. Buttons used inline (e.g. Accept/Reject
+/// side by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
+/// forcing full width there fights the Row's layout instead of the other
+/// widget in it.
+class PrimaryCta extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final Widget child;
+  const PrimaryCta({super.key, required this.onPressed, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(onPressed: onPressed, child: child),
     );
   }
 }

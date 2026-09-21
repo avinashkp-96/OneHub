@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 
 // docx 5.4 — Price Range & Contact Unlock. Covers: submit the initial bid,
@@ -86,20 +87,27 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(_error!, style: const TextStyle(color: Colors.red))),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(_error!, style: TextStyle(color: context.statusDanger)),
+              ),
             TextField(controller: _min, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Min price (₹)')),
             const SizedBox(height: 8),
             TextField(controller: _max, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max price (₹)')),
             const SizedBox(height: 16),
             if (_bidId == null)
-              FilledButton(onPressed: _busy ? null : _submitBid, child: const Text('Submit Bid'))
+              PrimaryCta(onPressed: _busy ? null : _submitBid, child: const Text('Submit Bid'))
             else ...[
               if (!_contactUnlocked)
                 OutlinedButton(onPressed: _busy ? null : _unlockContact, child: const Text('Pay ₹50 to Contact Customer'))
               else
-                const Text('Contact unlocked — call or message the customer, then refine your price.'),
+                Text(
+                  'Contact unlocked — call or message the customer, then refine your price.',
+                  style: TextStyle(color: context.statusSuccess),
+                ),
               const SizedBox(height: 12),
-              FilledButton(
+              PrimaryCta(
                 onPressed: _busy || !_contactUnlocked ? null : _updateRefinedBid,
                 child: const Text('Update Bid'),
               ),

@@ -17,7 +17,7 @@ class DashboardScreen extends StatelessWidget {
         children: const [
           _SectionPlaceholder('Location + Search bar'),
           _SectionPlaceholder('Service Categories grid'),
-          _SectionPlaceholder('Post a Requirement CTA'),
+          _ProminentCtaPlaceholder('Post a Requirement'),
           _SectionPlaceholder('Active Requests'),
           _SectionPlaceholder('Nearby / Recommended Providers'),
         ],
@@ -48,6 +48,36 @@ class _SectionPlaceholder extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(label),
+      ),
+    );
+  }
+}
+
+// docx 4.1 describes this as "Prominent CTA button that starts the 'Describe
+// your requirement' flow directly" — styled to stand out from the other
+// placeholder sections even before category browsing exists to wire it up.
+class _ProminentCtaPlaceholder extends StatelessWidget {
+  final String label;
+  const _ProminentCtaPlaceholder(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Icon(Icons.add_circle, color: colorScheme.onPrimaryContainer),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }

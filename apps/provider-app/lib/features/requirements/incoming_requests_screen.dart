@@ -68,7 +68,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+                  if (_error != null) Text(_error!, style: TextStyle(color: context.statusDanger)),
                   if (_requests.isEmpty) const Text('No new requests right now.'),
                   for (final r in _requests)
                     Card(
@@ -83,7 +83,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
-                                TextButton(onPressed: () => _reject(r), child: const Text('Reject')),
+                                TextButton(
+                                  onPressed: () => _reject(r),
+                                  style: TextButton.styleFrom(foregroundColor: context.statusDanger),
+                                  child: const Text('Reject'),
+                                ),
                                 const SizedBox(width: 8),
                                 FilledButton(onPressed: () => _accept(r), child: const Text('Accept')),
                               ],

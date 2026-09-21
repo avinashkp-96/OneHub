@@ -58,16 +58,27 @@ class _BidListScreenState extends State<BidListScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
+                  if (_error != null) Text(_error!, style: TextStyle(color: context.statusDanger)),
                   if (_bids.isEmpty) const Text('No bids yet. Providers who accept your request will appear here.'),
                   for (final bid in _bids)
                     Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        title: Text(_priceRangeLabel(bid)),
-                        subtitle: Text(bid.contactUnlocked ? 'Contacted you' : 'Not yet contacted you'),
+                        title: Text(
+                          _priceRangeLabel(bid),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          bid.contactUnlocked ? 'Contacted you' : 'Not yet contacted you',
+                          style: TextStyle(color: bid.contactUnlocked ? context.statusSuccess : null),
+                        ),
                         trailing: bid.confirmed
-                            ? const Chip(label: Text('Confirmed'))
+                            ? Chip(
+                                label: const Text('Confirmed'),
+                                backgroundColor: context.statusSuccess.withOpacity(0.15),
+                                labelStyle: TextStyle(color: context.statusSuccess, fontWeight: FontWeight.bold),
+                                side: BorderSide.none,
+                              )
                             : TextButton(onPressed: () => _confirm(bid), child: const Text('Confirm Provider')),
                       ),
                     ),
