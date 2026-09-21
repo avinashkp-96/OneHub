@@ -40,14 +40,23 @@ cd apps/provider-app && flutter pub get && flutter run
 
 ## What's implemented vs. stubbed
 
-Implemented end-to-end (routes + Prisma-backed service logic):
-customer/provider sign-up with OTP, login, forgot/reset password, category
-and sub-service CRUD, posting a requirement, accept/reject, initial and
-refined bids, contact-unlock payment record, provider confirmation, job
+Backend (routes + Prisma-backed service logic): customer/provider sign-up
+with OTP, login, forgot/reset password, category and sub-service CRUD,
+provider search by sub-service, posting a requirement, accept/reject, initial
+and refined bids, contact-unlock payment record, provider confirmation, job
 completion, ratings (with a placeholder certification threshold — see
 `src/ratings/ratings.service.ts`), notifications, and subscription plans.
 
-Not implemented yet: real SMS/OTP delivery, a real payment gateway for the
-₹50 contact-unlock and subscription charges, push notification delivery,
-provider matching/search ranking, and most of the mobile/admin UI beyond the
-screens scaffolded here (login, dashboard shells, category list).
+Mobile UI wired to the backend: login shells (not yet calling the API),
+dashboard shells, and — end to end — Post a Requirement + Bid List on the
+customer app, and Incoming Requests + Price Range & Contact Unlock on the
+provider app.
+
+Not implemented yet: login screens don't call the API yet (they navigate
+straight to the dashboard), real SMS/OTP delivery, a real payment gateway for
+the ₹50 contact-unlock and subscription charges, push notification delivery,
+nearest-first/radius provider ranking (provider search currently returns
+every active provider for a sub-service, sorted by rating only), category
+browsing on the customer app (post-requirement currently needs a
+`subServiceId` passed in directly), and the admin provider-verification
+queue.
