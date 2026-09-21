@@ -48,15 +48,14 @@ completion, ratings (with a placeholder certification threshold — see
 `src/ratings/ratings.service.ts`), notifications, and subscription plans.
 
 Mobile UI wired to the backend: login shells (not yet calling the API),
-dashboard shells, and — end to end — Post a Requirement + Bid List on the
-customer app, and Incoming Requests + Price Range & Contact Unlock on the
-provider app.
+dashboard shells, and — end to end — Category browsing + Post a Requirement +
+Bid List on the customer app, and Incoming Requests + Price Range & Contact
+Unlock on the provider app.
 
 Not implemented yet: login screens don't call the API yet (they navigate
 straight to the dashboard), real SMS/OTP delivery, a real payment gateway for
 the ₹50 contact-unlock and subscription charges, push notification delivery,
 nearest-first/radius provider ranking (provider search currently returns
-every active provider for a sub-service, sorted by rating only), category
-browsing on the customer app (post-requirement currently needs a
-`subServiceId` passed in directly), and the admin provider-verification
-queue.
+every active provider for a sub-service, sorted by rating only), the location
+selector and free-text search bar from docx 4.1/4.2 (browsing is grid-only
+for now, no search/filter/sort), and the admin provider-verification queue.

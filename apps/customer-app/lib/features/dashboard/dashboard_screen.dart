@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../categories/category_grid_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Each section below is a
 // placeholder for the corresponding widget: location/search header, category
@@ -10,16 +11,19 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    void openCategories() =>
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CategoryGridScreen()));
+
     return Scaffold(
       appBar: AppBar(title: const Text('OneHub')),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          _SectionPlaceholder('Location + Search bar'),
-          _SectionPlaceholder('Service Categories grid'),
-          _ProminentCtaPlaceholder('Post a Requirement'),
-          _SectionPlaceholder('Active Requests'),
-          _SectionPlaceholder('Nearby / Recommended Providers'),
+        children: [
+          const _SectionPlaceholder('Location + Search bar'),
+          _SectionPlaceholder('Service Categories grid', onTap: openCategories),
+          _ProminentCtaPlaceholder('Post a Requirement', onTap: openCategories),
+          const _SectionPlaceholder('Active Requests'),
+          const _SectionPlaceholder('Nearby / Recommended Providers'),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -39,15 +43,20 @@ class DashboardScreen extends StatelessWidget {
 
 class _SectionPlaceholder extends StatelessWidget {
   final String label;
-  const _SectionPlaceholder(this.label);
+  final VoidCallback? onTap;
+  const _SectionPlaceholder(this.label, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Text(label),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(label),
+        ),
       ),
     );
   }
@@ -55,10 +64,13 @@ class _SectionPlaceholder extends StatelessWidget {
 
 // docx 4.1 describes this as "Prominent CTA button that starts the 'Describe
 // your requirement' flow directly" — styled to stand out from the other
-// placeholder sections even before category browsing exists to wire it up.
+// placeholder sections. It opens category browsing first (docx 4.1's own
+// flow: pick a category/sub-service before describing the work), same as
+// tapping the category grid above.
 class _ProminentCtaPlaceholder extends StatelessWidget {
   final String label;
-  const _ProminentCtaPlaceholder(this.label);
+  final VoidCallback onTap;
+  const _ProminentCtaPlaceholder(this.label, {required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -66,17 +78,21 @@ class _ProminentCtaPlaceholder extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Icon(Icons.add_circle, color: colorScheme.onPrimaryContainer),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
-            ),
-          ],
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(Icons.add_circle, color: colorScheme.onPrimaryContainer),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
         ),
       ),
     );
