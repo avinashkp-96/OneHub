@@ -28,7 +28,7 @@ jobs:
         run: |
           sudo apt-get install -y lcov
           COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep lines | grep -oP '\d+\.\d+(?=%)')
-          awk -v c="$COVERAGE" 'BEGIN { if (c < 80) { print "Line coverage " c "% is below the 80% floor"; exit 1 } }'
+          awk -v c="$COVERAGE" 'BEGIN { if (c < 85) { print "Line coverage " c "% is below the 85% floor"; exit 1 } }'
 
   security:
     runs-on: ubuntu-latest

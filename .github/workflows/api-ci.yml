@@ -35,7 +35,7 @@ jobs:
         run: |
           node -e "
             const s = require('./coverage/coverage-summary.json').total.lines.pct;
-            if (s < 80) { console.error('Line coverage ' + s + '% is below the 80% floor'); process.exit(1); }
+            if (s < 85) { console.error('Line coverage ' + s + '% is below the 85% floor'); process.exit(1); }
           "
 
   security:

@@ -39,11 +39,20 @@ Not decided yet. Flag when a target (cloud provider, hosting) is chosen.
 
 ## **Quality floor**
 
-Unit test line coverage: 80% (Engineering default, not raised here). Only `auth.service.spec.ts` exists so far — coverage is well under floor until more tests are written.
+Unit test line coverage: 85%, raised from the Engineering 80% default. Enforced
+in CI (`.github/workflows/*.yml`) on every PR. Actual coverage is well under
+that right now — only a handful of `*.spec.ts`/`*.test.ts` files exist so far;
+treat the CI gate as real and write tests to clear it, not as aspirational.
+
+Every commit must touch a test file alongside any source change (enforced by
+the local `pre-commit` hook installed from `Engineering/hooks-templates/`) —
+it checks for *a* test file in the commit, not that it's the right one or
+that coverage moved in the right direction, so review test quality yourself.
 
 ## **Constraints**
 
 - No AI attribution in commits, comments, or file headers (Engineering default).
+- No reference to Claude/Anthropic anywhere in source code or commit messages — enforced by the local `pre-commit`/`commit-msg` hooks, not just a convention.
 - Client data (customer/provider PII, ID proof uploads, bank/UPI details) stays out of logs and URLs.
 
 ## **Open items**
