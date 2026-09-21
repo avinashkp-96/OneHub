@@ -4,6 +4,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ProvidersModule } from './providers/providers.module';
 import { RequirementsModule } from './requirements/requirements.module';
 import { BidsModule } from './bids/bids.module';
 import { SubscriptionsModule } from './subscriptions/subscriptions.module';
@@ -17,6 +18,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AuthModule,
     UsersModule,
     CategoriesModule,
+    ProvidersModule,
     RequirementsModule,
     BidsModule,
     SubscriptionsModule,

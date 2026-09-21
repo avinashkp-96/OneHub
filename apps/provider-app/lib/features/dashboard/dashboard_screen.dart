@@ -18,12 +18,15 @@ class DashboardScreen extends StatelessWidget {
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
-          _SectionPlaceholder("Today's Summary — new requests, earnings, active jobs"),
-          _SectionPlaceholder('Incoming Requests (Accept / Reject)'),
-          _SectionPlaceholder('Active Jobs'),
-          _SectionPlaceholder('Wallet / Subscription Status'),
-          _SectionPlaceholder('Certification progress'),
+        children: [
+          const _SectionPlaceholder("Today's Summary — new requests, earnings, active jobs"),
+          _SectionPlaceholder(
+            'Incoming Requests (Accept / Reject)',
+            onTap: () => Navigator.of(context).pushNamed('/incoming-requests'),
+          ),
+          const _SectionPlaceholder('Active Jobs'),
+          const _SectionPlaceholder('Wallet / Subscription Status'),
+          const _SectionPlaceholder('Certification progress'),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -43,13 +46,17 @@ class DashboardScreen extends StatelessWidget {
 
 class _SectionPlaceholder extends StatelessWidget {
   final String label;
-  const _SectionPlaceholder(this.label);
+  final VoidCallback? onTap;
+  const _SectionPlaceholder(this.label, {this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(padding: const EdgeInsets.all(20), child: Text(label)),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: const EdgeInsets.all(20), child: Text(label)),
+      ),
     );
   }
 }

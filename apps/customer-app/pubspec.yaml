@@ -12,7 +12,6 @@ dependencies:
     sdk: flutter
   onehub_shared:
     path: ../../packages/shared-flutter
-  go_router: ^13.2.0
 
 dev_dependencies:
   flutter_test:

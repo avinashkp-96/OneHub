@@ -1,19 +1,34 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
+import { JwtPayload } from '../auth/jwt.strategy';
+import { PrismaService } from '../prisma/prisma.service';
 import { BidsService } from './bids.service';
 import { PriceRangeDto } from './dto/submit-bid.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller()
 export class BidsController {
-  constructor(private readonly bids: BidsService) {}
+  constructor(
+    private readonly bids: BidsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Roles('PROVIDER')
   @Post('requirements/:requirementId/bids')
-  submit(@Param('requirementId') requirementId: string, @Body() body: { providerId: string } & PriceRangeDto) {
-    return this.bids.submitInitialBid(requirementId, body.providerId, body);
+  async submit(
+    @Req() req: { user: JwtPayload },
+    @Param('requirementId') requirementId: string,
+    @Body() range: PriceRangeDto,
+  ) {
+    const providerId = await this.providerIdFor(req.user.sub);
+    return this.bids.submitInitialBid(requirementId, providerId, range);
+  }
+
+  private async providerIdFor(userId: string): Promise<string> {
+    const provider = await this.prisma.provider.findUniqueOrThrow({ where: { userId } });
+    return provider.id;
   }
 
   @Roles('CUSTOMER', 'PROVIDER')

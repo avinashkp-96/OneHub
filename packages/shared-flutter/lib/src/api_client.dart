@@ -16,13 +16,24 @@ class ApiClient {
   Future<void> _saveToken(String token) => _storage.write(key: 'access_token', value: token);
   Future<String?> get token => _storage.read(key: 'access_token');
 
-  Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool auth = false}) async {
+  Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool auth = false}) =>
+      _send(_http.post, path, body, auth);
+
+  Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body, {bool auth = false}) =>
+      _send(_http.patch, path, body, auth);
+
+  Future<Map<String, dynamic>> _send(
+    Future<http.Response> Function(Uri, {Map<String, String>? headers, Object? body}) method,
+    String path,
+    Map<String, dynamic> body,
+    bool auth,
+  ) async {
     final headers = {'Content-Type': 'application/json'};
     if (auth) {
       final t = await token;
       if (t != null) headers['Authorization'] = 'Bearer $t';
     }
-    final res = await _http.post(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
+    final res = await method(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
     final decoded = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode >= 400) {
       throw ApiException(res.statusCode, decoded['message']?.toString() ?? 'request failed');
