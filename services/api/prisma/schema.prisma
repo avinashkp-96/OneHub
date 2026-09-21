@@ -1,0 +1,213 @@
+// OneHub data model — mirrors OneHub_Requirements.docx sections 2-6.
+// Run `npx prisma migrate dev` after `npm install` to create the database.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  PROVIDER
+  ADMIN
+}
+
+enum ProviderStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  SUSPENDED
+}
+
+enum RequestStatus {
+  SENT
+  ACCEPTED
+  REJECTED
+  BID_RECEIVED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PlanType {
+  PER_SERVICE
+  MONTHLY_99
+  MONTHLY_299
+}
+
+model User {
+  id           String   @id @default(cuid())
+  role         Role
+  fullName     String
+  mobile       String   @unique
+  mobileVerifiedAt DateTime?
+  email        String?  @unique
+  passwordHash String
+  city         String?
+  latitude     Float?
+  longitude    Float?
+  profilePhotoUrl String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  provider     Provider?
+  addresses    Address[]
+  requirementsPosted Requirement[]      @relation("CustomerRequirements")
+  ratingsGiven RatingFeedback[]         @relation("RatingsGiven")
+  notifications Notification[]
+}
+
+model Address {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  label   String
+  line    String
+  city    String
+  latitude  Float?
+  longitude Float?
+}
+
+model Provider {
+  id                String         @id @default(cuid())
+  userId            String         @unique
+  user              User           @relation(fields: [userId], references: [id])
+  businessName      String?
+  yearsExperience   Int?
+  coverageRadiusKm  Float
+  idProofUrl        String?
+  bankOrUpiDetails  String?
+  status            ProviderStatus @default(PENDING_VERIFICATION)
+  online            Boolean        @default(false)
+  averageRating     Float          @default(0)
+  ratingCount       Int            @default(0)
+  certified         Boolean        @default(false)
+  createdAt         DateTime       @default(now())
+
+  subServices       ProviderSubService[]
+  bids              Bid[]
+  ratingsReceived   RatingFeedback[]
+  subscription      Subscription?
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  iconUrl     String?
+  description String?
+  active      Boolean  @default(true)
+
+  subServices SubService[]
+}
+
+model SubService {
+  id                  String   @id @default(cuid())
+  categoryId          String
+  category            Category @relation(fields: [categoryId], references: [id])
+  name                String
+  description         String?
+  suggestedMinPrice   Float?
+  suggestedMaxPrice   Float?
+
+  providers           ProviderSubService[]
+  requirements        Requirement[]
+}
+
+model ProviderSubService {
+  providerId   String
+  provider     Provider   @relation(fields: [providerId], references: [id])
+  subServiceId String
+  subService   SubService @relation(fields: [subServiceId], references: [id])
+
+  @@id([providerId, subServiceId])
+}
+
+model Requirement {
+  id             String        @id @default(cuid())
+  customerId     String
+  customer       User          @relation("CustomerRequirements", fields: [customerId], references: [id])
+  subServiceId   String
+  subService     SubService    @relation(fields: [subServiceId], references: [id])
+  description    String
+  voiceTranscript String?
+  photoUrls      String[]
+  preferredAt    DateTime?
+  status         RequestStatus @default(SENT)
+  createdAt      DateTime      @default(now())
+
+  targetedProviders RequirementProvider[]
+  bids              Bid[]
+  confirmedBidId    String?
+}
+
+model RequirementProvider {
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id])
+  providerId    String
+  status        RequestStatus @default(SENT) // per-provider: SENT/ACCEPTED/REJECTED
+
+  @@id([requirementId, providerId])
+}
+
+model Bid {
+  id                String   @id @default(cuid())
+  requirementId     String
+  requirement       Requirement @relation(fields: [requirementId], references: [id])
+  providerId        String
+  provider          Provider @relation(fields: [providerId], references: [id])
+  initialMinPrice   Float
+  initialMaxPrice   Float
+  refinedMinPrice   Float?
+  refinedMaxPrice   Float?
+  contactUnlocked   Boolean  @default(false)
+  confirmed         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  providerId    String
+  bidId         String?
+  amount        Float
+  purpose       String   // "CONTACT_UNLOCK" | "SUBSCRIPTION"
+  status        String   // "PENDING" | "SUCCESS" | "FAILED"
+  createdAt     DateTime @default(now())
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  providerId    String   @unique
+  provider      Provider @relation(fields: [providerId], references: [id])
+  plan          PlanType @default(PER_SERVICE)
+  cycleUsed     Int      @default(0)
+  cycleLimit    Int      @default(0)
+  renewsAt      DateTime?
+}
+
+model RatingFeedback {
+  id           String   @id @default(cuid())
+  providerId   String
+  provider     Provider @relation(fields: [providerId], references: [id])
+  customerId   String
+  customer     User     @relation("RatingsGiven", fields: [customerId], references: [id])
+  requirementId String  @unique
+  stars        Int
+  feedback     String?
+  createdAt    DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  event     String
+  message   String
+  channel   String   // "PUSH" | "IN_APP" | "SMS"
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}

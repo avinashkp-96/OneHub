@@ -1,0 +1,73 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['apps/customer-app/**', 'apps/provider-app/**', 'packages/shared-flutter/**']
+  pull_request:
+    branches: [main, develop]
+    paths: ['apps/customer-app/**', 'apps/provider-app/**', 'packages/shared-flutter/**']
+
+jobs:
+  analyze-and-test:
+    strategy:
+      matrix:
+        app: [apps/customer-app, apps/provider-app]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test --coverage
+      - name: Enforce coverage floor
+        run: |
+          sudo apt-get install -y lcov
+          COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep lines | grep -oP '\d+\.\d+(?=%)')
+          awk -v c="$COVERAGE" 'BEGIN { if (c < 80) { print "Line coverage " c "% is below the 80% floor"; exit 1 } }'
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    needs: [analyze-and-test, security]
+    strategy:
+      matrix:
+        app: [apps/customer-app, apps/provider-app]
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable }
+      - run: flutter pub get
+      - run: flutter build apk --debug
+
+  auto-issue-on-failure:
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [analyze-and-test, security, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Mobile CI failed on main: ${context.sha.slice(0, 7)}`,
+              body: `Workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ['ci-failure'],
+            });
