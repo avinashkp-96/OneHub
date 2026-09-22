@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../categories/category_grid_screen.dart';
+import '../requirements/my_requests_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Each section below is a
 // placeholder for the corresponding widget: location/search header, category
@@ -13,6 +14,8 @@ class DashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     void openCategories() =>
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CategoryGridScreen()));
+    void openMyRequests() =>
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
 
     return Scaffold(
       appBar: AppBar(title: const Text('OneHub')),
@@ -22,7 +25,7 @@ class DashboardScreen extends StatelessWidget {
           const _SectionPlaceholder('Location + Search bar'),
           _SectionPlaceholder('Service Categories grid', onTap: openCategories),
           _ProminentCtaPlaceholder('Post a Requirement', onTap: openCategories),
-          const _SectionPlaceholder('Active Requests'),
+          _SectionPlaceholder('Active Requests', onTap: openMyRequests),
           const _SectionPlaceholder('Nearby / Recommended Providers'),
         ],
       ),
@@ -35,7 +38,11 @@ class DashboardScreen extends StatelessWidget {
           NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
         selectedIndex: 0,
-        onDestinationSelected: (_) {},
+        // Only "My Requests" is wired — Search, Notifications, and Profile
+        // aren't built yet, so this isn't a true persistent tab shell.
+        onDestinationSelected: (index) {
+          if (index == 2) openMyRequests();
+        },
       ),
     );
   }

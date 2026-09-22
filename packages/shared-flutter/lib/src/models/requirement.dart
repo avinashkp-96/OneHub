@@ -21,6 +21,11 @@ class Requirement {
   final String description;
   final List<String> photoUrls;
   final RequestStatus status;
+  // On /requirements/incoming this is filtered to the requesting provider's
+  // own bid (0 or 1 entries) — use it to tell "my bid was confirmed" apart
+  // from "a different provider on this request was confirmed" (docx 5.6).
+  // On /requirements/mine (customer side) this holds every bid received.
+  final List<Bid> bids;
 
   const Requirement({
     required this.id,
@@ -28,6 +33,7 @@ class Requirement {
     required this.description,
     required this.photoUrls,
     required this.status,
+    this.bids = const [],
   });
 
   factory Requirement.fromJson(Map<String, dynamic> json) => Requirement(
@@ -36,6 +42,7 @@ class Requirement {
         description: json['description'] as String,
         photoUrls: (json['photoUrls'] as List?)?.cast<String>() ?? const [],
         status: requestStatusFromJson(json['status'] as String),
+        bids: (json['bids'] as List?)?.map((b) => Bid.fromJson(b as Map<String, dynamic>)).toList() ?? const [],
       );
 }
 

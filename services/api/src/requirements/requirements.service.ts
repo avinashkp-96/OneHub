@@ -34,11 +34,15 @@ export class RequirementsService {
     });
   }
 
-  // docx 5.3 "Incoming Requests"
+  // docx 5.3 "Incoming Requests" and 5.6 "Awaiting Selection / Selected /
+  // Not Selected" — `bids` is filtered to this provider's own bid (if any)
+  // so the client can tell "my bid was confirmed" apart from "a different
+  // provider on this multi-provider request was confirmed" without the
+  // requirement's single global `status` field being ambiguous between them.
   listForProvider(providerId: string) {
     return this.prisma.requirement.findMany({
       where: { targetedProviders: { some: { providerId } } },
-      include: { subService: true },
+      include: { subService: true, bids: { where: { providerId } } },
       orderBy: { createdAt: 'desc' },
     });
   }
