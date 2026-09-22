@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../../core/api.dart';
+import 'signup_screen.dart';
 
-// docx 2.2 — Customer Login. Sign-up (2.1) and Forgot Password (2.5) are
-// natural follow-ups from this screen's footer links; build them alongside it.
+// docx 2.2 — Customer Login. Sign-up (2.1) and Forgot Password (2.5) live in
+// signup_screen.dart and onehub_shared's ResetPasswordScreen respectively.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -13,6 +15,26 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _mobileOrEmail = TextEditingController();
   final _password = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  Future<void> _login() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await api.post('/auth/customer/login', {
+        'mobileOrEmail': _mobileOrEmail.text.trim(),
+        'password': _password.text,
+      });
+      if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
+    } catch (e) {
+      setState(() => _error = 'Could not log in: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +54,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
               ),
               const SizedBox(height: 32),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(_error!, style: TextStyle(color: context.statusDanger)),
+                ),
               TextField(
                 controller: _mobileOrEmail,
                 decoration: const InputDecoration(labelText: 'Mobile Number or Email'),
@@ -43,15 +70,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 decoration: const InputDecoration(labelText: 'Password'),
               ),
               const SizedBox(height: 24),
-              PrimaryCta(
-                // TODO: call ApiClient.post('/auth/customer/login', ...) and
-                // navigate on success.
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/dashboard'),
-                child: const Text('Login'),
-              ),
+              PrimaryCta(onPressed: _busy ? null : _login, child: const Text('Login')),
               const SizedBox(height: 12),
-              TextButton(onPressed: () {}, child: const Text('Forgot Password?')),
-              TextButton(onPressed: () {}, child: const Text("New here? Sign up")),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ResetPasswordScreen(client: api)),
+                ),
+                child: const Text('Forgot Password?'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const SignupScreen()),
+                ),
+                child: const Text("New here? Sign up"),
+              ),
             ],
           ),
         ),

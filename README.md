@@ -47,15 +47,19 @@ and refined bids, contact-unlock payment record, provider confirmation, job
 completion, ratings (with a placeholder certification threshold — see
 `src/ratings/ratings.service.ts`), notifications, and subscription plans.
 
-Mobile UI wired to the backend: login shells (not yet calling the API),
-dashboard shells, and — end to end — Category browsing + Post a Requirement +
-Bid List on the customer app, and Incoming Requests + Price Range & Contact
-Unlock on the provider app.
+Mobile UI wired to the backend, end to end: Sign Up (with OTP) + Login +
+Forgot/Reset Password for both apps, dashboard shells, Category browsing +
+Post a Requirement + Bid List on the customer app, and Incoming Requests +
+Price Range & Contact Unlock on the provider app.
 
-Not implemented yet: login screens don't call the API yet (they navigate
-straight to the dashboard), real SMS/OTP delivery, a real payment gateway for
-the ₹50 contact-unlock and subscription charges, push notification delivery,
-nearest-first/radius provider ranking (provider search currently returns
-every active provider for a sub-service, sorted by rating only), the location
-selector and free-text search bar from docx 4.1/4.2 (browsing is grid-only
-for now, no search/filter/sort), and the admin provider-verification queue.
+Not implemented yet: real SMS/OTP delivery (the OTP flow works end to end,
+but the backend returns the code in the response instead of sending it —
+see `OtpService`), a real payment gateway for the ₹50 contact-unlock and
+subscription charges, push notification delivery, nearest-first/radius
+provider ranking (provider search currently returns every active provider
+for a sub-service, sorted by rating only), the location selector and
+free-text search bar from docx 4.1/4.2 (browsing is grid-only for now, no
+search/filter/sort), real file upload for provider signup's profile
+photo/ID proof (currently plain text fields for a document URL), GPS capture
+during provider signup (coverage area is hardcoded to lat/lng 0,0 pending
+location permission handling), and the admin provider-verification queue.
