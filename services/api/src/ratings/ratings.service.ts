@@ -46,4 +46,11 @@ export class RatingsService {
   overview(providerId: string) {
     return this.prisma.ratingFeedback.findMany({ where: { providerId }, orderBy: { createdAt: 'desc' } });
   }
+
+  // Lets the client check before showing a rating prompt, since `requirementId`
+  // is unique on RatingFeedback — a second submit for the same job would
+  // otherwise fail with a raw database constraint error.
+  forRequirement(requirementId: string) {
+    return this.prisma.ratingFeedback.findUnique({ where: { requirementId } });
+  }
 }

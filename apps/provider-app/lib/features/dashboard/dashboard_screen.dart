@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../requirements/active_jobs_screen.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen).
 class DashboardScreen extends StatelessWidget {
@@ -31,7 +32,10 @@ class DashboardScreen extends StatelessWidget {
             'Incoming Requests (Accept / Reject)',
             onTap: () => Navigator.of(context).pushNamed('/incoming-requests'),
           ),
-          const _SectionPlaceholder('Active Jobs'),
+          _SectionPlaceholder(
+            'Active Jobs',
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen())),
+          ),
           const _SectionPlaceholder('Wallet / Subscription Status'),
           const _SectionPlaceholder('Certification progress'),
         ],

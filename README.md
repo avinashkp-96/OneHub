@@ -48,9 +48,11 @@ completion, ratings (with a placeholder certification threshold — see
 `src/ratings/ratings.service.ts`), notifications, and subscription plans.
 
 Mobile UI wired to the backend, end to end: Sign Up (with OTP) + Login +
-Forgot/Reset Password for both apps, dashboard shells, Category browsing +
-Post a Requirement + Bid List on the customer app, and Incoming Requests +
-Price Range & Contact Unlock on the provider app.
+Forgot/Reset Password for both apps, dashboard shells, and on the customer
+app Category browsing → Post a Requirement → My Requests → Bid List →
+Rate the provider, matched on the provider app by Incoming Requests →
+Price Range & Contact Unlock → Active Jobs → Mark as Completed. That's the
+full request-to-rating loop from the requirements doc, start to finish.
 
 Not implemented yet: real SMS/OTP delivery (the OTP flow works end to end,
 but the backend returns the code in the response instead of sending it —

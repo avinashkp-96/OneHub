@@ -21,4 +21,9 @@ export class RatingsController {
   overview(@Param('providerId') providerId: string) {
     return this.ratings.overview(providerId);
   }
+
+  @Get('requirement/:requirementId')
+  forRequirement(@Param('requirementId') requirementId: string) {
+    return this.ratings.forRequirement(requirementId);
+  }
 }
