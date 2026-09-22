@@ -22,9 +22,10 @@ class OneHubCustomerApp extends StatelessWidget {
         '/dashboard': (_) => const DashboardScreen(),
       },
       onGenerateRoute: (settings) {
-        // Category browsing (docx 4.1/4.2) doesn't exist yet, so these two
-        // screens are reachable by pushing the route with an argument until
-        // then: Navigator.pushNamed(context, '/post-requirement', arguments: subServiceId).
+        // Category browsing (CategoryGridScreen -> SubServiceListScreen) is
+        // the normal path into PostRequirementScreen now; these named routes
+        // remain as a direct entry point, e.g. from a push notification deep
+        // link: Navigator.pushNamed(context, '/post-requirement', arguments: subServiceId).
         if (settings.name == '/post-requirement') {
           final subServiceId = settings.arguments as String;
           return MaterialPageRoute(builder: (_) => PostRequirementScreen(subServiceId: subServiceId));
