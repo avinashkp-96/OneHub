@@ -35,25 +35,37 @@ JWT (access token only, no refresh token yet), mobile OTP for signup and passwor
 
 ## **Design**
 
-**Mobile (customer-app, provider-app)**: indigo-on-lavender, pill-shaped
-buttons, large-radius shadowed (not outlined) cards, a light/transparent app
-bar with dark centered text rather than a bold color bar. This replaced an
-earlier deep-teal Material look on 2026-09-23 — the user supplied a
-reference mockup ("PetCare") directly and asked to match its palette and
-shape language, explicitly scoped to mobile only. `admin-web` was
-deliberately left on the old teal palette; the two are no longer the "one
-shared brand across all three surfaces" this section used to describe, and
-that's an intentional, explicit divergence, not drift — don't "fix" it back
-without asking.
+**Mobile (customer-app, provider-app)**: purple accent (`#6C63FF` exactly),
+Outfit for headings, Inter for body copy, pill-shaped gradient CTAs with a
+shadow, large-radius shadowed (not outlined) cards, icon-in-field text
+inputs, a light/transparent app bar with dark centered text rather than a
+bold color bar. This is the second retheme in as many days (2026-09-23):
+first an indigo-on-lavender "PetCare"-referenced look replaced the original
+teal, then a Figma Make prototype the user linked directly (a signup-screen
+design) replaced that. Each time a newer, more specific reference took
+priority over the previous one — if a third shows up, same rule applies.
+`admin-web` was deliberately left on the original teal palette throughout;
+it is not "the one shared brand across all three surfaces" and that's
+intentional, not drift — don't "fix" it back without asking.
+
+Screen rebuilds to match this reference are scoped to the **customer app
+only** (explicitly confirmed) — provider screens inherit the new
+colors/fonts/shapes automatically via the shared theme, but their layouts
+(login, signup, dashboard, etc.) haven't been individually rebuilt against
+this reference. Customer login and signup are done as of 2026-09-23; other
+customer screens (dashboard, category browsing, requirements, ratings)
+still use the previous PetCare-era layout conventions, just with the new
+colors/shapes applied automatically. If provider screens or the rest of
+customer screens are wanted in this style too, that's a separate ask.
 
 Semantic success/warning/danger colors stay separate from the Material
-color slots (there's no built-in success/warning concept). Noto Sans is
-kept for future regional-language coverage; full-width 48px-tall primary
-CTAs for outdoor/gloved-hand use are kept from the original design too.
+color slots (there's no built-in success/warning concept). Full-width
+48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
+original design.
 
-- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`.
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`. `PrimaryCta` is now a custom gradient pill (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern).
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
-- Noto Sans is referenced by family name (`ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke in tests and would be a real risk in production on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet).
+- Outfit and Inter are referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads both via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` files are bundled as assets (not done yet). This also dropped Noto Sans's Devanagari/regional-script coverage, chosen earlier for the provider base's likely regional-language needs — a real regression to revisit before any localization work starts, not re-litigated when this reference was adopted since the user handed over an explicit font spec.
 
 ## **Deployment**
 

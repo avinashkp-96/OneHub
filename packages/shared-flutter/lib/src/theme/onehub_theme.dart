@@ -5,29 +5,33 @@ import 'onehub_colors.dart';
 /// should use this instead of building their own ThemeData, so a palette or
 /// typography change only has to happen in one place.
 ///
-/// Style reference: a "PetCare" app mockup the user supplied directly —
-/// indigo-on-lavender, pill-shaped buttons, large-radius shadowed (not
-/// outlined) cards, and a light/transparent app bar with dark text rather
-/// than a bold color bar, which would clash with everything else in that
-/// reference being pastel. Palette and shape language only, not an exact
-/// layout clone of that mockup's specific screens.
+/// Style reference: a Figma Make prototype the user supplied directly for
+/// the signup screen — purple accent (#6C63FF exactly), Outfit for
+/// headings, Inter for body copy, pill-shaped gradient CTAs with a shadow,
+/// large-radius shadowed (not outlined) cards, icon-in-field text inputs.
+/// Superseded an earlier "PetCare"-referenced indigo-on-lavender look on
+/// 2026-09-23 — palette/typography/shape only, not a pixel clone of that
+/// prototype's specific screens.
 ///
-/// Noto Sans over Roboto/Inter: this app's provider base spans Indian cities
-/// and regional-language UI is a near-term ask, not a hypothetical, so the
-/// font needs Devanagari/regional-script coverage from day one rather than a
-/// swap later.
+/// Outfit/Inter over Noto Sans: this drops the Devanagari/regional-script
+/// coverage Noto Sans had, which was chosen earlier specifically for the
+/// provider base's likely regional-language needs. That tradeoff wasn't
+/// re-litigated here — the user handed over an explicit font spec — but
+/// it's a real regression to revisit before any localization work starts
+/// (tracked in CLAUDE.md).
 ///
-/// Referenced by family name rather than through the `google_fonts` package:
-/// that package's runtime API fetches the font over the network the first
-/// time it's used and has no offline fallback, which both broke every widget
-/// test touching this theme and would be a real production risk (a customer
-/// on a bad connection shouldn't be blocked from seeing basic UI text). On
-/// web, `apps/*/web/index.html` loads Noto Sans via a Google Fonts
-/// stylesheet `<link>`. On mobile, until the actual .ttf files are bundled
-/// as assets (tracked as a known gap in CLAUDE.md), this falls back to the
-/// platform's default font rather than failing.
+/// Both fonts are referenced by family name rather than through the
+/// `google_fonts` package: that package's runtime API fetches fonts over
+/// the network with no offline fallback, which broke every widget test
+/// touching this theme and would be a real production risk (a customer on
+/// a bad connection shouldn't be blocked from seeing basic UI text). On
+/// web, `apps/*/web/index.html` loads both via a Google Fonts stylesheet
+/// `<link>`. On mobile, until the actual .ttf files are bundled as assets
+/// (tracked as a known gap in CLAUDE.md), this falls back to the platform's
+/// default font rather than failing.
 abstract final class OneHubTheme {
-  static const fontFamily = 'Noto Sans';
+  static const headingFontFamily = 'Outfit';
+  static const bodyFontFamily = 'Inter';
 
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -38,27 +42,23 @@ abstract final class OneHubTheme {
       seedColor: dark ? OneHubColors.primaryDark : OneHubColors.primary,
       brightness: brightness,
     );
+    final textTheme = _textTheme(dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      fontFamily: fontFamily,
+      textTheme: textTheme,
       scaffoldBackgroundColor: dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
-          color: colorScheme.onSurface,
-          fontFamily: fontFamily,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
+        titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
       ),
       // Large radius + a soft shadow instead of an outline — cards read as
-      // "floating" on the lavender background, matching the reference,
-      // rather than as bordered Material containers.
+      // "floating" on the background rather than as bordered Material
+      // containers.
       cardTheme: CardThemeData(
         elevation: 2,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
@@ -99,13 +99,42 @@ abstract final class OneHubTheme {
       ),
     );
   }
+
+  /// Outfit for display/headline/title slots, Inter for body/label — every
+  /// slot is set explicitly rather than relying on ThemeData's fontFamily
+  /// default + textTheme merge behavior, so this is deterministic and
+  /// trivial to unit test.
+  static TextTheme _textTheme(TextTheme base) {
+    TextStyle heading(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: headingFontFamily);
+    TextStyle body(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: bodyFontFamily);
+
+    return base.copyWith(
+      displayLarge: heading(base.displayLarge),
+      displayMedium: heading(base.displayMedium),
+      displaySmall: heading(base.displaySmall),
+      headlineLarge: heading(base.headlineLarge),
+      headlineMedium: heading(base.headlineMedium),
+      headlineSmall: heading(base.headlineSmall),
+      titleLarge: heading(base.titleLarge),
+      titleMedium: heading(base.titleMedium),
+      titleSmall: heading(base.titleSmall),
+      bodyLarge: body(base.bodyLarge),
+      bodyMedium: body(base.bodyMedium),
+      bodySmall: body(base.bodySmall),
+      labelLarge: body(base.labelLarge),
+      labelMedium: body(base.labelMedium),
+      labelSmall: body(base.labelSmall),
+    );
+  }
 }
 
 /// A page-level primary CTA ("Login", "Send Request", "Submit Bid") that
-/// spans the full width available. Buttons used inline (e.g. Accept/Reject
-/// side by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
+/// spans the full width available, rendered as a gradient pill with a soft
+/// shadow, per the reference. Buttons used inline (e.g. Accept/Reject side
+/// by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
 /// forcing full width there fights the Row's layout instead of the other
-/// widget in it.
+/// widget in it, and the gradient look is meant to read as "the one primary
+/// action on this screen," not as decoration on every button.
 class PrimaryCta extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -113,9 +142,45 @@ class PrimaryCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final gradientEnd = dark ? OneHubColors.primaryDarkGradientEnd : OneHubColors.primaryGradientEnd;
+    final disabled = onPressed == null;
+
     return SizedBox(
       width: double.infinity,
-      child: FilledButton(onPressed: onPressed, child: child),
+      height: 48,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          gradient: disabled
+              ? null
+              : LinearGradient(colors: [scheme.primary, gradientEnd], begin: Alignment.centerLeft, end: Alignment.centerRight),
+          color: disabled ? scheme.onSurface.withValues(alpha: 0.12) : null,
+          boxShadow: disabled
+              ? null
+              : [BoxShadow(color: scheme.primary.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+        ),
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(999),
+            onTap: onPressed,
+            child: Center(
+              child: DefaultTextStyle.merge(
+                style: TextStyle(
+                  color: disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                child: IconTheme.merge(
+                  data: IconThemeData(color: disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

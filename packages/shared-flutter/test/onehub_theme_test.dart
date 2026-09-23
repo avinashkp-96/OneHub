@@ -69,4 +69,37 @@ void main() {
     final dark = OneHubTheme.dark();
     expect(dark.colorScheme.primary, isNot(equals(light.colorScheme.primary)));
   });
+
+  test('primary matches the Figma reference exactly', () {
+    expect(OneHubColors.primary, const Color(0xFF6C63FF));
+  });
+
+  test('headings use Outfit and body text uses Inter', () {
+    final textTheme = OneHubTheme.light().textTheme;
+    expect(textTheme.headlineMedium?.fontFamily, OneHubTheme.headingFontFamily);
+    expect(textTheme.titleLarge?.fontFamily, OneHubTheme.headingFontFamily);
+    expect(textTheme.bodyMedium?.fontFamily, OneHubTheme.bodyFontFamily);
+    expect(textTheme.labelLarge?.fontFamily, OneHubTheme.bodyFontFamily);
+  });
+
+  testWidgets('PrimaryCta renders a gradient when enabled and a flat disabled color when not', (tester) async {
+    Future<BoxDecoration> pump(VoidCallback? onPressed) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: OneHubTheme.light(),
+          home: Scaffold(body: PrimaryCta(onPressed: onPressed, child: const Text('Go'))),
+        ),
+      );
+      final box = tester.widget<DecoratedBox>(find.byType(DecoratedBox));
+      return box.decoration as BoxDecoration;
+    }
+
+    final enabled = await pump(() {});
+    expect(enabled.gradient, isNotNull);
+    expect(enabled.boxShadow, isNotNull);
+
+    final disabled = await pump(null);
+    expect(disabled.gradient, isNull);
+    expect(disabled.color, isNotNull);
+  });
 }
