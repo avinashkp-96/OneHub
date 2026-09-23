@@ -43,9 +43,30 @@ void main() {
     expect(innerSizedBox.width, double.infinity);
   });
 
-  test('app bars carry the brand color instead of the generic surface tint', () {
+  test('app bars are transparent with dark text, not a bold color bar', () {
+    // Matches the reference style: a plain light background with a small
+    // centered title, not a solid-color header.
     final theme = OneHubTheme.light();
-    expect(theme.appBarTheme.backgroundColor, theme.colorScheme.primary);
-    expect(theme.appBarTheme.foregroundColor, theme.colorScheme.onPrimary);
+    expect(theme.appBarTheme.backgroundColor, Colors.transparent);
+    expect(theme.appBarTheme.foregroundColor, theme.colorScheme.onSurface);
+    expect(theme.appBarTheme.centerTitle, isTrue);
+  });
+
+  test('buttons are pill-shaped per the reference, not rounded rectangles', () {
+    final theme = OneHubTheme.light();
+    expect(theme.filledButtonTheme.style?.shape?.resolve({}), isA<StadiumBorder>());
+  });
+
+  test('cards use a large radius and no visible border, reading as floating on the background', () {
+    final theme = OneHubTheme.light();
+    final shape = theme.cardTheme.shape as RoundedRectangleBorder?;
+    expect(shape?.borderRadius, BorderRadius.circular(24));
+    expect(shape?.side, BorderSide.none);
+  });
+
+  test('dark-mode seed uses the lighter indigo, not the same seed as light mode', () {
+    final light = OneHubTheme.light();
+    final dark = OneHubTheme.dark();
+    expect(dark.colorScheme.primary, isNot(equals(light.colorScheme.primary)));
   });
 }
