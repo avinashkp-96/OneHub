@@ -46,6 +46,7 @@ tradeoff note this was decided against differentiating by in-app color.
 - Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`.
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties), loaded once in `main.tsx`.
 - These two aren't generated from one shared source — keep them in sync by hand until a token pipeline exists.
+- Noto Sans is referenced by family name (`ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke in tests and would be a real risk in production on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet).
 
 ## **Deployment**
 
@@ -81,5 +82,5 @@ Carried over from the requirements doc, section 9:
 
 - No git remote created yet (Bitbucket `codelynks1` or GitHub `OrgMelethil` — not decided; project currently lives only at `Engineering/Projects/OneHub`, outside the `Personal/`/`Codelynks/` split).
 - No commons libraries installed — `jm-ts-commons` / `jm-flutter-commons` aren't checked out locally. Revisit once they're available; several hand-rolled pieces here (JWT guard, OTP service, API client) are candidates to replace.
-- No runtime installed on the dev machine this was scaffolded on (no Node.js, npm, Flutter, or Python) — nothing here has been installed, built, or run.
+- No Node.js or Postgres on the dev machine this was scaffolded on — the backend and admin-web have still never been installed, built, or run. Flutter *is* now installed (shallow clone of `flutter/flutter` stable, not via an official package manager — none exists for this OS) and the mobile apps have been built, tested, and manually verified running (`flutter run -d web-server`) as of 2026-09-23.
 - Local git hooks and CI were copied from `Engineering/hooks-templates/` and `Engineering/ci-templates/`, which were created as part of this project's kickoff (they didn't exist before). Review them once a second project needs them.

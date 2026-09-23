@@ -11,6 +11,9 @@ coverage/
 **/.flutter-plugins-dependencies
 **/build/
 **/*.g.dart
+# pubspec.lock is committed for apps (reproducible builds) but not for
+# packages/libraries (consumers should resolve their own versions).
+packages/*/pubspec.lock
 
 # IDE
 .vscode/
