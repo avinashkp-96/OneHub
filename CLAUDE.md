@@ -35,17 +35,24 @@ JWT (access token only, no refresh token yet), mobile OTP for signup and passwor
 
 ## **Design**
 
-Material 3, one shared brand: deep teal-blue primary (`#0E7C86`), semantic
-success/warning/danger colors kept separate from the Material color slots
-(there's no built-in success/warning concept), Noto Sans for future
-regional-language coverage, rounded cards, full-width 48px-tall primary CTAs
-for outdoor/gloved-hand use. Same palette across the customer app, provider
-app, and admin panel, deliberately not differentiated by role — see the
-tradeoff note this was decided against differentiating by in-app color.
+**Mobile (customer-app, provider-app)**: indigo-on-lavender, pill-shaped
+buttons, large-radius shadowed (not outlined) cards, a light/transparent app
+bar with dark centered text rather than a bold color bar. This replaced an
+earlier deep-teal Material look on 2026-09-23 — the user supplied a
+reference mockup ("PetCare") directly and asked to match its palette and
+shape language, explicitly scoped to mobile only. `admin-web` was
+deliberately left on the old teal palette; the two are no longer the "one
+shared brand across all three surfaces" this section used to describe, and
+that's an intentional, explicit divergence, not drift — don't "fix" it back
+without asking.
+
+Semantic success/warning/danger colors stay separate from the Material
+color slots (there's no built-in success/warning concept). Noto Sans is
+kept for future regional-language coverage; full-width 48px-tall primary
+CTAs for outdoor/gloved-hand use are kept from the original design too.
 
 - Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`.
-- Admin web: `apps/admin-web/src/theme.css` (CSS custom properties), loaded once in `main.tsx`.
-- These two aren't generated from one shared source — keep them in sync by hand until a token pipeline exists.
+- Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
 - Noto Sans is referenced by family name (`ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke in tests and would be a real risk in production on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet).
 
 ## **Deployment**

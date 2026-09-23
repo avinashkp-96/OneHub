@@ -5,6 +5,13 @@ import 'onehub_colors.dart';
 /// should use this instead of building their own ThemeData, so a palette or
 /// typography change only has to happen in one place.
 ///
+/// Style reference: a "PetCare" app mockup the user supplied directly —
+/// indigo-on-lavender, pill-shaped buttons, large-radius shadowed (not
+/// outlined) cards, and a light/transparent app bar with dark text rather
+/// than a bold color bar, which would clash with everything else in that
+/// reference being pastel. Palette and shape language only, not an exact
+/// layout clone of that mockup's specific screens.
+///
 /// Noto Sans over Roboto/Inter: this app's provider base spans Indian cities
 /// and regional-language UI is a near-term ask, not a hypothetical, so the
 /// font needs Devanagari/regional-script coverage from day one rather than a
@@ -26,8 +33,9 @@ abstract final class OneHubTheme {
   static ThemeData dark() => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
+    final dark = brightness == Brightness.dark;
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: OneHubColors.primary,
+      seedColor: dark ? OneHubColors.primaryDark : OneHubColors.primary,
       brightness: brightness,
     );
 
@@ -35,41 +43,53 @@ abstract final class OneHubTheme {
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: fontFamily,
-      scaffoldBackgroundColor: brightness == Brightness.dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
+      scaffoldBackgroundColor: dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
       appBarTheme: AppBarTheme(
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
+        backgroundColor: Colors.transparent,
+        foregroundColor: colorScheme.onSurface,
         elevation: 0,
-        centerTitle: false,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: colorScheme.outlineVariant),
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          color: colorScheme.onSurface,
+          fontFamily: fontFamily,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      // A fixed 48px minimum height (not full width, by design — see
-      // PrimaryCta below for page-level CTAs) so every button is an easy
-      // outdoor tap target, whether it's a page-level CTA or one of a pair
-      // in a Row.
+      // Large radius + a soft shadow instead of an outline — cards read as
+      // "floating" on the lavender background, matching the reference,
+      // rather than as bordered Material containers.
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
+        margin: EdgeInsets.zero,
+        color: dark ? OneHubColors.inputFillDark : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      // Pill-shaped, per the reference, not just rounded-rectangle. A fixed
+      // 48px minimum height (not full width, by design — see PrimaryCta
+      // below for page-level CTAs) so every button is an easy outdoor/
+      // gloved-hand tap target, whether it's a page-level CTA or one of a
+      // pair in a Row.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: const StadiumBorder(),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: const StadiumBorder(),
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(shape: const StadiumBorder()),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        fillColor: dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
