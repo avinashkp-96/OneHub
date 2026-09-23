@@ -14,11 +14,15 @@ packages/shared-flutter/ Shared Flutter models + API client used by both mobile 
 
 ## Status
 
-Source scaffold only. Nothing has been installed, built, or run yet — this
-machine has no Node.js, Flutter, or Python runtime installed. See `CLAUDE.md`
-for the full list of gaps.
+The Flutter apps (`customer-app`, `provider-app`, `shared-flutter`) are
+installed, tested, and manually verified running as of 2026-09-23 —
+`flutter test` and `flutter analyze` pass clean across all three, and both
+apps render correctly via `flutter run -d web-server`. The backend and
+admin-web are still source-only: this machine has no Node.js or Postgres, so
+neither has ever been installed, built, or run. See `CLAUDE.md` for the full
+list of gaps.
 
-## Getting started (once runtimes are installed)
+## Getting started
 
 ```bash
 # Backend
@@ -64,4 +68,7 @@ free-text search bar from docx 4.1/4.2 (browsing is grid-only for now, no
 search/filter/sort), real file upload for provider signup's profile
 photo/ID proof (currently plain text fields for a document URL), GPS capture
 during provider signup (coverage area is hardcoded to lat/lng 0,0 pending
-location permission handling), and the admin provider-verification queue.
+location permission handling), the admin provider-verification queue, and
+the Noto Sans font as an actual bundled asset on mobile (works on web via a
+stylesheet link; Android/iOS currently fall back to the platform default
+font — see the Design section in `CLAUDE.md`).

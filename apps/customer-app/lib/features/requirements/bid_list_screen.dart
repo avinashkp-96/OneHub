@@ -75,7 +75,7 @@ class _BidListScreenState extends State<BidListScreen> {
                         trailing: bid.confirmed
                             ? Chip(
                                 label: const Text('Confirmed'),
-                                backgroundColor: context.statusSuccess.withOpacity(0.15),
+                                backgroundColor: context.statusSuccess.withValues(alpha: 0.15),
                                 labelStyle: TextStyle(color: context.statusSuccess, fontWeight: FontWeight.bold),
                                 side: BorderSide.none,
                               )

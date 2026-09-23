@@ -50,6 +50,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
         }
       }
       if (confirmedBid == null) return; // shouldn't happen, but nothing sane to open
+      final providerId = confirmedBid.providerId; // captured as final so the closure below can use it
       final alreadyRated = await api.get('/ratings/requirement/${r.id}');
       if (!mounted) return;
       if (alreadyRated != null) {
@@ -57,7 +58,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
         return;
       }
       await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => RatingScreen(requirementId: r.id, providerId: confirmedBid.providerId)),
+        MaterialPageRoute(builder: (_) => RatingScreen(requirementId: r.id, providerId: providerId)),
       );
       _load();
       return;

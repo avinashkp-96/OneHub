@@ -18,7 +18,7 @@ class DashboardScreen extends StatelessWidget {
             child: Row(
               children: [
                 Text('Online', style: TextStyle(color: onPrimary)),
-                Switch(value: true, onChanged: null, activeColor: context.statusSuccess),
+                Switch(value: true, onChanged: null, activeThumbColor: context.statusSuccess),
               ],
             ),
           ),

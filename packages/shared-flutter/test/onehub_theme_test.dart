@@ -34,8 +34,13 @@ void main() {
         ),
       ),
     );
-    final sizedBox = tester.widget<SizedBox>(find.byType(SizedBox).first);
-    expect(sizedBox.width, double.infinity);
+    // find.byType(SizedBox).first would find the test's own 300px wrapper
+    // (higher in the tree) instead of PrimaryCta's internal one — be explicit
+    // about which SizedBox this assertion is actually about.
+    final innerSizedBox = tester.widget<SizedBox>(
+      find.descendant(of: find.byType(PrimaryCta), matching: find.byType(SizedBox)),
+    );
+    expect(innerSizedBox.width, double.infinity);
   });
 
   test('app bars carry the brand color instead of the generic surface tint', () {

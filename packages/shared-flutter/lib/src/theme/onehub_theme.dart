@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'onehub_colors.dart';
 
 /// Shared Material 3 theme for the customer and provider apps. Both apps
@@ -10,7 +9,19 @@ import 'onehub_colors.dart';
 /// and regional-language UI is a near-term ask, not a hypothetical, so the
 /// font needs Devanagari/regional-script coverage from day one rather than a
 /// swap later.
+///
+/// Referenced by family name rather than through the `google_fonts` package:
+/// that package's runtime API fetches the font over the network the first
+/// time it's used and has no offline fallback, which both broke every widget
+/// test touching this theme and would be a real production risk (a customer
+/// on a bad connection shouldn't be blocked from seeing basic UI text). On
+/// web, `apps/*/web/index.html` loads Noto Sans via a Google Fonts
+/// stylesheet `<link>`. On mobile, until the actual .ttf files are bundled
+/// as assets (tracked as a known gap in CLAUDE.md), this falls back to the
+/// platform's default font rather than failing.
 abstract final class OneHubTheme {
+  static const fontFamily = 'Noto Sans';
+
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
 
@@ -19,14 +30,11 @@ abstract final class OneHubTheme {
       seedColor: OneHubColors.primary,
       brightness: brightness,
     );
-    final textTheme = GoogleFonts.notoSansTextTheme(
-      brightness == Brightness.dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
-    );
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      textTheme: textTheme,
+      fontFamily: fontFamily,
       scaffoldBackgroundColor: brightness == Brightness.dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
       appBarTheme: AppBarTheme(
         backgroundColor: colorScheme.primary,
@@ -34,7 +42,7 @@ abstract final class OneHubTheme {
         elevation: 0,
         centerTitle: false,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
@@ -60,7 +68,7 @@ abstract final class OneHubTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: colorScheme.surfaceVariant.withOpacity(0.4),
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),

@@ -36,7 +36,9 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'OTP'), '1234');
     await tester.enterText(find.widgetWithText(TextField, 'New Password'), 'newpass1');
     await tester.enterText(find.widgetWithText(TextField, 'Confirm New Password'), 'newpass1');
-    await tester.tap(find.text('Reset Password'));
+    // find.text('Reset Password') is ambiguous with the AppBar title of the
+    // same text, so target the submit button specifically.
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset Password'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Password reset.'), findsOneWidget);
@@ -55,7 +57,7 @@ void main() {
 
     await tester.enterText(find.widgetWithText(TextField, 'New Password'), 'newpass1');
     await tester.enterText(find.widgetWithText(TextField, 'Confirm New Password'), 'different');
-    await tester.tap(find.text('Reset Password'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Reset Password'));
     await tester.pumpAndSettle();
 
     expect(find.text('New password and confirmation must match.'), findsOneWidget);
