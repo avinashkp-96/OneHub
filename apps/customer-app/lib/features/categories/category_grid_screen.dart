@@ -88,7 +88,9 @@ class _CategoryTile extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        // Matches OneHubTheme's cardTheme radius so the ink ripple doesn't
+        // poke past the card's now much more rounded corners.
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Column(

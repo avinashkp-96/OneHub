@@ -59,7 +59,7 @@ class _SectionPlaceholder extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24), // matches OneHubTheme's cardTheme radius
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Text(label),
@@ -87,7 +87,7 @@ class _ProminentCtaPlaceholder extends StatelessWidget {
       color: colorScheme.primaryContainer,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24), // matches OneHubTheme's cardTheme radius
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Row(

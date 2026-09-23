@@ -8,7 +8,11 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onPrimary = Theme.of(context).colorScheme.onPrimary;
+    // The app bar is transparent with dark text now (OneHubTheme), not a
+    // colored bar — onPrimary (meant for text on a colored background)
+    // would be near-invisible here. onSurface is the app bar's own
+    // foreground color.
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Scaffold(
       appBar: AppBar(
         title: const Text('OneHub Provider'),
@@ -17,7 +21,7 @@ class DashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.only(right: 12),
             child: Row(
               children: [
-                Text('Online', style: TextStyle(color: onPrimary)),
+                Text('Online', style: TextStyle(color: onSurface)),
                 Switch(value: true, onChanged: null, activeThumbColor: context.statusSuccess),
               ],
             ),
@@ -66,6 +70,7 @@ class _SectionPlaceholder extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(24), // matches OneHubTheme's cardTheme radius
         child: Padding(padding: const EdgeInsets.all(20), child: Text(label)),
       ),
     );
