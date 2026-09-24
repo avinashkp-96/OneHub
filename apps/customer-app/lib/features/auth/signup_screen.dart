@@ -5,8 +5,14 @@ import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
 import '../../core/widgets/otp_input.dart';
 
-// docx 2.1 — Customer Sign Up. 3-step flow per the Figma Make reference:
-// signup form -> OTP verification -> success screen.
+// docx 2.1 — Customer Sign Up. 3-step flow per a formal style guide PDF the
+// user supplied directly ("Component library and visual tokens extracted
+// from the signup screen"): signup form -> OTP verification -> success
+// screen. No badges above the heading — an earlier reading of the
+// underlying Figma file's live rendered page showed "NEW ACCOUNT"/"FREE
+// SIGNUP" pills there, but the actual reference screenshot that came with
+// this PDF doesn't have them; the style guide's own "Badges" section is a
+// component-library showcase, not a spec for this screen's layout.
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -147,36 +153,36 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: GlowBackground(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: OneHubTheme.pageMargin, vertical: OneHubTheme.pagePaddingY),
             child: switch (_step) {
               _Step.form => _FormStep(
-                fullName: _fullName,
-                mobile: _mobile,
-                email: _email,
-                password: _password,
-                confirmPassword: _confirmPassword,
-                city: _city,
-                obscurePassword: _obscurePassword,
-                obscureConfirmPassword: _obscureConfirmPassword,
-                onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
-                onToggleConfirmPassword: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                acceptedTerms: _acceptedTerms,
-                onAcceptedTermsChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                onUseGps: _useGpsLocation,
-                error: _error,
-                busy: _busy,
-                onSubmit: _submitForm,
-                onBackToLogin: () => Navigator.of(context).pop(),
-              ),
-            _Step.otp => _OtpStep(
-                mobile: _mobile.text.trim(),
-                onChanged: (code) => _otp = code,
-                resendSecondsLeft: _resendSecondsLeft,
-                onResend: _resendOtp,
-                error: _error,
-                busy: _busy,
-                onVerify: _verifyAndCreateAccount,
-              ),
+                  fullName: _fullName,
+                  mobile: _mobile,
+                  email: _email,
+                  password: _password,
+                  confirmPassword: _confirmPassword,
+                  city: _city,
+                  obscurePassword: _obscurePassword,
+                  obscureConfirmPassword: _obscureConfirmPassword,
+                  onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onToggleConfirmPassword: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  acceptedTerms: _acceptedTerms,
+                  onAcceptedTermsChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                  onUseGps: _useGpsLocation,
+                  error: _error,
+                  busy: _busy,
+                  onSubmit: _submitForm,
+                  onBackToLogin: () => Navigator.of(context).pop(),
+                ),
+              _Step.otp => _OtpStep(
+                  mobile: _mobile.text.trim(),
+                  onChanged: (code) => _otp = code,
+                  resendSecondsLeft: _resendSecondsLeft,
+                  onResend: _resendOtp,
+                  error: _error,
+                  busy: _busy,
+                  onVerify: _verifyAndCreateAccount,
+                ),
               _Step.success => _SuccessStep(onGoToDashboard: () => Navigator.of(context).pushReplacementNamed('/dashboard')),
             },
           ),
@@ -215,55 +221,50 @@ class _FormStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            TintedBadge(label: 'NEW ACCOUNT', color: OneHubColors.primary),
-            SizedBox(width: 8),
-            TintedBadge(label: 'FREE SIGNUP', color: OneHubColors.accentPurple),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Text('Create Account', textAlign: TextAlign.center, style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        // Exact copy from the style guide's type sample, period included.
+        Text('Create Account.', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
-          'Join us and discover nearby providers',
+          'Join and discover nearby service providers',
           textAlign: TextAlign.center,
-          style: textTheme.bodyMedium?.copyWith(color: textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
+          style: OneHubTextStyles.bodyText(textSecondary),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: OneHubTheme.sectionGap),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(OneHubTheme.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error!, style: TextStyle(color: context.statusDanger))),
                 const FieldLabel('FULL NAME', required: true, icon: OneHubIcons.user),
-                const SizedBox(height: 6),
+                const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(controller: fullName, decoration: const InputDecoration(hintText: 'John Doe')),
-                const SizedBox(height: 16),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('MOBILE NUMBER', required: true, icon: OneHubIcons.phone),
-                const SizedBox(height: 6),
+                const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: mobile,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(hintText: '10-digit number'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('EMAIL ID (optional)', icon: OneHubIcons.email),
-                const SizedBox(height: 6),
+                const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: email,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(hintText: 'you@example.com'),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -272,7 +273,7 @@ class _FormStep extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const FieldLabel('PASSWORD', required: true, icon: OneHubIcons.lock),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: OneHubTheme.gapFieldInternals),
                           TextField(
                             controller: password,
                             obscureText: obscurePassword,
@@ -287,13 +288,13 @@ class _FormStep extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: OneHubTheme.gridGap),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           const FieldLabel('CONFIRM', required: true, icon: OneHubIcons.confirmed),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: OneHubTheme.gapFieldInternals),
                           TextField(
                             controller: confirmPassword,
                             obscureText: obscureConfirmPassword,
@@ -310,9 +311,9 @@ class _FormStep extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('CITY / LOCATION', required: true, icon: OneHubIcons.location),
-                const SizedBox(height: 6),
+                const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: city,
                   decoration: InputDecoration(
@@ -321,7 +322,7 @@ class _FormStep extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 8),
                       child: Center(
                         widthFactor: 1,
-                        child: TintedBadge(label: 'GPS', color: OneHubColors.primary, onTap: onUseGps),
+                        child: TintedBadge(label: 'GPS', color: primary, onTap: onUseGps),
                       ),
                     ),
                   ),
@@ -334,18 +335,12 @@ class _FormStep extends StatelessWidget {
                   onChanged: onAcceptedTermsChanged,
                   title: Text.rich(
                     TextSpan(
-                      style: textTheme.bodyMedium,
+                      style: OneHubTextStyles.bodyText(textSecondary),
                       children: [
                         const TextSpan(text: 'I agree to the '),
-                        TextSpan(
-                          text: 'Terms & Conditions',
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
-                        ),
+                        TextSpan(text: 'Terms & Conditions', style: OneHubTextStyles.linkText(primary)),
                         const TextSpan(text: ' and '),
-                        TextSpan(
-                          text: 'Privacy Policy',
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
-                        ),
+                        TextSpan(text: 'Privacy Policy', style: OneHubTextStyles.linkText(primary)),
                       ],
                     ),
                   ),
@@ -356,17 +351,14 @@ class _FormStep extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: OneHubTheme.sectionGap),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Already have an account? ', style: textTheme.bodyMedium),
+            Text('Already have an account? ', style: OneHubTextStyles.linkText(textSecondary)),
             GestureDetector(
               onTap: onBackToLogin,
-              child: Text(
-                'Login',
-                style: textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
-              ),
+              child: Text('Login', style: OneHubTextStyles.linkText(primary)),
             ),
           ],
         ),
@@ -396,32 +388,36 @@ class _OtpStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final textMuted = dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 16),
-        Text('Phone Verification', textAlign: TextAlign.center, style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text('Phone Verification', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
           'Enter the 6-digit code sent to +91 $mobile',
           textAlign: TextAlign.center,
-          style: textTheme.bodyMedium?.copyWith(color: textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
+          style: OneHubTextStyles.bodyText(textSecondary),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: OneHubTheme.sectionGap),
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(OneHubTheme.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error!, style: TextStyle(color: context.statusDanger))),
                 OtpInput(onChanged: onChanged),
-                const SizedBox(height: 20),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 Center(
                   child: resendSecondsLeft > 0
-                      ? Text('Resend code in 0:${resendSecondsLeft.toString().padLeft(2, '0')}', style: textTheme.bodySmall)
-                      : TextButton(onPressed: onResend, child: const Text('Resend code')),
+                      ? Text('Resend code in 0:${resendSecondsLeft.toString().padLeft(2, '0')}', style: OneHubTextStyles.bodyText(textMuted))
+                      : TextButton(onPressed: onResend, child: Text('Resend code', style: OneHubTextStyles.linkText(primary))),
                 ),
                 const SizedBox(height: 12),
                 PrimaryCta(onPressed: busy ? null : onVerify, child: const Text('Verify & Create Account')),
@@ -440,12 +436,14 @@ class _SuccessStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final colorScheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 64),
+        const SizedBox(height: 32),
         Center(
           child: Container(
             width: 88,
@@ -455,14 +453,14 @@ class _SuccessStep extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Account Created!', textAlign: TextAlign.center, style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+        Text('Account Created!', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
           'Your account has been created successfully.',
           textAlign: TextAlign.center,
-          style: textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
+          style: OneHubTextStyles.bodyText(textSecondary),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: OneHubTheme.sectionGap),
         PrimaryCta(onPressed: onGoToDashboard, child: const Text('Go to Dashboard')),
       ],
     );

@@ -5,15 +5,17 @@ import 'onehub_colors.dart';
 /// should use this instead of building their own ThemeData, so a palette or
 /// typography change only has to happen in one place.
 ///
-/// Style reference: a Figma Make prototype the user linked directly, read
-/// at its "Version 5" iteration (2026-09-24) by extracting computed CSS
-/// from the live rendered page, not by eyeballing a screenshot — see
-/// OneHubColors' doc comment for exact values and where each one came from.
-/// Dark-first: Tailwind blue-500/700 gradient CTAs, translucent white-on-dark
-/// cards and inputs with a visible ~10% white border (not the shadow-only,
-/// borderless cards from an earlier reading of an older version of the same
-/// file), 14px rounded-rect buttons (not a full pill), one font throughout
-/// (Plus Jakarta Sans) rather than the previous two-font Outfit/Inter split.
+/// Style reference: a formal style guide PDF the user supplied directly on
+/// 2026-09-25 ("Component library and visual tokens extracted from the
+/// signup screen") — exact hex/rgba color tokens, a 7-entry type scale, and
+/// named spacing/radius tokens, all reproduced in [OneHubColors],
+/// [OneHubTextStyles], and the radius/padding constants below rather than
+/// eyeballed. This superseded a close-but-not-exact reading of the same
+/// underlying Figma file taken the day before via live computed CSS (e.g.
+/// the card radius was read as 16px then; the PDF specifies 20px for "Form
+/// card"). Dark-first: Tailwind blue-500/700 gradient CTAs, translucent
+/// white-on-dark cards/inputs with a visible border, one font throughout
+/// (Plus Jakarta Sans).
 ///
 /// Plus Jakarta Sans is referenced by family name rather than through the
 /// `google_fonts` package: that package's runtime API fetches fonts over
@@ -27,6 +29,23 @@ import 'onehub_colors.dart';
 abstract final class OneHubTheme {
   static const fontFamily = 'Plus Jakarta Sans';
 
+  // Named spacing tokens, straight off the style guide's spacing grid.
+  static const gapIconLabel = 6.0;
+  static const gapFieldInternals = 10.0; // label -> its input
+  static const gridGap = 12.0; // e.g. Password / Confirm columns
+  static const fieldPaddingX = 14.0;
+  static const cardPadding = 16.0;
+  static const sectionGap = 20.0; // between field groups
+  static const pageMargin = 24.0;
+  static const pagePaddingY = 32.0;
+
+  // Named radius tokens.
+  static const radiusGpsBadge = 6.0;
+  static const radiusInputField = 12.0;
+  static const radiusCtaButton = 14.0;
+  static const radiusFormCard = 20.0;
+  static const radiusPillBadge = 99.0;
+
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
 
@@ -36,7 +55,7 @@ abstract final class OneHubTheme {
       seedColor: dark ? OneHubColors.primaryDark : OneHubColors.primary,
       brightness: brightness,
     );
-    final textTheme = _textTheme(dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme);
+    final textTheme = _textTheme(dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme, dark);
     final cardBorder = dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return ThemeData(
@@ -53,47 +72,48 @@ abstract final class OneHubTheme {
       ),
       // Translucent surface + a visible subtle border, not a shadow-only
       // card — reads as "a panel on the dark background" rather than as a
-      // Material-elevation card.
+      // Material-elevation card. Radius: style guide's "Form card" = 20px.
       cardTheme: CardThemeData(
         elevation: 0,
         margin: EdgeInsets.zero,
         color: dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(radiusFormCard),
           side: BorderSide(color: cardBorder),
         ),
       ),
-      // 14px rounded rectangles, not a full pill — a real shape change from
-      // the previous StadiumBorder reading. A fixed 48px minimum height
-      // (not full width, by design — see PrimaryCta below for page-level
-      // CTAs) so every button is an easy outdoor/gloved-hand tap target.
+      // Style guide's "CTA button" radius = 14px, not a full pill. A fixed
+      // 48px minimum height (not full width, by design — see PrimaryCta
+      // below for page-level CTAs) so every button is an easy outdoor/
+      // gloved-hand tap target.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+        style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton))),
       ),
+      // Style guide's "Input fields" radius = 12px, "Padding X (field)" = 14px.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInputField),
           borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(radiusInputField),
           borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: fieldPaddingX, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surface,
@@ -103,11 +123,14 @@ abstract final class OneHubTheme {
     );
   }
 
-  /// Plus Jakarta Sans for every TextTheme slot — one font throughout,
-  /// replacing the earlier Outfit/Inter split. Still set explicitly per
-  /// slot rather than via ThemeData's fontFamily-default-plus-merge
-  /// behavior, so it stays deterministic and trivial to unit test.
-  static TextTheme _textTheme(TextTheme base) {
+  /// Plus Jakarta Sans for every TextTheme slot — one font throughout. Still
+  /// set explicitly per slot rather than via ThemeData's fontFamily-default-
+  /// plus-merge behavior, so it stays deterministic and trivial to unit
+  /// test. `titleMedium` is also given the style guide's "Medium/14px"
+  /// input-text size/weight here, since that's the Material slot
+  /// `TextField` reads its text style from by default — one change here
+  /// fixes every input's text app-wide instead of setting it per field.
+  static TextTheme _textTheme(TextTheme base, bool dark) {
     TextStyle apply(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: fontFamily);
     return base.copyWith(
       displayLarge: apply(base.displayLarge),
@@ -117,7 +140,12 @@ abstract final class OneHubTheme {
       headlineMedium: apply(base.headlineMedium),
       headlineSmall: apply(base.headlineSmall),
       titleLarge: apply(base.titleLarge),
-      titleMedium: apply(base.titleMedium),
+      titleMedium: TextStyle(
+        fontFamily: fontFamily,
+        fontSize: 14,
+        fontWeight: FontWeight.w500, // "Medium/14px" — input text
+        color: dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight,
+      ),
       titleSmall: apply(base.titleSmall),
       bodyLarge: apply(base.bodyLarge),
       bodyMedium: apply(base.bodyMedium),
@@ -129,13 +157,39 @@ abstract final class OneHubTheme {
   }
 }
 
+/// The style guide's 7 named type styles, as static methods (need a text
+/// color parameter since dark/light aren't otherwise distinguishable from a
+/// plain TextStyle). Prefer these over generic `Theme.of(context).textTheme`
+/// slots on the auth screens this style guide actually documents — the
+/// Material default type scale doesn't map 1:1 onto this bespoke one.
+abstract final class OneHubTextStyles {
+  static TextStyle pageHeading(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 36, fontWeight: FontWeight.w800, color: color);
+
+  static TextStyle buttonLabel(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 15, fontWeight: FontWeight.w700, color: color);
+
+  static TextStyle linkText(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 13, fontWeight: FontWeight.w600, color: color);
+
+  static TextStyle bodyText(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 14, fontWeight: FontWeight.w400, color: color);
+
+  static TextStyle badgeLabel(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: color);
+
+  static TextStyle fieldLabel(Color color) =>
+      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: color);
+}
+
 /// A page-level primary CTA ("Login", "Send Request", "Submit Bid") that
 /// spans the full width available, rendered as a gradient rounded-rect with
-/// a soft shadow, per the reference. Buttons used inline (e.g. Accept/Reject
-/// side by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
-/// forcing full width there fights the Row's layout instead of the other
-/// widget in it, and the gradient look is meant to read as "the one primary
-/// action on this screen," not as decoration on every button.
+/// a soft shadow, per the style guide ("Bold/15px" button label, 14px
+/// radius). Buttons used inline (e.g. Accept/Reject side by side in a Row)
+/// should stay plain `FilledButton`/`OutlinedButton` — forcing full width
+/// there fights the Row's layout instead of the other widget in it, and the
+/// gradient look is meant to read as "the one primary action on this
+/// screen," not as decoration on every button.
 class PrimaryCta extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -153,7 +207,7 @@ class PrimaryCta extends StatelessWidget {
       height: 48,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(OneHubTheme.radiusCtaButton),
           gradient: disabled
               ? null
               : LinearGradient(colors: [scheme.primary, gradientEnd], begin: Alignment.topLeft, end: Alignment.bottomRight),
@@ -165,14 +219,11 @@ class PrimaryCta extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(OneHubTheme.radiusCtaButton),
             onTap: onPressed,
             child: Center(
               child: DefaultTextStyle.merge(
-                style: TextStyle(
-                  color: disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: OneHubTextStyles.buttonLabel(disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary),
                 child: IconTheme.merge(
                   data: IconThemeData(color: disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary),
                   child: child,
@@ -186,31 +237,32 @@ class PrimaryCta extends StatelessWidget {
   }
 }
 
-/// A small tinted rounded-rect badge ("NEW ACCOUNT", "GPS"), per the
-/// reference — 15% tinted background, ~22% tinted border, tinted text,
-/// small radius (6px, not a pill).
+/// A small tinted badge, per the style guide's two documented variants:
+/// the default 6px-radius rectangle ("GPS badge") and the full-pill 99px
+/// variant ("Pill badges" — e.g. a "New Account"/"Free Signup" tag), picked
+/// via [pill]. 15% tinted background, ~22% tinted border, tinted text —
+/// "Bold/11px, Label caps" per the type scale.
 class TintedBadge extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback? onTap;
-  const TintedBadge({super.key, required this.label, required this.color, this.onTap});
+  final bool pill;
+  const TintedBadge({super.key, required this.label, required this.color, this.onTap, this.pill = false});
 
   @override
   Widget build(BuildContext context) {
+    final radius = pill ? OneHubTheme.radiusPillBadge : OneHubTheme.radiusGpsBadge;
     final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: color.withValues(alpha: 0.22)),
       ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.3),
-      ),
+      child: Text(label, style: OneHubTextStyles.badgeLabel(color)),
     );
     if (onTap == null) return content;
-    return InkWell(borderRadius: BorderRadius.circular(6), onTap: onTap, child: content);
+    return InkWell(borderRadius: BorderRadius.circular(radius), onTap: onTap, child: content);
   }
 }
 
