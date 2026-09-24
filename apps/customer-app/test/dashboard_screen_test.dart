@@ -83,4 +83,38 @@ void main() {
         .where((icon) => icon.color == OneHubColors.surfaceDark);
     expect(chevrons, hasLength(2));
   });
+
+  testWidgets('the hero CTA is full width, bordered, and centers its label',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
+    );
+
+    final ctaContainer = tester.widget<Container>(
+      find
+          .ancestor(
+              of: find.text('Post requirement'),
+              matching: find.byType(Container))
+          .first,
+    );
+    expect(ctaContainer.constraints?.maxWidth, double.infinity,
+        reason:
+            'the button should stretch to the card width, not just wrap its content');
+    final decoration = ctaContainer.decoration as BoxDecoration;
+    expect(decoration.border, isNotNull,
+        reason: 'the button needs a visible border per the reference');
+
+    // The label sits inside an Expanded + Center, not directly next to the
+    // icon circle, so it reads as centered in the button's remaining space.
+    expect(
+      find.ancestor(
+          of: find.text('Post requirement'), matching: find.byType(Center)),
+      findsWidgets,
+    );
+  });
 }
