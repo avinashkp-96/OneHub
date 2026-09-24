@@ -119,25 +119,40 @@ dashboard, etc.) haven't been individually rebuilt against this reference.
 Customer login and signup are done as of 2026-09-25, including the full
 3-step signup flow (form → 6-box OTP → success) and the icon-next-to-label
 field pattern (icons sit beside the field's label, not inside the field
-itself). The customer Dashboard (home screen) was redesigned 2026-09-24: a
-greeting header + real search field replace the old plain `AppBar`, the
-four placeholder sections became `_FeatureRow` cards (tinted icon badge +
-title + subtitle, still placeholder content — no new reference for actual
-copy/data), and the "Post a Requirement" CTA now uses `PrimaryCta` instead
-of a colored `Card`. Its old 5-item Material `NavigationBar` (Home, Search,
-My Requests, Notifications, Profile — only My Requests wired) was replaced
-by a new `CurvedNavBar` (`packages/shared-flutter/lib/src/theme/
-curved_nav_bar.dart`): a floating, icon-only, 3-item bar (Home, Requests,
-Profile — Profile still unwired) with a wavy top edge, painted via a
-`CustomPainter` (`_WaveNavPainter`) rather than approximated with existing
-widgets, per an explicit reference screenshot. `OneHubColors.navBarFillDark`/
-`.navBarFillLight` are new solid (not translucent) fills specifically for
-this bar, since it floats over arbitrary scrolling content rather than a
-fixed backdrop. Other customer screens (category browsing, requirements,
-ratings) still use earlier layout conventions, just with the current
-colors/fonts/shapes/icons applied automatically since those come from the
-shared theme. If provider screens or the rest of customer screens are
-wanted in this style too, that's a separate ask.
+itself). The customer Dashboard (home screen) went through two redesign
+passes on 2026-09-24. First: a greeting header + real search field replaced
+the old plain `AppBar`, placeholder sections gained icon badges, and the
+old 5-item Material `NavigationBar` (Home, Search, My Requests,
+Notifications, Profile) was replaced by `CurvedNavBar`
+(`packages/shared-flutter/lib/src/theme/curved_nav_bar.dart`): a floating,
+icon-only, 3-item bar (Home, Requests, Profile — Profile still unwired)
+with a wavy top edge painted via a `CustomPainter` (`_WaveNavPainter`), per
+a reference screenshot. `OneHubColors.navBarFillDark`/`.navBarFillLight`
+are solid (not translucent) fills specifically for this bar, since it
+floats over arbitrary scrolling content rather than a fixed backdrop.
+
+Second: the user supplied a full HTML/CSS mockup ("OneHub home screen.html")
+with its own distinct palette, fonts (Bricolage Grotesque/DM Sans), and
+custom SVG icons. Explicitly scoped down before implementing: match its
+**structure and alignment only** — location chip + bell header, headline,
+search bar with a trailing filter button, a hero gradient CTA card, a
+Services quick-access grid, an Active Requests list with a 4-step status
+tracker, a Nearby Providers teaser, and a promo banner — while keeping the
+current `OneHubColors`/`OneHubTheme`/`OneHubIcons` design system entirely
+unchanged (not the mockup's own palette/fonts/icons). `CurvedNavBar` from
+the first pass was kept as-is (not swapped for the mockup's flat 5-item
+nav). Services and Active Requests are wired to the real `/categories` and
+`/requirements/mine` endpoints this app already calls elsewhere, rather
+than the mockup's example content (specific fabricated names/ratings with
+no backing data). Nearby Providers has no matching generic endpoint
+(`providers.controller.ts` only supports `GET /providers?subServiceId=...`,
+scoped to one sub-service) — kept as an honest prompt into category
+browsing instead of inventing example providers. Other customer screens
+(category browsing, requirements, ratings) still use earlier layout
+conventions, just with the current colors/fonts/shapes/icons applied
+automatically since those come from the shared theme. If provider screens
+or the rest of customer screens are wanted in this style too, that's a
+separate ask.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width

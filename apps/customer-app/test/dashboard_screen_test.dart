@@ -6,6 +6,16 @@ import 'package:onehub_shared/onehub_shared.dart';
 void main() {
   testWidgets('section cards clip their ink ripple to the theme card radius',
       (tester) async {
+    // The dashboard is much taller than the default test viewport now (header,
+    // search, hero, services, requests, providers, promo) — without a tall
+    // enough surface, ListView's lazy sliver never builds the below-the-fold
+    // cards (e.g. the Nearby Providers prompt), and the InkWell search below
+    // silently comes back empty instead of actually failing on a bad radius.
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
     );
