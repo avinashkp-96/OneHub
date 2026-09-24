@@ -61,12 +61,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .push(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
 
     return Scaffold(
-      // Lets the ListView's scrolled content actually run underneath
-      // CurvedNavBar instead of stopping short of it — without this, the
-      // area behind the bar's translucent/wavy gaps is just the flat
-      // Scaffold background (a solid dark box), not real content for the
-      // bar's BackdropFilter to blur.
-      extendBody: true,
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -114,8 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       bottomNavigationBar: CurvedNavBar(
         items: const [
-          CurvedNavItem(icon: OneHubIcons.category, label: 'Home'),
+          CurvedNavItem(icon: OneHubIcons.home, label: 'Home'),
           CurvedNavItem(icon: OneHubIcons.documentList, label: 'Requests'),
+          CurvedNavItem(icon: OneHubIcons.category, label: 'Category'),
           CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
         ],
         selectedIndex: 0,
@@ -123,6 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // NavigationBar's convention of leaving unbuilt destinations unwired.
         onSelected: (index) {
           if (index == 1) openMyRequests();
+          if (index == 2) openCategories();
         },
       ),
     );

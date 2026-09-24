@@ -67,20 +67,20 @@ void main() {
   });
 
   testWidgets(
-      'the Scaffold extends its body behind CurvedNavBar so the blur has real content to blur',
+      'the bottom nav has 4 items (Home, Requests, Category, Profile) with Home selected',
       (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
     );
 
-    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
-    expect(
-      scaffold.extendBody,
-      isTrue,
-      reason:
-          'without this, Scaffold reserves body height above the bottom nav bar, so '
-          "there's nothing but the flat scaffoldBackgroundColor behind CurvedNavBar's "
-          'translucent/wavy gaps for its BackdropFilter to actually blur',
-    );
+    final navBar = tester.widget<CurvedNavBar>(find.byType(CurvedNavBar));
+    expect(navBar.items.map((i) => i.label),
+        ['Home', 'Requests', 'Category', 'Profile']);
+    expect(navBar.selectedIndex, 0);
   });
 }
