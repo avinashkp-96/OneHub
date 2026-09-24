@@ -55,20 +55,24 @@ abstract final class OneHubTheme {
       seedColor: dark ? OneHubColors.primaryDark : OneHubColors.primary,
       brightness: brightness,
     );
-    final textTheme = _textTheme(dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme, dark);
-    final cardBorder = dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
+    final textTheme = _textTheme(
+        dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme, dark);
+    final cardBorder =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
+      scaffoldBackgroundColor:
+          dark ? OneHubColors.surfaceDark : OneHubColors.surfaceLight,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
+        titleTextStyle: textTheme.titleLarge
+            ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
       ),
       // Translucent surface + a visible subtle border, not a shadow-only
       // card — reads as "a panel on the dark background" rather than as a
@@ -89,31 +93,43 @@ abstract final class OneHubTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusCtaButton)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(radiusCtaButton)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusCtaButton))),
+        style: TextButton.styleFrom(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radiusCtaButton))),
       ),
       // Style guide's "Input fields" radius = 12px, "Padding X (field)" = 14px.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
+        fillColor:
+            dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInputField),
-          borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
+          borderSide: BorderSide(
+              color: dark
+                  ? OneHubColors.inputBorderDark
+                  : OneHubColors.inputBorderLight),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusInputField),
-          borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
+          borderSide: BorderSide(
+              color: dark
+                  ? OneHubColors.inputBorderDark
+                  : OneHubColors.inputBorderLight),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: fieldPaddingX, vertical: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: fieldPaddingX, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colorScheme.surface,
@@ -131,7 +147,8 @@ abstract final class OneHubTheme {
   /// `TextField` reads its text style from by default — one change here
   /// fixes every input's text app-wide instead of setting it per field.
   static TextTheme _textTheme(TextTheme base, bool dark) {
-    TextStyle apply(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: fontFamily);
+    TextStyle apply(TextStyle? style) =>
+        (style ?? const TextStyle()).copyWith(fontFamily: fontFamily);
     return base.copyWith(
       displayLarge: apply(base.displayLarge),
       displayMedium: apply(base.displayMedium),
@@ -144,7 +161,8 @@ abstract final class OneHubTheme {
         fontFamily: fontFamily,
         fontSize: 14,
         fontWeight: FontWeight.w500, // "Medium/14px" — input text
-        color: dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight,
+        color:
+            dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight,
       ),
       titleSmall: apply(base.titleSmall),
       bodyLarge: apply(base.bodyLarge),
@@ -163,23 +181,43 @@ abstract final class OneHubTheme {
 /// slots on the auth screens this style guide actually documents — the
 /// Material default type scale doesn't map 1:1 onto this bespoke one.
 abstract final class OneHubTextStyles {
-  static TextStyle pageHeading(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 36, fontWeight: FontWeight.w800, color: color);
+  static TextStyle pageHeading(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 36,
+      fontWeight: FontWeight.w800,
+      color: color);
 
-  static TextStyle buttonLabel(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 15, fontWeight: FontWeight.w700, color: color);
+  static TextStyle buttonLabel(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 15,
+      fontWeight: FontWeight.w700,
+      color: color);
 
-  static TextStyle linkText(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 13, fontWeight: FontWeight.w600, color: color);
+  static TextStyle linkText(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: color);
 
-  static TextStyle bodyText(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 14, fontWeight: FontWeight.w400, color: color);
+  static TextStyle bodyText(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 14,
+      fontWeight: FontWeight.w400,
+      color: color);
 
-  static TextStyle badgeLabel(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: color);
+  static TextStyle badgeLabel(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.3,
+      color: color);
 
-  static TextStyle fieldLabel(Color color) =>
-      TextStyle(fontFamily: OneHubTheme.fontFamily, fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.4, color: color);
+  static TextStyle fieldLabel(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamily,
+      fontSize: 10.5,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.4,
+      color: color);
 }
 
 /// A page-level primary CTA ("Login", "Send Request", "Submit Bid") that
@@ -190,6 +228,13 @@ abstract final class OneHubTextStyles {
 /// there fights the Row's layout instead of the other widget in it, and the
 /// gradient look is meant to read as "the one primary action on this
 /// screen," not as decoration on every button.
+///
+/// Gradient and label color are the exact literal tokens
+/// (`OneHubColors.primary` -> `.primaryGradientEnd`, white text), not
+/// `ColorScheme.primary`/`.onPrimary` — `ColorScheme.fromSeed` derives a
+/// tonal-palette color from the seed, which isn't guaranteed to equal the
+/// seed's own hex value, and this button's exact color is explicitly
+/// specified rather than theme-derived.
 class PrimaryCta extends StatelessWidget {
   final VoidCallback? onPressed;
   final Widget child;
@@ -198,8 +243,6 @@ class PrimaryCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final gradientEnd = dark ? OneHubColors.primaryDarkGradientEnd : OneHubColors.primaryGradientEnd;
     final disabled = onPressed == null;
 
     return SizedBox(
@@ -210,11 +253,23 @@ class PrimaryCta extends StatelessWidget {
           borderRadius: BorderRadius.circular(OneHubTheme.radiusCtaButton),
           gradient: disabled
               ? null
-              : LinearGradient(colors: [scheme.primary, gradientEnd], begin: Alignment.topLeft, end: Alignment.bottomRight),
+              : const LinearGradient(
+                  colors: [
+                    OneHubColors.primary,
+                    OneHubColors.primaryGradientEnd
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
           color: disabled ? scheme.onSurface.withValues(alpha: 0.12) : null,
           boxShadow: disabled
               ? null
-              : [BoxShadow(color: scheme.primary.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
+              : [
+                  BoxShadow(
+                      color: OneHubColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6))
+                ],
         ),
         child: Material(
           type: MaterialType.transparency,
@@ -223,9 +278,14 @@ class PrimaryCta extends StatelessWidget {
             onTap: onPressed,
             child: Center(
               child: DefaultTextStyle.merge(
-                style: OneHubTextStyles.buttonLabel(disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary),
+                style: OneHubTextStyles.buttonLabel(disabled
+                    ? scheme.onSurface.withValues(alpha: 0.38)
+                    : Colors.white),
                 child: IconTheme.merge(
-                  data: IconThemeData(color: disabled ? scheme.onSurface.withValues(alpha: 0.38) : scheme.onPrimary),
+                  data: IconThemeData(
+                      color: disabled
+                          ? scheme.onSurface.withValues(alpha: 0.38)
+                          : Colors.white),
                   child: child,
                 ),
               ),
@@ -247,11 +307,17 @@ class TintedBadge extends StatelessWidget {
   final Color color;
   final VoidCallback? onTap;
   final bool pill;
-  const TintedBadge({super.key, required this.label, required this.color, this.onTap, this.pill = false});
+  const TintedBadge(
+      {super.key,
+      required this.label,
+      required this.color,
+      this.onTap,
+      this.pill = false});
 
   @override
   Widget build(BuildContext context) {
-    final radius = pill ? OneHubTheme.radiusPillBadge : OneHubTheme.radiusGpsBadge;
+    final radius =
+        pill ? OneHubTheme.radiusPillBadge : OneHubTheme.radiusGpsBadge;
     final content = Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -262,7 +328,10 @@ class TintedBadge extends StatelessWidget {
       child: Text(label, style: OneHubTextStyles.badgeLabel(color)),
     );
     if (onTap == null) return content;
-    return InkWell(borderRadius: BorderRadius.circular(radius), onTap: onTap, child: content);
+    return InkWell(
+        borderRadius: BorderRadius.circular(radius),
+        onTap: onTap,
+        child: content);
   }
 }
 

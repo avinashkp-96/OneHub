@@ -30,7 +30,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
-  final _city = TextEditingController();
 
   _Step _step = _Step.form;
   String _otp = '';
@@ -51,10 +50,12 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String? _validateForm() {
     if (_fullName.text.trim().isEmpty) return 'Full name is required.';
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) return 'Enter a valid 10-digit mobile number.';
-    if (_password.text.length < 6) return 'Password must be at least 6 characters.';
-    if (_password.text != _confirmPassword.text) return 'Password and confirmation must match.';
-    if (_city.text.trim().isEmpty) return 'City / Location is required.';
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim()))
+      return 'Enter a valid 10-digit mobile number.';
+    if (_password.text.length < 6)
+      return 'Password must be at least 6 characters.';
+    if (_password.text != _confirmPassword.text)
+      return 'Password and confirmation must match.';
     if (!_acceptedTerms) return 'Accept the Terms & Conditions to continue.';
     return null;
   }
@@ -120,7 +121,9 @@ class _SignupScreenState extends State<SignupScreen> {
         if (_email.text.trim().isNotEmpty) 'email': _email.text.trim(),
         'password': _password.text,
         'confirmPassword': _confirmPassword.text,
-        'city': _city.text.trim(),
+        // City field removed from this screen for now (will be added back
+        // later); the backend DTO still requires a string, so send empty.
+        'city': '',
       });
       _resendTimer?.cancel();
       setState(() => _step = _Step.success);
@@ -129,14 +132,6 @@ class _SignupScreenState extends State<SignupScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
-  }
-
-  void _useGpsLocation() {
-    // TODO: wire up real device/browser geolocation. Not implemented yet —
-    // this is a UI-only placeholder so the flow isn't blocked on it.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Location detection is not set up yet — enter your city manually.')),
-    );
   }
 
   @override
@@ -151,41 +146,44 @@ class _SignupScreenState extends State<SignupScreen> {
             )
           : null,
       body: SafeArea(
-        child: GlowBackground(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: OneHubTheme.pageMargin, vertical: OneHubTheme.pagePaddingY),
-            child: switch (_step) {
-              _Step.form => _FormStep(
-                  fullName: _fullName,
-                  mobile: _mobile,
-                  email: _email,
-                  password: _password,
-                  confirmPassword: _confirmPassword,
-                  city: _city,
-                  obscurePassword: _obscurePassword,
-                  obscureConfirmPassword: _obscureConfirmPassword,
-                  onTogglePassword: () => setState(() => _obscurePassword = !_obscurePassword),
-                  onToggleConfirmPassword: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
-                  acceptedTerms: _acceptedTerms,
-                  onAcceptedTermsChanged: (v) => setState(() => _acceptedTerms = v ?? false),
-                  onUseGps: _useGpsLocation,
-                  error: _error,
-                  busy: _busy,
-                  onSubmit: _submitForm,
-                  onBackToLogin: () => Navigator.of(context).pop(),
-                ),
-              _Step.otp => _OtpStep(
-                  mobile: _mobile.text.trim(),
-                  onChanged: (code) => _otp = code,
-                  resendSecondsLeft: _resendSecondsLeft,
-                  onResend: _resendOtp,
-                  error: _error,
-                  busy: _busy,
-                  onVerify: _verifyAndCreateAccount,
-                ),
-              _Step.success => _SuccessStep(onGoToDashboard: () => Navigator.of(context).pushReplacementNamed('/dashboard')),
-            },
-          ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+              horizontal: OneHubTheme.pageMargin,
+              vertical: OneHubTheme.pagePaddingY),
+          child: switch (_step) {
+            _Step.form => _FormStep(
+                fullName: _fullName,
+                mobile: _mobile,
+                email: _email,
+                password: _password,
+                confirmPassword: _confirmPassword,
+                obscurePassword: _obscurePassword,
+                obscureConfirmPassword: _obscureConfirmPassword,
+                onTogglePassword: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+                onToggleConfirmPassword: () => setState(
+                    () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                acceptedTerms: _acceptedTerms,
+                onAcceptedTermsChanged: (v) =>
+                    setState(() => _acceptedTerms = v ?? false),
+                error: _error,
+                busy: _busy,
+                onSubmit: _submitForm,
+                onBackToLogin: () => Navigator.of(context).pop(),
+              ),
+            _Step.otp => _OtpStep(
+                mobile: _mobile.text.trim(),
+                onChanged: (code) => _otp = code,
+                resendSecondsLeft: _resendSecondsLeft,
+                onResend: _resendOtp,
+                error: _error,
+                busy: _busy,
+                onVerify: _verifyAndCreateAccount,
+              ),
+            _Step.success => _SuccessStep(
+                onGoToDashboard: () =>
+                    Navigator.of(context).pushReplacementNamed('/dashboard')),
+          },
         ),
       ),
     );
@@ -193,9 +191,16 @@ class _SignupScreenState extends State<SignupScreen> {
 }
 
 class _FormStep extends StatelessWidget {
-  final TextEditingController fullName, mobile, email, password, confirmPassword, city;
+  final TextEditingController fullName,
+      mobile,
+      email,
+      password,
+      confirmPassword;
   final bool obscurePassword, obscureConfirmPassword, acceptedTerms, busy;
-  final VoidCallback onTogglePassword, onToggleConfirmPassword, onUseGps, onSubmit, onBackToLogin;
+  final VoidCallback onTogglePassword,
+      onToggleConfirmPassword,
+      onSubmit,
+      onBackToLogin;
   final ValueChanged<bool?> onAcceptedTermsChanged;
   final String? error;
 
@@ -205,14 +210,12 @@ class _FormStep extends StatelessWidget {
     required this.email,
     required this.password,
     required this.confirmPassword,
-    required this.city,
     required this.obscurePassword,
     required this.obscureConfirmPassword,
     required this.onTogglePassword,
     required this.onToggleConfirmPassword,
     required this.acceptedTerms,
     required this.onAcceptedTermsChanged,
-    required this.onUseGps,
     required this.error,
     required this.busy,
     required this.onSubmit,
@@ -222,15 +225,19 @@ class _FormStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Exact copy from the style guide's type sample, period included.
-        Text('Create Account.', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
+        Text('Create Account.',
+            textAlign: TextAlign.center,
+            style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
           'Join and discover nearby service providers',
@@ -238,92 +245,74 @@ class _FormStep extends StatelessWidget {
           style: OneHubTextStyles.bodyText(textSecondary),
         ),
         const SizedBox(height: OneHubTheme.sectionGap),
-        Card(
+        GlowCard(
           child: Padding(
             padding: const EdgeInsets.all(OneHubTheme.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error!, style: TextStyle(color: context.statusDanger))),
-                const FieldLabel('FULL NAME', required: true, icon: OneHubIcons.user),
+                if (error != null)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(error!,
+                          style: TextStyle(color: context.statusDanger))),
+                const FieldLabel('FULL NAME',
+                    required: true, icon: OneHubIcons.user),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
-                TextField(controller: fullName, decoration: const InputDecoration(hintText: 'John Doe')),
+                TextField(
+                    controller: fullName,
+                    decoration: const InputDecoration(hintText: 'John Doe')),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                const FieldLabel('MOBILE NUMBER', required: true, icon: OneHubIcons.phone),
+                const FieldLabel('MOBILE NUMBER',
+                    required: true, icon: OneHubIcons.phone),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: mobile,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: '10-digit number'),
+                  decoration:
+                      const InputDecoration(hintText: '10-digit number'),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                const FieldLabel('EMAIL ID (optional)', icon: OneHubIcons.email),
+                const FieldLabel('EMAIL ID (optional)',
+                    icon: OneHubIcons.email),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: 'you@example.com'),
+                  decoration:
+                      const InputDecoration(hintText: 'you@example.com'),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const FieldLabel('PASSWORD', required: true, icon: OneHubIcons.lock),
-                          const SizedBox(height: OneHubTheme.gapFieldInternals),
-                          TextField(
-                            controller: password,
-                            obscureText: obscurePassword,
-                            decoration: InputDecoration(
-                              hintText: 'Min. 6 chars',
-                              suffixIcon: IconButton(
-                                icon: Icon(obscurePassword ? OneHubIcons.hide : OneHubIcons.show),
-                                onPressed: onTogglePassword,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: OneHubTheme.gridGap),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const FieldLabel('CONFIRM', required: true, icon: OneHubIcons.confirmed),
-                          const SizedBox(height: OneHubTheme.gapFieldInternals),
-                          TextField(
-                            controller: confirmPassword,
-                            obscureText: obscureConfirmPassword,
-                            decoration: InputDecoration(
-                              hintText: 'Re-enter',
-                              suffixIcon: IconButton(
-                                icon: Icon(obscureConfirmPassword ? OneHubIcons.hide : OneHubIcons.show),
-                                onPressed: onToggleConfirmPassword,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: OneHubTheme.sectionGap),
-                const FieldLabel('CITY / LOCATION', required: true, icon: OneHubIcons.location),
+                const FieldLabel('PASSWORD',
+                    required: true, icon: OneHubIcons.lock),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
-                  controller: city,
+                  controller: password,
+                  obscureText: obscurePassword,
                   decoration: InputDecoration(
-                    hintText: 'e.g. Mumbai',
-                    suffixIcon: Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Center(
-                        widthFactor: 1,
-                        child: TintedBadge(label: 'GPS', color: primary, onTap: onUseGps),
-                      ),
+                    hintText: 'Min. 6 chars',
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePassword
+                          ? OneHubIcons.hide
+                          : OneHubIcons.show),
+                      onPressed: onTogglePassword,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: OneHubTheme.sectionGap),
+                const FieldLabel('CONFIRM PASSWORD',
+                    required: true, icon: OneHubIcons.confirmed),
+                const SizedBox(height: OneHubTheme.gapFieldInternals),
+                TextField(
+                  controller: confirmPassword,
+                  obscureText: obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    hintText: 'Re-enter',
+                    suffixIcon: IconButton(
+                      icon: Icon(obscureConfirmPassword
+                          ? OneHubIcons.hide
+                          : OneHubIcons.show),
+                      onPressed: onToggleConfirmPassword,
                     ),
                   ),
                 ),
@@ -338,15 +327,21 @@ class _FormStep extends StatelessWidget {
                       style: OneHubTextStyles.bodyText(textSecondary),
                       children: [
                         const TextSpan(text: 'I agree to the '),
-                        TextSpan(text: 'Terms & Conditions', style: OneHubTextStyles.linkText(primary)),
+                        TextSpan(
+                            text: 'Terms & Conditions',
+                            style: OneHubTextStyles.linkText(primary)),
                         const TextSpan(text: ' and '),
-                        TextSpan(text: 'Privacy Policy', style: OneHubTextStyles.linkText(primary)),
+                        TextSpan(
+                            text: 'Privacy Policy',
+                            style: OneHubTextStyles.linkText(primary)),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 8),
-                PrimaryCta(onPressed: busy ? null : onSubmit, child: const Text('Create Account')),
+                PrimaryCta(
+                    onPressed: busy ? null : onSubmit,
+                    child: const Text('Create Account')),
               ],
             ),
           ),
@@ -355,7 +350,8 @@ class _FormStep extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Already have an account? ', style: OneHubTextStyles.linkText(textSecondary)),
+            Text('Already have an account? ',
+                style: OneHubTextStyles.linkText(textSecondary)),
             GestureDetector(
               onTap: onBackToLogin,
               child: Text('Login', style: OneHubTextStyles.linkText(primary)),
@@ -389,15 +385,20 @@ class _OtpStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
-    final textMuted = dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final textMuted =
+        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Phone Verification', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
+        Text('Phone Verification',
+            textAlign: TextAlign.center,
+            style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
           'Enter the 6-digit code sent to +91 $mobile',
@@ -405,22 +406,33 @@ class _OtpStep extends StatelessWidget {
           style: OneHubTextStyles.bodyText(textSecondary),
         ),
         const SizedBox(height: OneHubTheme.sectionGap),
-        Card(
+        GlowCard(
           child: Padding(
             padding: const EdgeInsets.all(OneHubTheme.cardPadding),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error!, style: TextStyle(color: context.statusDanger))),
+                if (error != null)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(error!,
+                          style: TextStyle(color: context.statusDanger))),
                 OtpInput(onChanged: onChanged),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 Center(
                   child: resendSecondsLeft > 0
-                      ? Text('Resend code in 0:${resendSecondsLeft.toString().padLeft(2, '0')}', style: OneHubTextStyles.bodyText(textMuted))
-                      : TextButton(onPressed: onResend, child: Text('Resend code', style: OneHubTextStyles.linkText(primary))),
+                      ? Text(
+                          'Resend code in 0:${resendSecondsLeft.toString().padLeft(2, '0')}',
+                          style: OneHubTextStyles.bodyText(textMuted))
+                      : TextButton(
+                          onPressed: onResend,
+                          child: Text('Resend code',
+                              style: OneHubTextStyles.linkText(primary))),
                 ),
                 const SizedBox(height: 12),
-                PrimaryCta(onPressed: busy ? null : onVerify, child: const Text('Verify & Create Account')),
+                PrimaryCta(
+                    onPressed: busy ? null : onVerify,
+                    child: const Text('Verify & Create Account')),
               ],
             ),
           ),
@@ -437,8 +449,10 @@ class _SuccessStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -448,12 +462,17 @@ class _SuccessStep extends StatelessWidget {
           child: Container(
             width: 88,
             height: 88,
-            decoration: BoxDecoration(color: context.statusSuccess.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Icon(OneHubIcons.successCheck, color: context.statusSuccess, size: 48),
+            decoration: BoxDecoration(
+                color: context.statusSuccess.withValues(alpha: 0.12),
+                shape: BoxShape.circle),
+            child: Icon(OneHubIcons.successCheck,
+                color: context.statusSuccess, size: 48),
           ),
         ),
         const SizedBox(height: 24),
-        Text('Account Created!', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
+        Text('Account Created!',
+            textAlign: TextAlign.center,
+            style: OneHubTextStyles.pageHeading(textPrimary)),
         const SizedBox(height: 8),
         Text(
           'Your account has been created successfully.',
@@ -461,7 +480,8 @@ class _SuccessStep extends StatelessWidget {
           style: OneHubTextStyles.bodyText(textSecondary),
         ),
         const SizedBox(height: OneHubTheme.sectionGap),
-        PrimaryCta(onPressed: onGoToDashboard, child: const Text('Go to Dashboard')),
+        PrimaryCta(
+            onPressed: onGoToDashboard, child: const Text('Go to Dashboard')),
       ],
     );
   }
