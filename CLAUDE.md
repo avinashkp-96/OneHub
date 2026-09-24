@@ -179,6 +179,13 @@ anchored bottom-right, alongside the existing top-right light glow —
 applied consistently everywhere `PageGlow` already wraps a screen (all
 auth screens and the dashboard), not just this one.
 
+A fifth round matched the hero card's CTA icon exactly: it's a "»"
+slide-button affordance, not a single chevron — Iconly has no
+double-chevron glyph, so it's built from two `OneHubIcons.chevronRight`
+icons overlapped via `Transform.translate`, recolored from
+`OneHubColors.primary` (blue) to `OneHubColors.surfaceDark` (near-black)
+to match the reference's dark icon on the white circle.
+
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If

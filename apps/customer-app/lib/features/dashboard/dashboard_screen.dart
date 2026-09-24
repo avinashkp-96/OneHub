@@ -353,9 +353,22 @@ class _HeroCard extends StatelessWidget {
                       height: 32,
                       decoration: const BoxDecoration(
                           shape: BoxShape.circle, color: Colors.white),
-                      child: const Center(
-                        child: Icon(OneHubIcons.chevronRight,
-                            size: 16, color: OneHubColors.primary),
+                      // A slide-button affordance ("»") — Iconly has no
+                      // double-chevron glyph, so this is two chevronRight
+                      // icons overlapped instead of a single arrow.
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(OneHubIcons.chevronRight,
+                                size: 14, color: OneHubColors.surfaceDark),
+                            Transform.translate(
+                              offset: const Offset(-6, 0),
+                              child: const Icon(OneHubIcons.chevronRight,
+                                  size: 14, color: OneHubColors.surfaceDark),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),

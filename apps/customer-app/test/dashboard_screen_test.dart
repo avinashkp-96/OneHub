@@ -65,4 +65,22 @@ void main() {
     expect(find.text('Carpenter'), findsOneWidget);
     expect(find.text('12 available pros'), findsOneWidget);
   });
+
+  testWidgets(
+      'the hero CTA\'s icon is two overlapped chevrons ("slide" affordance), not a single arrow',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
+    );
+
+    final chevrons = tester
+        .widgetList<Icon>(find.byIcon(OneHubIcons.chevronRight))
+        .where((icon) => icon.color == OneHubColors.surfaceDark);
+    expect(chevrons, hasLength(2));
+  });
 }
