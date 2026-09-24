@@ -15,12 +15,14 @@ packages/shared-flutter/ Shared Flutter models + API client used by both mobile 
 ## Status
 
 The Flutter apps (`customer-app`, `provider-app`, `shared-flutter`) are
-installed, tested, and manually verified running as of 2026-09-24 —
+installed, tested, and manually verified running as of 2026-09-25 —
 `flutter test` and `flutter analyze` pass clean across all three, and both
 apps render correctly via `flutter run -d web-server`. Customer login and
-signup match a Figma Make reference exactly (colors/border style extracted
-from the live page's computed CSS, not eyeballed) — see the Design section
-in `CLAUDE.md` for the retheme history and what is/isn't rebuilt to match it.
+signup match `docs/onehub-signup-style-guide.pdf` exactly (a formal style
+guide with exact hex/rgba/px tokens — the authoritative design source,
+superseding an earlier CSS-extraction reading of the same Figma file where
+they differ) — see the Design section in `CLAUDE.md` for the full retheme
+history and what is/isn't rebuilt to match it.
 The backend and admin-web are still source-only: this machine has no Node.js
 or Postgres, so neither has ever been installed, built, or run. See
 `CLAUDE.md` for the full list of gaps.

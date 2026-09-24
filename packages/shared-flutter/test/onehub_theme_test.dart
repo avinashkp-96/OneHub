@@ -17,9 +17,8 @@ void main() {
     expect(dark.scaffoldBackgroundColor, isNot(equals(light.scaffoldBackgroundColor)));
   });
 
-  test('dark scaffold background matches the reference exactly', () {
-    // Extracted from the live page's computed style, not eyeballed.
-    expect(OneHubColors.surfaceDark, const Color(0xFF121714));
+  test('dark scaffold background matches the style guide PDF exactly', () {
+    expect(OneHubColors.surfaceDark, const Color(0xFF111318));
   });
 
   test('buttons get a 48px minimum height for outdoor tap targets, not forced full width', () {
@@ -61,11 +60,12 @@ void main() {
     expect(shape?.borderRadius, BorderRadius.circular(14));
   });
 
-  test('cards have a visible border, reading as a translucent panel rather than a floating shadow card', () {
+  test('cards have a visible border and the style guide\'s 20px "Form card" radius', () {
     final theme = OneHubTheme.dark();
     final shape = theme.cardTheme.shape as RoundedRectangleBorder?;
     expect(shape?.side.color, OneHubColors.cardBorderDark);
     expect(shape?.side, isNot(BorderSide.none));
+    expect(shape?.borderRadius, BorderRadius.circular(20));
   });
 
   test('dark-mode seed differs from light mode', () {
@@ -107,14 +107,52 @@ void main() {
     expect(disabled.color, isNotNull);
   });
 
-  testWidgets('TintedBadge shows a small tinted rounded-rect, not a pill', (tester) async {
+  testWidgets('TintedBadge defaults to the style guide\'s 6px "GPS badge" radius', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(theme: OneHubTheme.light(), home: const Scaffold(body: TintedBadge(label: 'NEW ACCOUNT', color: Colors.blue))),
+      MaterialApp(theme: OneHubTheme.light(), home: const Scaffold(body: TintedBadge(label: 'GPS', color: Colors.blue))),
     );
     final container = tester.widget<Container>(find.byType(Container));
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.borderRadius, BorderRadius.circular(6));
-    expect(find.text('NEW ACCOUNT'), findsOneWidget);
+    expect(find.text('GPS'), findsOneWidget);
+  });
+
+  testWidgets('TintedBadge(pill: true) uses the style guide\'s 99px "Pill badges" radius', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.light(), home: const Scaffold(body: TintedBadge(label: 'NEW ACCOUNT', color: Colors.blue, pill: true))),
+    );
+    final container = tester.widget<Container>(find.byType(Container));
+    final decoration = container.decoration as BoxDecoration;
+    expect(decoration.borderRadius, BorderRadius.circular(99));
+  });
+
+  test('OneHubTextStyles matches the style guide\'s 7-entry type scale exactly', () {
+    expect(OneHubTextStyles.pageHeading(Colors.white).fontSize, 36);
+    expect(OneHubTextStyles.pageHeading(Colors.white).fontWeight, FontWeight.w800);
+    expect(OneHubTextStyles.buttonLabel(Colors.white).fontSize, 15);
+    expect(OneHubTextStyles.buttonLabel(Colors.white).fontWeight, FontWeight.w700);
+    expect(OneHubTextStyles.linkText(Colors.white).fontSize, 13);
+    expect(OneHubTextStyles.linkText(Colors.white).fontWeight, FontWeight.w600);
+    expect(OneHubTextStyles.bodyText(Colors.white).fontSize, 14);
+    expect(OneHubTextStyles.bodyText(Colors.white).fontWeight, FontWeight.w400);
+    expect(OneHubTextStyles.badgeLabel(Colors.white).fontSize, 11);
+    expect(OneHubTextStyles.badgeLabel(Colors.white).fontWeight, FontWeight.w700);
+    expect(OneHubTextStyles.fieldLabel(Colors.white).fontSize, 10.5);
+    expect(OneHubTextStyles.fieldLabel(Colors.white).fontWeight, FontWeight.w600);
+  });
+
+  test('input text (TextField default style) is Medium/14px per the style guide', () {
+    final textTheme = OneHubTheme.dark().textTheme;
+    expect(textTheme.titleMedium?.fontSize, 14);
+    expect(textTheme.titleMedium?.fontWeight, FontWeight.w500);
+  });
+
+  test('exact color tokens from the style guide PDF', () {
+    expect(OneHubColors.accentPurple, const Color(0xFFB39CFF));
+    expect(OneHubColors.requiredAsterisk, const Color(0xFFFF6B6B));
+    expect(OneHubColors.textPrimaryDark, const Color(0xEBFFFFFF));
+    expect(OneHubColors.textSecondaryDark, const Color(0x8CFFFFFF));
+    expect(OneHubColors.textMutedDark, const Color(0x59FFFFFF));
   });
 
   testWidgets('GlowBackground renders the glow blobs in dark mode but not light', (tester) async {

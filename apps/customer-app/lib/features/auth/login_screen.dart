@@ -6,11 +6,13 @@ import 'signup_screen.dart';
 
 // docx 2.2 — Customer Login. Sign-up (2.1) and Forgot Password (2.5) live in
 // signup_screen.dart and onehub_shared's ResetPasswordScreen respectively.
-// Visual language matches the Figma Make reference exactly (colors/border
-// extracted from its live rendered CSS, see OneHubColors): a translucent
-// bordered card over the glow background, icon-next-to-label fields (not
-// icon-inside-field), a password show/hide toggle, a gradient rounded-rect
-// CTA.
+// Visual language matches the style guide PDF exactly (see OneHubColors/
+// OneHubTheme/OneHubTextStyles): a translucent bordered card over the glow
+// background, icon-next-to-label fields, a password show/hide toggle, a
+// gradient rounded-rect CTA. That PDF documents the signup screen
+// specifically, not login — this screen reuses the same type scale/tokens
+// for consistency, since it's the same design system, but isn't itself
+// pixel-specified anywhere.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -45,27 +47,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary = dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final primary = Theme.of(context).colorScheme.primary;
+
     return Scaffold(
       body: SafeArea(
         child: GlowBackground(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.symmetric(horizontal: OneHubTheme.pageMargin, vertical: OneHubTheme.pagePaddingY),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 32),
-                Text('Welcome Back', textAlign: TextAlign.center, style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Welcome Back', textAlign: TextAlign.center, style: OneHubTextStyles.pageHeading(textPrimary)),
                 const SizedBox(height: 8),
                 Text(
                   'Log in to find and book local service providers',
                   textAlign: TextAlign.center,
-                  style: textTheme.bodyMedium?.copyWith(color: textTheme.bodySmall?.color?.withValues(alpha: 0.7)),
+                  style: OneHubTextStyles.bodyText(textSecondary),
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(OneHubTheme.cardPadding),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -75,14 +80,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Text(_error!, style: TextStyle(color: context.statusDanger)),
                           ),
                         const FieldLabel('MOBILE NUMBER OR EMAIL', icon: OneHubIcons.user),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
                         TextField(
                           controller: _mobileOrEmail,
                           decoration: const InputDecoration(hintText: '10-digit number or email'),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('PASSWORD', icon: OneHubIcons.lock),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
                         TextField(
                           controller: _password,
                           obscureText: _obscurePassword,
@@ -101,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: () => Navigator.of(context).push(
                               MaterialPageRoute(builder: (_) => ResetPasswordScreen(client: api)),
                             ),
-                            child: const Text('Forgot Password?'),
+                            child: Text('Forgot Password?', style: OneHubTextStyles.linkText(primary)),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -110,22 +115,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: OneHubTheme.sectionGap),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("New here? ", style: textTheme.bodyMedium),
+                    Text("New here? ", style: OneHubTextStyles.linkText(textSecondary)),
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SignupScreen()),
                       ),
-                      child: Text(
-                        'Sign up',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('Sign up', style: OneHubTextStyles.linkText(primary)),
                     ),
                   ],
                 ),

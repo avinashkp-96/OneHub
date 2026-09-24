@@ -12,7 +12,7 @@ void main() {
     final inkWells = tester.widgetList<InkWell>(find.byType(InkWell));
     expect(inkWells, isNotEmpty);
     for (final inkWell in inkWells) {
-      expect(inkWell.borderRadius, BorderRadius.circular(24));
+      expect(inkWell.borderRadius, BorderRadius.circular(OneHubTheme.radiusFormCard));
     }
   });
 

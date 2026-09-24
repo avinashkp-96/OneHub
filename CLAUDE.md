@@ -35,34 +35,48 @@ JWT (access token only, no refresh token yet), mobile OTP for signup and passwor
 
 ## **Design**
 
+**Authoritative source: `docs/onehub-signup-style-guide.pdf`** (copied into
+the repo 2026-09-25, "Component library and visual tokens extracted from
+the signup screen"). Where this PDF and any Figma link/screenshot disagree,
+the PDF wins — it's the exact hex/rgba/px tokens, not an eyeballed reading.
+Every value in `OneHubColors`, `OneHubTheme`'s named spacing/radius
+constants, and `OneHubTextStyles`' 7-entry type scale traces back to a
+specific line in that PDF; see each file's doc comments for the mapping.
+
 **Mobile (customer-app, provider-app)**: dark-first, Tailwind blue-500/700
 (`#3B82F6`→`#1D4ED8`) gradient CTAs, translucent white-on-dark cards/inputs
-with a visible ~10% white border, 14px rounded-rect shapes (not a pill),
-three decorative radial-gradient glow blobs behind auth screens, one font
-throughout (Plus Jakarta Sans), Iconly icons (thin "Light" stroke, two
-deliberate Bold exceptions — rating stars and the signup success check).
-This is the **third** retheme in three days (2026-09-22 through -24), each
-one superseding the last as a newer, more specific reference arrived: teal
-→ indigo-on-lavender ("PetCare" mockup) → light-purple (`#6C63FF`, an
-earlier snapshot of the Figma file below) → this one (the same Figma file's
-"Version 5", read by extracting computed CSS from the live rendered page,
-not eyeballed). If a fourth reference shows up, same rule applies — check
-the file again before assuming the current read is final.
-Reference: https://www.figma.com/make/EaytjRnHfHfvqaMMKUdeDD/App-Signup-Screen-UI
+with a visible border, 20px card / 14px button / 12px input / 6px small-badge
+/ 99px pill-badge radii, named spacing tokens (`OneHubTheme.gapIconLabel`
+through `.pagePaddingY`), one font throughout (Plus Jakarta Sans), Iconly
+icons (thin "Light" stroke, two deliberate Bold exceptions — rating stars
+and the signup success check). This is the **fourth** design iteration in
+four days (2026-09-22 through -25), each superseding the last as a newer,
+more specific reference arrived: teal → indigo-on-lavender ("PetCare"
+mockup) → light-purple (`#6C63FF`, a Figma snapshot read from a screenshot)
+→ Tailwind blue (the same Figma file's "Version 5", read via live computed
+CSS) → this one (the style guide PDF, more precise still — e.g. the CSS
+reading had the card radius at 16px and the background at `#121714`; the
+PDF says 20px and `#111318`). If a fifth reference shows up, same rule
+applies: check it, don't assume the current read is final. The PDF also
+revealed one real layout correction: the earlier CSS-based reading rendered
+"NEW ACCOUNT"/"FREE SIGNUP" badges above the signup heading (they appeared
+on that live page); the actual reference screenshot that came with this PDF
+doesn't have them — the style guide's "Badges" section is a component
+showcase, not a spec for this screen's layout, so they were removed.
+Figma source (superseded, kept for history): https://www.figma.com/make/EaytjRnHfHfvqaMMKUdeDD/App-Signup-Screen-UI
 `admin-web` was deliberately left on the original teal palette throughout
-all three retheme rounds; it is not "the one shared brand across all three
+all four design rounds; it is not "the one shared brand across all three
 surfaces" and that's intentional, not drift — don't "fix" it back without asking.
 
 Screen rebuilds to match this reference are scoped to the **customer app
 only** (explicitly confirmed, twice) — provider screens inherit the shared
 colors/fonts/shapes/icons automatically, but their layouts (login, signup,
 dashboard, etc.) haven't been individually rebuilt against this reference.
-Customer login and signup are done as of 2026-09-24, including the full
+Customer login and signup are done as of 2026-09-25, including the full
 3-step signup flow (form → 6-box OTP → success) and the icon-next-to-label
-field pattern (icons sit beside the field's label now, not inside the
-field itself — a layout change from the previous reading of this same
-file). Other customer screens (dashboard, category browsing, requirements,
-ratings) still use the previous layout conventions, just with the current
+field pattern (icons sit beside the field's label, not inside the field
+itself). Other customer screens (dashboard, category browsing, requirements,
+ratings) still use earlier layout conventions, just with the current
 colors/fonts/shapes/icons applied automatically since those come from the
 shared theme. If provider screens or the rest of customer screens are
 wanted in this style too, that's a separate ask.
@@ -72,10 +86,10 @@ color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
 original design.
 
-- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubIcons`, `GlowBackground`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference — see OneHubIcons' doc comment for which exceptions exist and why. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern).
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubTextStyles`, `OneHubIcons`, `GlowBackground`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, `OneHubTextStyles.*` rather than generic `Theme.of(context).textTheme` slots on screens this style guide documents, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern). **Named spacing/radius constants exist specifically so a value can't silently drift out of sync the way it already did once** — two retheme rounds' worth of hardcoded `24`s survived a card-radius change from 24→16→20 in four call sites and two tests before this pass caught it; every remaining radius reference now points at `OneHubTheme.radiusFormCard` etc. instead of a bare number.
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
 - **Icons**: Iconly, vendored directly rather than via the `iconly` or `flutter_iconly` pub packages — both subclass `IconData`, which became a `final class` in this Flutter version, so neither compiles. `OneHubIcons` defines plain `IconData` constants against `packages/shared-flutter/assets/fonts/IconlyLight.ttf`/`IconlyBold.ttf` (MIT-licensed, see `IconlyFont-LICENSE.txt` next to them), with codepoints read directly out of the `iconly` package's source rather than guessed. If a future Flutter/Dart release fixes the subclassing issue and a maintained package appears, this vendoring could be dropped, but there's no urgency — it works and has no runtime dependency risk.
-- Plus Jakarta Sans is referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used two retheme rounds ago, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit font spec each time.
+- Plus Jakarta Sans is referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used earlier, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit spec each time.
 
 ## **Deployment**
 

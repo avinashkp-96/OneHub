@@ -14,9 +14,12 @@ void main() {
     for (final inkWell in inkWells) {
       expect(
         inkWell.borderRadius,
-        BorderRadius.circular(24),
+        BorderRadius.circular(OneHubTheme.radiusFormCard),
         reason: 'InkWell radius should match OneHubTheme.cardTheme so the ripple '
-            'does not poke past the rounded card corners',
+            'does not poke past the rounded card corners — this asserts against '
+            'the theme constant, not a hardcoded number, precisely so it cannot '
+            'silently drift out of sync with the theme again like it did across '
+            'the last two retheme rounds',
       );
     }
   });
