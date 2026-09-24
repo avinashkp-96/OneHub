@@ -94,6 +94,16 @@ bid list rows), which would turn a subtle effect into a distracting,
 repeated one. Since `GlowCard` is the shared component, any screen that
 adopts the form-card pattern gets both glows automatically; existing
 list-tile `Card` usage elsewhere in the app was deliberately left alone.
+
+A second same-day follow-up moved the top-right glow back out of the card:
+per explicit instruction, it now lives on the page background, behind the
+card, not inside it — a deliberate, explicit exception to "glows stay
+inside their component." `GlowCard` (`glow_card.dart`) keeps only the
+bottom-left blue glow; a new `PageGlow` widget in the same file renders the
+top-right light glow on the page background and wraps each auth screen's
+`Scaffold.body` (outside `SafeArea`, so it isn't clipped by safe-area
+insets). Both widgets are dark-mode-only, matching the reference.
+
 Login's content is also now vertically centered on the page (was top-
 aligned) via a `LayoutBuilder` + `ConstrainedBox(minHeight: ...)` wrapping
 the `SingleChildScrollView`'s child, so it still scrolls if content

@@ -187,7 +187,7 @@ void main() {
   });
 
   testWidgets(
-      'GlowCard renders a bottom-left blue glow and a top-right light glow, both clipped to the card',
+      'GlowCard renders only the bottom-left blue glow, clipped to the card',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -202,23 +202,42 @@ void main() {
         .map((box) => (box.decoration as BoxDecoration).gradient)
         .whereType<RadialGradient>()
         .toList();
-    expect(gradients.map((g) => g.colors.first),
-        containsAll([OneHubColors.glowBlue1, OneHubColors.glowLight]));
-    expect(
-        gradients
-            .firstWhere((g) => g.colors.first == OneHubColors.glowBlue1)
-            .center,
-        Alignment.bottomLeft);
-    expect(
-        gradients
-            .firstWhere((g) => g.colors.first == OneHubColors.glowLight)
-            .center,
-        Alignment.topRight);
+    expect(gradients, hasLength(1));
+    expect(gradients.single.colors.first, OneHubColors.glowBlue1);
+    expect(gradients.single.center, Alignment.bottomLeft);
 
     await tester.pumpWidget(
       MaterialApp(
           theme: OneHubTheme.light(),
           home: const Scaffold(body: GlowCard(child: Text('content')))),
+    );
+    expect(find.text('content'), findsOneWidget);
+  });
+
+  testWidgets(
+      'PageGlow renders a single top-right light glow behind its child, not inside a card',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+          theme: OneHubTheme.dark(),
+          home: const Scaffold(body: PageGlow(child: Text('content')))),
+    );
+    expect(find.byType(ClipRRect), findsNothing);
+    expect(find.text('content'), findsOneWidget);
+
+    final gradients = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => (box.decoration as BoxDecoration).gradient)
+        .whereType<RadialGradient>()
+        .toList();
+    expect(gradients, hasLength(1));
+    expect(gradients.single.colors.first, OneHubColors.glowLight);
+    expect(gradients.single.center, Alignment.topRight);
+
+    await tester.pumpWidget(
+      MaterialApp(
+          theme: OneHubTheme.light(),
+          home: const Scaffold(body: PageGlow(child: Text('content')))),
     );
     expect(find.text('content'), findsOneWidget);
   });
