@@ -229,7 +229,7 @@ void main() {
   });
 
   testWidgets(
-      'PageGlow renders a single top-right light glow behind its child, not inside a card',
+      'PageGlow renders a top-right light glow and a bottom-right blue glow behind its child, not inside a card',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -244,9 +244,19 @@ void main() {
         .map((box) => (box.decoration as BoxDecoration).gradient)
         .whereType<RadialGradient>()
         .toList();
-    expect(gradients, hasLength(1));
-    expect(gradients.single.colors.first, OneHubColors.glowLight);
-    expect(gradients.single.center, Alignment.topRight);
+    expect(gradients, hasLength(2));
+    expect(gradients.map((g) => g.colors.first),
+        containsAll([OneHubColors.glowLight, OneHubColors.glowBlue1]));
+    expect(
+        gradients
+            .firstWhere((g) => g.colors.first == OneHubColors.glowLight)
+            .center,
+        Alignment.topRight);
+    expect(
+        gradients
+            .firstWhere((g) => g.colors.first == OneHubColors.glowBlue1)
+            .center,
+        Alignment.bottomRight);
 
     await tester.pumpWidget(
       MaterialApp(
