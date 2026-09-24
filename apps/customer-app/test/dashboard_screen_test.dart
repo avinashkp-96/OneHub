@@ -40,4 +40,29 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+      'Services grid shows the 4 dummy categories with their pro counts',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
+    );
+
+    // Explicit dummy data per a reference screenshot ("use dummy data for
+    // now") — ServiceCategory has no "available pros" field at all, so this
+    // exact stat can't come from the real /categories endpoint yet.
+    expect(find.text('Electrician'), findsOneWidget);
+    expect(find.text('18 available pros'), findsOneWidget);
+    expect(find.text('Plumber'), findsOneWidget);
+    expect(find.text('24 available pros'), findsOneWidget);
+    expect(find.text('Painter'), findsOneWidget);
+    expect(find.text('31 available pros'), findsOneWidget);
+    expect(find.text('Carpenter'), findsOneWidget);
+    expect(find.text('12 available pros'), findsOneWidget);
+  });
 }

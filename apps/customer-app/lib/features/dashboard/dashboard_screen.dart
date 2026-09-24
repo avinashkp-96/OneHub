@@ -4,19 +4,19 @@ import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
 import '../requirements/my_requests_screen.dart';
 
-// docx 4.1 — Customer Dashboard (Home Screen). Structure and section
-// rhythm (location chip + bell, headline, search + filter, hero CTA card,
-// Services quick-access grid, Active Requests with a status stepper,
-// Nearby Providers teaser, promo banner) follow an explicit HTML/CSS
-// reference the user supplied directly ("OneHub home screen.html") —
-// matched for layout/alignment only. Colors, fonts, and icons stay the
-// current OneHub design system (OneHubColors/OneHubTheme/OneHubIcons) per
-// explicit instruction, not the reference's own beige/mint palette or
-// custom SVG icon set. Services and Active Requests are wired to the real
-// /categories and /requirements/mine endpoints (data this app already
-// fetches elsewhere) rather than the reference's example content, since
-// that's specific fabricated sample data (names, ratings, distances) with
-// no backing endpoint. Nearby Providers has no matching generic endpoint
+// docx 4.1 — Customer Dashboard (Home Screen). Structure follows an
+// explicit HTML/CSS reference the user supplied ("OneHub home screen.html"),
+// matched for layout/alignment only, plus a second, pixel-exact screenshot
+// round for the header/search/hero/Services section specifically. Colors,
+// fonts, and icons stay the current OneHub design system
+// (OneHubColors/OneHubTheme/OneHubIcons) per explicit instruction. The
+// Services grid uses explicit dummy data (name/icon/pro count) per that
+// screenshot's own instruction ("use dummy data for now") — "available
+// pros" has no backing field on ServiceCategory regardless, so this is the
+// only way to show it right now; "See all" still opens the real,
+// API-backed CategoryGridScreen. Active Requests stays wired to the real
+// /requirements/mine endpoint (unaffected by that screenshot, which didn't
+// show this section). Nearby Providers has no matching generic endpoint
 // (providers.controller.ts only supports GET /providers?subServiceId=...,
 // scoped to one sub-service) — kept as a prompt into category browsing
 // instead of inventing example providers.
@@ -28,7 +28,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  List<ServiceCategory> _categories = [];
   List<Requirement> _requirements = [];
   bool _loading = true;
 
@@ -40,14 +39,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _load() async {
     try {
-      final results = await Future.wait(
-          [api.get('/categories'), api.get('/requirements/mine')]);
+      final json = await api.get('/requirements/mine') as List;
       if (!mounted) return;
       setState(() {
-        _categories = (results[0] as List)
-            .map((c) => ServiceCategory.fromJson(c as Map<String, dynamic>))
-            .toList();
-        _requirements = (results[1] as List)
+        _requirements = json
             .map((r) => Requirement.fromJson(r as Map<String, dynamic>))
             .toList();
         _loading = false;
@@ -83,16 +78,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _HeroCard(onTap: openCategories),
                 const SizedBox(height: 26),
                 _SectionHeader(
-                    title: 'Services',
+                    title: 'Expert services',
                     actionLabel: 'See all',
                     onAction: openCategories),
                 const SizedBox(height: 12),
-                if (_loading)
-                  const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Center(child: CircularProgressIndicator()))
-                else
-                  _ServicesGrid(categories: _categories, onTap: openCategories),
+                _ServicesGrid(onTap: openCategories),
                 const SizedBox(height: 26),
                 _SectionHeader(
                     title: 'Active requests',
@@ -168,8 +158,13 @@ class _TopRow extends StatelessWidget {
                 const Icon(OneHubIcons.location,
                     size: 16, color: OneHubColors.primary),
                 const SizedBox(width: 6),
-                Text('Set your location',
+                // Dummy location text — geolocation isn't wired up yet, but
+                // the reference screenshot calls for a real-looking value
+                // here rather than a generic "Set your location" prompt.
+                Text('Edappally, Kochi',
                     style: OneHubTextStyles.linkText(textPrimary)),
+                const SizedBox(width: 2),
+                Icon(OneHubIcons.chevronDown, size: 14, color: textMuted),
               ],
             ),
           ),
@@ -224,7 +219,9 @@ class _Headline extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    return Text('What needs fixing today?',
+    // "Meera" is dummy placeholder content per the reference screenshot —
+    // no real user name is plumbed through to this screen yet.
+    return Text('What needs fixing today, Meera?',
         style:
             OneHubTextStyles.pageHeading(textPrimary).copyWith(fontSize: 28));
   }
@@ -246,11 +243,18 @@ class _SearchBar extends StatelessWidget {
     final inputBorder =
         dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight;
 
+    final filterFill =
+        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
+    final filterBorder =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color: inputFill,
-        borderRadius: BorderRadius.circular(OneHubTheme.radiusInputField),
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
         border: Border.all(color: inputBorder),
       ),
       child: Row(
@@ -260,20 +264,19 @@ class _SearchBar extends StatelessWidget {
           Expanded(
             child: InkWell(
               onTap: onTap,
-              child: Text('Search for electricians, plumbers...',
+              child: Text('Search electrician, plumber...',
                   style: OneHubTextStyles.bodyText(textMuted)),
             ),
           ),
           IconButton(
             onPressed: onTap,
             style: IconButton.styleFrom(
-              backgroundColor: OneHubColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(OneHubTheme.radiusInputField - 5)),
+              backgroundColor: filterFill,
+              foregroundColor: textPrimary,
+              side: BorderSide(color: filterBorder),
+              shape: const CircleBorder(),
             ),
-            icon: const Icon(OneHubIcons.category, size: 18),
+            icon: const Icon(OneHubIcons.filter, size: 18),
           ),
         ],
       ),
@@ -289,73 +292,85 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          colors: [OneHubColors.primary, OneHubColors.primaryGradientEnd],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Transform.rotate(
-              angle: -0.3,
-              child: Icon(OneHubIcons.work,
-                  size: 140, color: Colors.white.withValues(alpha: 0.08)),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final ctaFill =
+        dark ? OneHubColors.navBarFillDark : OneHubColors.navBarFillLight;
+
+    return GlowCard(
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Transform.rotate(
+                angle: -0.3,
+                child: Icon(OneHubIcons.work,
+                    size: 140, color: textPrimary.withValues(alpha: 0.06)),
+              ),
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Tell us what's broken",
-                style: OneHubTextStyles.pageHeading(Colors.white)
-                    .copyWith(fontSize: 22),
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: 230,
-                child: Text(
-                  'Describe the job once and nearby pros send you bids.',
-                  style: OneHubTextStyles.bodyText(
-                      Colors.white.withValues(alpha: 0.85)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const TintedBadge(
+                    label: 'FREE TO POST',
+                    color: OneHubColors.warning,
+                    pill: true),
+                const SizedBox(height: 14),
+                Text(
+                  "Tell us what's broken",
+                  style: OneHubTextStyles.pageHeading(textPrimary)
+                      .copyWith(fontSize: 22),
                 ),
-              ),
-              const SizedBox(height: 18),
-              InkWell(
-                borderRadius:
-                    BorderRadius.circular(OneHubTheme.radiusCtaButton),
-                onTap: onTap,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(OneHubTheme.radiusCtaButton)),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(OneHubIcons.plus,
-                          size: 18, color: OneHubColors.primary),
-                      const SizedBox(width: 8),
-                      Text('Describe your requirement',
-                          style: OneHubTextStyles.buttonLabel(
-                              OneHubColors.primary)),
-                    ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: 230,
+                  child: Text(
+                    'Describe the job once and nearby pros send you bids.',
+                    style: OneHubTextStyles.bodyText(textSecondary),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(height: 18),
+                InkWell(
+                  borderRadius:
+                      BorderRadius.circular(OneHubTheme.radiusPillBadge),
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+                    decoration: BoxDecoration(
+                        color: ctaFill,
+                        borderRadius:
+                            BorderRadius.circular(OneHubTheme.radiusPillBadge)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 32,
+                          height: 32,
+                          decoration: const BoxDecoration(
+                              shape: BoxShape.circle, color: Colors.white),
+                          child: const Center(
+                            child: Icon(OneHubIcons.chevronRight,
+                                size: 16, color: OneHubColors.primary),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text('Post requirement',
+                            style: OneHubTextStyles.buttonLabel(textPrimary)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -393,6 +408,11 @@ class _SectionHeader extends StatelessWidget {
 }
 
 // --- Services quick-access grid -----------------------------------------------
+//
+// Explicit dummy data ("use dummy data for now") — icon, name, and pro
+// count all come from a reference screenshot, not a real endpoint.
+// ServiceCategory (the real model) has no "available pros" field at all,
+// so this specific stat can't be real yet regardless.
 
 const _categoryTintPalette = [
   OneHubColors.primary,
@@ -402,77 +422,88 @@ const _categoryTintPalette = [
   OneHubColors.danger,
 ];
 
+class _DummyCategory {
+  final String name;
+  final IconData icon;
+  final int proCount;
+  const _DummyCategory(this.name, this.icon, this.proCount);
+}
+
+const _dummyCategories = [
+  _DummyCategory('Electrician', OneHubIcons.danger, 18),
+  _DummyCategory('Plumber', OneHubIcons.category, 24),
+  _DummyCategory('Painter', OneHubIcons.edit, 31),
+  _DummyCategory('Carpenter', OneHubIcons.work, 12),
+];
+
 class _ServicesGrid extends StatelessWidget {
-  final List<ServiceCategory> categories;
   final VoidCallback onTap;
-  const _ServicesGrid({required this.categories, required this.onTap});
+  const _ServicesGrid({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    if (categories.isEmpty) {
-      final dark = Theme.of(context).brightness == Brightness.dark;
-      final textMuted =
-          dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-      return Text('Services aren\'t available right now.',
-          style: OneHubTextStyles.bodyText(textMuted));
-    }
-
-    final shown = categories.take(8).toList();
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 8,
-        childAspectRatio: 0.8,
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        mainAxisExtent: 130,
       ),
-      itemCount: shown.length,
-      itemBuilder: (context, index) {
-        final category = shown[index];
-        final tint = _categoryTintPalette[index % _categoryTintPalette.length];
-        return _CategoryQuickTile(
-            name: category.name, tint: tint, onTap: onTap);
-      },
+      itemCount: _dummyCategories.length,
+      itemBuilder: (context, index) =>
+          _ServiceCard(category: _dummyCategories[index], onTap: onTap),
     );
   }
 }
 
-class _CategoryQuickTile extends StatelessWidget {
-  final String name;
-  final Color tint;
+class _ServiceCard extends StatelessWidget {
+  final _DummyCategory category;
   final VoidCallback onTap;
-  const _CategoryQuickTile(
-      {required this.name, required this.tint, required this.onTap});
+  const _ServiceCard({required this.category, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textMuted =
+        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final iconFill =
+        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
+    final iconBorder =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Column(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle, color: tint.withValues(alpha: 0.15)),
-            child: Icon(OneHubIcons.category, color: tint, size: 24),
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: iconFill,
+                    border: Border.all(color: iconBorder)),
+                child: Icon(category.icon, color: textPrimary, size: 18),
+              ),
+              const SizedBox(height: 12),
+              Text(category.name,
+                  style: OneHubTextStyles.bodyText(textPrimary)
+                      .copyWith(fontWeight: FontWeight.w700, fontSize: 15)),
+              const SizedBox(height: 2),
+              Text('${category.proCount} available pros',
+                  style: OneHubTextStyles.fieldLabel(textMuted)
+                      .copyWith(letterSpacing: 0, fontSize: 11)),
+            ],
           ),
-          const SizedBox(height: 7),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: OneHubTextStyles.fieldLabel(textPrimary)
-                .copyWith(letterSpacing: 0, fontSize: 11),
-          ),
-        ],
+        ),
       ),
     );
   }

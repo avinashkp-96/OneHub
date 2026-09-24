@@ -141,18 +141,37 @@ tracker, a Nearby Providers teaser, and a promo banner — while keeping the
 current `OneHubColors`/`OneHubTheme`/`OneHubIcons` design system entirely
 unchanged (not the mockup's own palette/fonts/icons). `CurvedNavBar` from
 the first pass was kept as-is (not swapped for the mockup's flat 5-item
-nav). Services and Active Requests are wired to the real `/categories` and
-`/requirements/mine` endpoints this app already calls elsewhere, rather
-than the mockup's example content (specific fabricated names/ratings with
-no backing data). Nearby Providers has no matching generic endpoint
-(`providers.controller.ts` only supports `GET /providers?subServiceId=...`,
-scoped to one sub-service) — kept as an honest prompt into category
-browsing instead of inventing example providers. Other customer screens
-(category browsing, requirements, ratings) still use earlier layout
-conventions, just with the current colors/fonts/shapes/icons applied
-automatically since those come from the shared theme. If provider screens
-or the rest of customer screens are wanted in this style too, that's a
-separate ask.
+nav). At that point Services and Active Requests were wired to the real
+`/categories` and `/requirements/mine` endpoints this app already calls
+elsewhere, rather than the mockup's example content.
+
+Third (same day): a pixel-exact screenshot of just the header/search/hero/
+Services portion, explicitly authorizing dummy data ("use dummy data for
+now") — the first explicit exception to not fabricating content. Applied
+narrowly to what the screenshot actually specified: the location chip now
+shows a fixed example ("Edappally, Kochi") instead of a generic "Set your
+location" prompt, the headline includes a dummy name ("...Meera?"), and
+the Services grid became 4 hardcoded `_DummyCategory` entries (name, icon,
+"N available pros") in a 2-column card layout — `ServiceCategory` (the real
+model) has no pro-count field at all, so this exact stat can't be real
+regardless of data source. The Services grid's live `/categories` fetch was
+removed since the section no longer displays fetched data; "See all" still
+opens the real, API-backed `CategoryGridScreen`. Active Requests, Nearby
+Providers, and the promo banner are unchanged — that screenshot didn't
+show them, so they keep the second pass's real-data/honest-prompt
+treatment. The hero card changed from a solid blue gradient to `GlowCard`
+(dark, per that screenshot), with a `TintedBadge` ("FREE TO POST") and a
+pill CTA (white icon-circle + label) replacing the earlier white-on-blue
+button. Two new `OneHubIcons` entries support this: `filter` (search bar)
+and `chevronDown` (location chip dropdown); `danger` and `edit` are
+approximate stand-ins for "electrician"/"painter" since Iconly has no
+trade-specific glyphs.
+
+Other customer screens (category browsing, requirements, ratings) still
+use earlier layout conventions, just with the current colors/fonts/shapes/
+icons applied automatically since those come from the shared theme. If
+provider screens or the rest of customer screens are wanted in this style
+too, that's a separate ask.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
