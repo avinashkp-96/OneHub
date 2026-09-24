@@ -87,8 +87,14 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                         title: Text(r.description, maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text(_statusLabel(r.status)),
                         trailing: _statusColor(context, r.status) == null
-                            ? const Icon(Icons.chevron_right)
-                            : Icon(Icons.circle, size: 12, color: _statusColor(context, r.status)),
+                            ? const Icon(OneHubIcons.chevronRight)
+                            // A plain colored dot, not an icon-font glyph — a status indicator
+                            // doesn't need to match the Iconly stroke style.
+                            : Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(color: _statusColor(context, r.status), shape: BoxShape.circle),
+                              ),
                         onTap: () => _open(r),
                       ),
                     ),

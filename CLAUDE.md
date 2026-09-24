@@ -35,25 +35,47 @@ JWT (access token only, no refresh token yet), mobile OTP for signup and passwor
 
 ## **Design**
 
-**Mobile (customer-app, provider-app)**: indigo-on-lavender, pill-shaped
-buttons, large-radius shadowed (not outlined) cards, a light/transparent app
-bar with dark centered text rather than a bold color bar. This replaced an
-earlier deep-teal Material look on 2026-09-23 — the user supplied a
-reference mockup ("PetCare") directly and asked to match its palette and
-shape language, explicitly scoped to mobile only. `admin-web` was
-deliberately left on the old teal palette; the two are no longer the "one
-shared brand across all three surfaces" this section used to describe, and
-that's an intentional, explicit divergence, not drift — don't "fix" it back
-without asking.
+**Mobile (customer-app, provider-app)**: dark-first, Tailwind blue-500/700
+(`#3B82F6`→`#1D4ED8`) gradient CTAs, translucent white-on-dark cards/inputs
+with a visible ~10% white border, 14px rounded-rect shapes (not a pill),
+three decorative radial-gradient glow blobs behind auth screens, one font
+throughout (Plus Jakarta Sans), Iconly icons (thin "Light" stroke, two
+deliberate Bold exceptions — rating stars and the signup success check).
+This is the **third** retheme in three days (2026-09-22 through -24), each
+one superseding the last as a newer, more specific reference arrived: teal
+→ indigo-on-lavender ("PetCare" mockup) → light-purple (`#6C63FF`, an
+earlier snapshot of the Figma file below) → this one (the same Figma file's
+"Version 5", read by extracting computed CSS from the live rendered page,
+not eyeballed). If a fourth reference shows up, same rule applies — check
+the file again before assuming the current read is final.
+Reference: https://www.figma.com/make/EaytjRnHfHfvqaMMKUdeDD/App-Signup-Screen-UI
+`admin-web` was deliberately left on the original teal palette throughout
+all three retheme rounds; it is not "the one shared brand across all three
+surfaces" and that's intentional, not drift — don't "fix" it back without asking.
+
+Screen rebuilds to match this reference are scoped to the **customer app
+only** (explicitly confirmed, twice) — provider screens inherit the shared
+colors/fonts/shapes/icons automatically, but their layouts (login, signup,
+dashboard, etc.) haven't been individually rebuilt against this reference.
+Customer login and signup are done as of 2026-09-24, including the full
+3-step signup flow (form → 6-box OTP → success) and the icon-next-to-label
+field pattern (icons sit beside the field's label now, not inside the
+field itself — a layout change from the previous reading of this same
+file). Other customer screens (dashboard, category browsing, requirements,
+ratings) still use the previous layout conventions, just with the current
+colors/fonts/shapes/icons applied automatically since those come from the
+shared theme. If provider screens or the rest of customer screens are
+wanted in this style too, that's a separate ask.
 
 Semantic success/warning/danger colors stay separate from the Material
-color slots (there's no built-in success/warning concept). Noto Sans is
-kept for future regional-language coverage; full-width 48px-tall primary
-CTAs for outdoor/gloved-hand use are kept from the original design too.
+color slots (there's no built-in success/warning concept). Full-width
+48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
+original design.
 
-- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`.
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubIcons`, `GlowBackground`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference — see OneHubIcons' doc comment for which exceptions exist and why. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern).
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
-- Noto Sans is referenced by family name (`ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke in tests and would be a real risk in production on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet).
+- **Icons**: Iconly, vendored directly rather than via the `iconly` or `flutter_iconly` pub packages — both subclass `IconData`, which became a `final class` in this Flutter version, so neither compiles. `OneHubIcons` defines plain `IconData` constants against `packages/shared-flutter/assets/fonts/IconlyLight.ttf`/`IconlyBold.ttf` (MIT-licensed, see `IconlyFont-LICENSE.txt` next to them), with codepoints read directly out of the `iconly` package's source rather than guessed. If a future Flutter/Dart release fixes the subclassing issue and a maintained package appears, this vendoring could be dropped, but there's no urgency — it works and has no runtime dependency risk.
+- Plus Jakarta Sans is referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used two retheme rounds ago, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit font spec each time.
 
 ## **Deployment**
 

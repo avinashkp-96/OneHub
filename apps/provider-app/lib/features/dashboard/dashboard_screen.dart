@@ -46,11 +46,11 @@ class DashboardScreen extends StatelessWidget {
       ),
       bottomNavigationBar: NavigationBar(
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.assignment_outlined), label: 'Requests'),
-          NavigationDestination(icon: Icon(Icons.payments_outlined), label: 'Earnings'),
-          NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Notifications'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          NavigationDestination(icon: Icon(OneHubIcons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(OneHubIcons.work), label: 'Requests'),
+          NavigationDestination(icon: Icon(OneHubIcons.wallet), label: 'Earnings'),
+          NavigationDestination(icon: Icon(OneHubIcons.notification), label: 'Notifications'),
+          NavigationDestination(icon: Icon(OneHubIcons.profile), label: 'Profile'),
         ],
         selectedIndex: 0,
         onDestinationSelected: (_) {},

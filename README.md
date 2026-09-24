@@ -15,12 +15,15 @@ packages/shared-flutter/ Shared Flutter models + API client used by both mobile 
 ## Status
 
 The Flutter apps (`customer-app`, `provider-app`, `shared-flutter`) are
-installed, tested, and manually verified running as of 2026-09-23 —
+installed, tested, and manually verified running as of 2026-09-24 —
 `flutter test` and `flutter analyze` pass clean across all three, and both
-apps render correctly via `flutter run -d web-server`. The backend and
-admin-web are still source-only: this machine has no Node.js or Postgres, so
-neither has ever been installed, built, or run. See `CLAUDE.md` for the full
-list of gaps.
+apps render correctly via `flutter run -d web-server`. Customer login and
+signup match a Figma Make reference exactly (colors/border style extracted
+from the live page's computed CSS, not eyeballed) — see the Design section
+in `CLAUDE.md` for the retheme history and what is/isn't rebuilt to match it.
+The backend and admin-web are still source-only: this machine has no Node.js
+or Postgres, so neither has ever been installed, built, or run. See
+`CLAUDE.md` for the full list of gaps.
 
 ## Getting started
 
@@ -69,6 +72,9 @@ search/filter/sort), real file upload for provider signup's profile
 photo/ID proof (currently plain text fields for a document URL), GPS capture
 during provider signup (coverage area is hardcoded to lat/lng 0,0 pending
 location permission handling), the admin provider-verification queue, and
-the Noto Sans font as an actual bundled asset on mobile (works on web via a
+Plus Jakarta Sans as an actual bundled asset on mobile (works on web via a
 stylesheet link; Android/iOS currently fall back to the platform default
-font — see the Design section in `CLAUDE.md`).
+font — see the Design section in `CLAUDE.md`). Iconly icons, by contrast,
+*are* bundled as real font assets (`packages/shared-flutter/assets/fonts/`)
+since the pub packages for them don't compile on this Flutter version —
+see `OneHubIcons`' doc comment.

@@ -101,7 +101,7 @@ class _CategoryTile extends StatelessWidget {
                 backgroundColor: colorScheme.primaryContainer,
                 foregroundImage: category.iconUrl != null ? NetworkImage(category.iconUrl!) : null,
                 child: category.iconUrl == null
-                    ? Icon(Icons.build, color: colorScheme.onPrimaryContainer)
+                    ? Icon(OneHubIcons.category, color: colorScheme.onPrimaryContainer)
                     : null,
               ),
               const SizedBox(height: 8),

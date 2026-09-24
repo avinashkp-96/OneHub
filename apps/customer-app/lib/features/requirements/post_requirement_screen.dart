@@ -88,7 +88,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
-                  icon: const Icon(Icons.calendar_today),
+                  icon: const Icon(OneHubIcons.calendar),
                   label: Text(_preferredAt == null ? 'Preferred date/time (optional)' : _preferredAt.toString()),
                   onPressed: () async {
                     final picked = await showDatePicker(
