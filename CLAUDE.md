@@ -194,6 +194,16 @@ area behind the bar's translucent/wavy gaps was just the flat
 `scaffoldBackgroundColor` (a solid dark box) instead of actual scrolled
 content for the `BackdropFilter` to blur.
 
+`CurvedNavBar`'s selected tab now gets a pill-shaped selection background
+plus its label next to the icon (`Icon` + `SizedBox` + `Text` in a
+rounded, tinted `Container`); unselected tabs stay icon-only, per a
+reference screenshot. Items switched from equal-width `Expanded` cells to
+naturally-sized children in a `spaceBetween` `Row`, so the wider selected
+pill doesn't have to fight fixed-width columns designed for icon-only
+content; the whole row is now wrapped in `Positioned.fill(child: Center(...))`
+instead of a fixed top padding, so it stays vertically centered regardless
+of the pill/icon height difference.
+
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If

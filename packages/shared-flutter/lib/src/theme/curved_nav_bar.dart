@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'onehub_colors.dart';
+import 'onehub_theme.dart';
 
 class CurvedNavItem {
   final IconData icon;
@@ -10,11 +11,13 @@ class CurvedNavItem {
 }
 
 /// A floating bottom navigation bar with a gently wavy top edge, per a
-/// reference screenshot: icon-only tabs (no visible labels) on a frosted
-/// glass bar that floats above the screen edge, distinct from Material's
-/// square-edged, full-width `NavigationBar` used previously. `label` is
-/// still carried per item for semantics/tooltips even though it isn't
-/// painted, so each tab stays accessible.
+/// reference screenshot, on a frosted glass bar that floats above the
+/// screen edge, distinct from Material's square-edged, full-width
+/// `NavigationBar` used previously. The selected tab gets a pill-shaped
+/// selection background plus its label next to the icon; unselected tabs
+/// stay icon-only, per a later reference screenshot -- `label` is still
+/// carried per item for semantics even on unselected tabs, so every tab
+/// stays accessible whether or not its text is currently painted.
 ///
 /// The bar has no solid fill — a `BackdropFilter` blurs whatever scrolls
 /// behind it, tinted by a translucent version of `OneHubColors.navBarFillDark`/
@@ -41,6 +44,11 @@ class CurvedNavBar extends StatelessWidget {
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
     final inactive =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final activeColor =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final activeFill = dark
+        ? Colors.white.withValues(alpha: 0.14)
+        : Colors.black.withValues(alpha: 0.08);
 
     return SafeArea(
       top: false,
@@ -65,30 +73,55 @@ class CurvedNavBar extends StatelessWidget {
               Positioned.fill(
                   child:
                       CustomPaint(painter: _WaveBorderPainter(border: border))),
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  children: [
-                    for (var i = 0; i < items.length; i++)
-                      Expanded(
-                        child: Semantics(
-                          button: true,
-                          selected: i == selectedIndex,
-                          label: items[i].label,
-                          child: InkWell(
-                            onTap: () => onSelected(i),
-                            customBorder: const CircleBorder(),
-                            child: Icon(
-                              items[i].icon,
-                              size: 22,
-                              color: i == selectedIndex
-                                  ? OneHubColors.primary
-                                  : inactive,
+              Positioned.fill(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        for (var i = 0; i < items.length; i++)
+                          Semantics(
+                            button: true,
+                            selected: i == selectedIndex,
+                            label: items[i].label,
+                            child: InkWell(
+                              onTap: () => onSelected(i),
+                              borderRadius: BorderRadius.circular(
+                                  OneHubTheme.radiusPillBadge),
+                              child: i == selectedIndex
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: activeFill,
+                                        borderRadius: BorderRadius.circular(
+                                            OneHubTheme.radiusPillBadge),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(items[i].icon,
+                                              size: 20, color: activeColor),
+                                          const SizedBox(width: 8),
+                                          Text(items[i].label,
+                                              style:
+                                                  OneHubTextStyles.buttonLabel(
+                                                      activeColor)),
+                                        ],
+                                      ),
+                                    )
+                                  : Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 12),
+                                      child: Icon(items[i].icon,
+                                          size: 22, color: inactive),
+                                    ),
                             ),
                           ),
-                        ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],

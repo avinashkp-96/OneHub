@@ -62,4 +62,43 @@ void main() {
     await tester.tap(find.byIcon(OneHubIcons.documentList));
     expect(tapped, 1);
   });
+
+  testWidgets(
+      'the selected item shows its label on a pill background; unselected items stay icon-only',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: const Scaffold(
+          bottomNavigationBar: CurvedNavBar(
+            items: [
+              CurvedNavItem(icon: OneHubIcons.category, label: 'Home'),
+              CurvedNavItem(icon: OneHubIcons.documentList, label: 'Requests'),
+              CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
+            ],
+            selectedIndex: 0,
+            onSelected: _noop,
+          ),
+        ),
+      ),
+    );
+
+    // Only the selected item's label is actually painted.
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Requests'), findsNothing);
+    expect(find.text('Profile'), findsNothing);
+
+    // That label sits inside a rounded, tinted Container (the selection pill).
+    final pill = tester.widget<Container>(
+      find
+          .ancestor(of: find.text('Home'), matching: find.byType(Container))
+          .first,
+    );
+    final decoration = pill.decoration as BoxDecoration;
+    expect(decoration.color, isNotNull);
+    expect(decoration.borderRadius,
+        BorderRadius.circular(OneHubTheme.radiusPillBadge));
+  });
 }
+
+void _noop(int _) {}
