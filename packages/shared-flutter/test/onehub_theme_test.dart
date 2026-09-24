@@ -88,12 +88,26 @@ void main() {
     expect(OneHubColors.primary, const Color(0xFF3B82F6));
   });
 
-  test('every text style uses Plus Jakarta Sans', () {
+  test(
+      'display/headline slots use Bricolage Grotesque, everything else uses DM Sans',
+      () {
     final textTheme = OneHubTheme.light().textTheme;
-    expect(textTheme.headlineMedium?.fontFamily, OneHubTheme.fontFamily);
+    expect(textTheme.displayLarge?.fontFamily, OneHubTheme.fontFamilyDisplay);
+    expect(textTheme.headlineMedium?.fontFamily, OneHubTheme.fontFamilyDisplay);
     expect(textTheme.titleLarge?.fontFamily, OneHubTheme.fontFamily);
     expect(textTheme.bodyMedium?.fontFamily, OneHubTheme.fontFamily);
     expect(textTheme.labelLarge?.fontFamily, OneHubTheme.fontFamily);
+  });
+
+  test(
+      'OneHubTextStyles.pageHeading uses Bricolage Grotesque; the rest use DM Sans',
+      () {
+    expect(OneHubTextStyles.pageHeading(Colors.white).fontFamily,
+        OneHubTheme.fontFamilyDisplay);
+    expect(OneHubTextStyles.buttonLabel(Colors.white).fontFamily,
+        OneHubTheme.fontFamily);
+    expect(OneHubTextStyles.bodyText(Colors.white).fontFamily,
+        OneHubTheme.fontFamily);
   });
 
   testWidgets(

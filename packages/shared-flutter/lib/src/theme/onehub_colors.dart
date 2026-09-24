@@ -56,4 +56,10 @@ abstract final class OneHubColors {
       Color(0x382563EB); // rgba(37,99,235,0.22), bottom-left
   static const glowLight =
       Color(0x1FFFFFFF); // rgba(255,255,255,0.12), top-right
+
+  // CurvedNavBar's floating bar fill — solid (not translucent like
+  // cardFillDark) since it sits over arbitrary scrolling content, not a
+  // fixed dark backdrop, and needs to read clearly at any scroll position.
+  static const navBarFillDark = Color(0xFF1B1E24);
+  static const navBarFillLight = Colors.white;
 }

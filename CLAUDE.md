@@ -47,7 +47,8 @@ specific line in that PDF; see each file's doc comments for the mapping.
 (`#3B82F6`→`#1D4ED8`) gradient CTAs, translucent white-on-dark cards/inputs
 with a visible border, 20px card / 14px button / 12px input / 6px small-badge
 / 99px pill-badge radii, named spacing tokens (`OneHubTheme.gapIconLabel`
-through `.pagePaddingY`), one font throughout (Plus Jakarta Sans), Iconly
+through `.pagePaddingY`), a two-font type system (Bricolage Grotesque for
+headings, DM Sans for body/UI text — see the Typography note below), Iconly
 icons (thin "Light" stroke, two deliberate Bold exceptions — rating stars
 and the signup success check). This is the **fourth** design iteration in
 four days (2026-09-22 through -25), each superseding the last as a newer,
@@ -119,21 +120,69 @@ dashboard, etc.) haven't been individually rebuilt against this reference.
 Customer login and signup are done as of 2026-09-25, including the full
 3-step signup flow (form → 6-box OTP → success) and the icon-next-to-label
 field pattern (icons sit beside the field's label, not inside the field
-itself). Other customer screens (dashboard, category browsing, requirements,
-ratings) still use earlier layout conventions, just with the current
-colors/fonts/shapes/icons applied automatically since those come from the
-shared theme. If provider screens or the rest of customer screens are
-wanted in this style too, that's a separate ask.
+itself). The customer Dashboard (home screen) went through two redesign
+passes on 2026-09-24. First: a greeting header + real search field replaced
+the old plain `AppBar`, placeholder sections gained icon badges, and the
+old 5-item Material `NavigationBar` (Home, Search, My Requests,
+Notifications, Profile) was replaced by `CurvedNavBar`
+(`packages/shared-flutter/lib/src/theme/curved_nav_bar.dart`): a floating,
+icon-only, 3-item bar (Home, Requests, Profile — Profile still unwired)
+with a wavy top edge painted via a `CustomPainter` (`_WaveNavPainter`), per
+a reference screenshot. `OneHubColors.navBarFillDark`/`.navBarFillLight`
+are solid (not translucent) fills specifically for this bar, since it
+floats over arbitrary scrolling content rather than a fixed backdrop.
+
+Second: the user supplied a full HTML/CSS mockup ("OneHub home screen.html")
+with its own distinct palette, fonts (Bricolage Grotesque/DM Sans), and
+custom SVG icons. Explicitly scoped down before implementing: match its
+**structure and alignment only** — location chip + bell header, headline,
+search bar with a trailing filter button, a hero gradient CTA card, a
+Services quick-access grid, an Active Requests list with a 4-step status
+tracker, a Nearby Providers teaser, and a promo banner — while keeping the
+current `OneHubColors`/`OneHubTheme`/`OneHubIcons` design system entirely
+unchanged (not the mockup's own palette/fonts/icons). `CurvedNavBar` from
+the first pass was kept as-is (not swapped for the mockup's flat 5-item
+nav). At that point Services and Active Requests were wired to the real
+`/categories` and `/requirements/mine` endpoints this app already calls
+elsewhere, rather than the mockup's example content.
+
+Third (same day): a pixel-exact screenshot of just the header/search/hero/
+Services portion, explicitly authorizing dummy data ("use dummy data for
+now") — the first explicit exception to not fabricating content. Applied
+narrowly to what the screenshot actually specified: the location chip now
+shows a fixed example ("Edappally, Kochi") instead of a generic "Set your
+location" prompt, the headline includes a dummy name ("...Meera?"), and
+the Services grid became 4 hardcoded `_DummyCategory` entries (name, icon,
+"N available pros") in a 2-column card layout — `ServiceCategory` (the real
+model) has no pro-count field at all, so this exact stat can't be real
+regardless of data source. The Services grid's live `/categories` fetch was
+removed since the section no longer displays fetched data; "See all" still
+opens the real, API-backed `CategoryGridScreen`. Active Requests, Nearby
+Providers, and the promo banner are unchanged — that screenshot didn't
+show them, so they keep the second pass's real-data/honest-prompt
+treatment. The hero card changed from a solid blue gradient to `GlowCard`
+(dark, per that screenshot), with a `TintedBadge` ("FREE TO POST") and a
+pill CTA (white icon-circle + label) replacing the earlier white-on-blue
+button. Two new `OneHubIcons` entries support this: `filter` (search bar)
+and `chevronDown` (location chip dropdown); `danger` and `edit` are
+approximate stand-ins for "electrician"/"painter" since Iconly has no
+trade-specific glyphs.
+
+Other customer screens (category browsing, requirements, ratings) still
+use earlier layout conventions, just with the current colors/fonts/shapes/
+icons applied automatically since those come from the shared theme. If
+provider screens or the rest of customer screens are wanted in this style
+too, that's a separate ask.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
 original design.
 
-- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubTextStyles`, `OneHubIcons`, `GlowCard`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, `OneHubTextStyles.*` rather than generic `Theme.of(context).textTheme` slots on screens this style guide documents, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern). **Named spacing/radius constants exist specifically so a value can't silently drift out of sync the way it already did once** — two retheme rounds' worth of hardcoded `24`s survived a card-radius change from 24→16→20 in four call sites and two tests before this pass caught it; every remaining radius reference now points at `OneHubTheme.radiusFormCard` etc. instead of a bare number.
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubTextStyles`, `OneHubIcons`, `GlowCard`, `PageGlow`, `CurvedNavBar`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, `OneHubTextStyles.*` rather than generic `Theme.of(context).textTheme` slots on screens this style guide documents, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern). **Named spacing/radius constants exist specifically so a value can't silently drift out of sync the way it already did once** — two retheme rounds' worth of hardcoded `24`s survived a card-radius change from 24→16→20 in four call sites and two tests before this pass caught it; every remaining radius reference now points at `OneHubTheme.radiusFormCard` etc. instead of a bare number.
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
 - **Icons**: Iconly, vendored directly rather than via the `iconly` or `flutter_iconly` pub packages — both subclass `IconData`, which became a `final class` in this Flutter version, so neither compiles. `OneHubIcons` defines plain `IconData` constants against `packages/shared-flutter/assets/fonts/IconlyLight.ttf`/`IconlyBold.ttf` (MIT-licensed, see `IconlyFont-LICENSE.txt` next to them), with codepoints read directly out of the `iconly` package's source rather than guessed. If a future Flutter/Dart release fixes the subclassing issue and a maintained package appears, this vendoring could be dropped, but there's no urgency — it works and has no runtime dependency risk.
-- Plus Jakarta Sans is referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used earlier, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit spec each time.
+- **Typography**: originally one font (Plus Jakarta Sans) throughout; switched 2026-09-24 to a two-font system per explicit instruction to match a separate HTML/CSS mockup's fonts exactly — `OneHubTheme.fontFamilyDisplay` (Bricolage Grotesque) for headings (`OneHubTextStyles.pageHeading` and the `TextTheme`'s display/headline slots), `OneHubTheme.fontFamily` (DM Sans, kept this name since most of the codebase already calls it that) for everything else. Both referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads both via one `<link>` in `web/index.html`, requesting only the weights actually used (Bricolage Grotesque 800; DM Sans 400/500/600/700) rather than the mockup's own narrower weight list, which didn't cover this app's full type scale. Mobile falls back to the platform default until the actual `.ttf`s are bundled as assets (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used before Plus Jakarta Sans, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit spec each time.
 
 ## **Deployment**
 

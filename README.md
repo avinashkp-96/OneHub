@@ -74,9 +74,9 @@ search/filter/sort), real file upload for provider signup's profile
 photo/ID proof (currently plain text fields for a document URL), GPS capture
 during provider signup (coverage area is hardcoded to lat/lng 0,0 pending
 location permission handling), the admin provider-verification queue, and
-Plus Jakarta Sans as an actual bundled asset on mobile (works on web via a
-stylesheet link; Android/iOS currently fall back to the platform default
-font — see the Design section in `CLAUDE.md`). Iconly icons, by contrast,
+Bricolage Grotesque/DM Sans as actual bundled assets on mobile (works on
+web via a stylesheet link; Android/iOS currently fall back to the platform
+default font — see the Design section in `CLAUDE.md`). Iconly icons, by contrast,
 *are* bundled as real font assets (`packages/shared-flutter/assets/fonts/`)
 since the pub packages for them don't compile on this Flutter version —
 see `OneHubIcons`' doc comment.

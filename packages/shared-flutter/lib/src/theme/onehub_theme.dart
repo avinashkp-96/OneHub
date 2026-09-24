@@ -14,20 +14,25 @@ import 'onehub_colors.dart';
 /// underlying Figma file taken the day before via live computed CSS (e.g.
 /// the card radius was read as 16px then; the PDF specifies 20px for "Form
 /// card"). Dark-first: Tailwind blue-500/700 gradient CTAs, translucent
-/// white-on-dark cards/inputs with a visible border, one font throughout
-/// (Plus Jakarta Sans).
+/// white-on-dark cards/inputs with a visible border.
 ///
-/// Plus Jakarta Sans is referenced by family name rather than through the
-/// `google_fonts` package: that package's runtime API fetches fonts over
-/// the network with no offline fallback, which broke every widget test
-/// touching this theme and would be a real production risk (a customer on
-/// a bad connection shouldn't be blocked from seeing basic UI text). On
-/// web, `apps/*/web/index.html` loads it via a Google Fonts stylesheet
-/// `<link>`. On mobile, until the actual .ttf is bundled as an asset
+/// Typography later switched to a two-font system per an explicit
+/// instruction to match a separate HTML/CSS mockup's fonts exactly:
+/// Bricolage Grotesque for headings/display text ([fontFamilyDisplay]),
+/// DM Sans for everything else ([fontFamily], the body/UI font — kept this
+/// name since most of the codebase already calls it that). Both are
+/// referenced by family name rather than through the `google_fonts`
+/// package: that package's runtime API fetches fonts over the network with
+/// no offline fallback, which broke every widget test touching this theme
+/// and would be a real production risk (a customer on a bad connection
+/// shouldn't be blocked from seeing basic UI text). On web,
+/// `apps/*/web/index.html` loads both via a Google Fonts stylesheet
+/// `<link>`. On mobile, until the actual `.ttf`s are bundled as assets
 /// (tracked as a known gap in CLAUDE.md), this falls back to the platform's
 /// default font rather than failing.
 abstract final class OneHubTheme {
-  static const fontFamily = 'Plus Jakarta Sans';
+  static const fontFamily = 'DM Sans';
+  static const fontFamilyDisplay = 'Bricolage Grotesque';
 
   // Named spacing tokens, straight off the style guide's spacing grid.
   static const gapIconLabel = 6.0;
@@ -139,23 +144,28 @@ abstract final class OneHubTheme {
     );
   }
 
-  /// Plus Jakarta Sans for every TextTheme slot — one font throughout. Still
-  /// set explicitly per slot rather than via ThemeData's fontFamily-default-
-  /// plus-merge behavior, so it stays deterministic and trivial to unit
-  /// test. `titleMedium` is also given the style guide's "Medium/14px"
-  /// input-text size/weight here, since that's the Material slot
-  /// `TextField` reads its text style from by default — one change here
-  /// fixes every input's text app-wide instead of setting it per field.
+  /// DM Sans for every TextTheme slot except the display/headline ones,
+  /// which get Bricolage Grotesque instead — matching the mockup's own
+  /// `h1, h2 { font-family: "Bricolage Grotesque" }` rule (everything else
+  /// stays on its body font). Still set explicitly per slot rather than via
+  /// ThemeData's fontFamily-default-plus-merge behavior, so it stays
+  /// deterministic and trivial to unit test. `titleMedium` is also given
+  /// the style guide's "Medium/14px" input-text size/weight here, since
+  /// that's the Material slot `TextField` reads its text style from by
+  /// default — one change here fixes every input's text app-wide instead
+  /// of setting it per field.
   static TextTheme _textTheme(TextTheme base, bool dark) {
     TextStyle apply(TextStyle? style) =>
         (style ?? const TextStyle()).copyWith(fontFamily: fontFamily);
+    TextStyle applyDisplay(TextStyle? style) =>
+        (style ?? const TextStyle()).copyWith(fontFamily: fontFamilyDisplay);
     return base.copyWith(
-      displayLarge: apply(base.displayLarge),
-      displayMedium: apply(base.displayMedium),
-      displaySmall: apply(base.displaySmall),
-      headlineLarge: apply(base.headlineLarge),
-      headlineMedium: apply(base.headlineMedium),
-      headlineSmall: apply(base.headlineSmall),
+      displayLarge: applyDisplay(base.displayLarge),
+      displayMedium: applyDisplay(base.displayMedium),
+      displaySmall: applyDisplay(base.displaySmall),
+      headlineLarge: applyDisplay(base.headlineLarge),
+      headlineMedium: applyDisplay(base.headlineMedium),
+      headlineSmall: applyDisplay(base.headlineSmall),
       titleLarge: apply(base.titleLarge),
       titleMedium: TextStyle(
         fontFamily: fontFamily,
@@ -181,8 +191,12 @@ abstract final class OneHubTheme {
 /// slots on the auth screens this style guide actually documents — the
 /// Material default type scale doesn't map 1:1 onto this bespoke one.
 abstract final class OneHubTextStyles {
+  // The one display-font style — every screen heading built from this
+  // (login/signup titles, dashboard headline, section headers, the hero
+  // card's heading) renders in Bricolage Grotesque; everything else below
+  // stays on the body font (DM Sans).
   static TextStyle pageHeading(Color color) => TextStyle(
-      fontFamily: OneHubTheme.fontFamily,
+      fontFamily: OneHubTheme.fontFamilyDisplay,
       fontSize: 36,
       fontWeight: FontWeight.w800,
       color: color);
