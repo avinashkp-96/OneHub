@@ -62,7 +62,7 @@ class _SubServiceListScreenState extends State<SubServiceListScreen> {
                       child: ListTile(
                         title: Text(s.name),
                         subtitle: _priceRangeLabel(s) == null ? null : Text(_priceRangeLabel(s)!),
-                        trailing: const Icon(Icons.chevron_right),
+                        trailing: const Icon(OneHubIcons.chevronRight),
                         onTap: () => Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => PostRequirementScreen(subServiceId: s.id)),
                         ),

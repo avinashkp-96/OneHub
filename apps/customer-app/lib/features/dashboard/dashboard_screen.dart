@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 import '../categories/category_grid_screen.dart';
 import '../requirements/my_requests_screen.dart';
 
@@ -31,11 +32,11 @@ class DashboardScreen extends StatelessWidget {
       ),
       bottomNavigationBar: NavigationBar(
         destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.search), label: 'Search'),
-          NavigationDestination(icon: Icon(Icons.list_alt), label: 'My Requests'),
-          NavigationDestination(icon: Icon(Icons.notifications_outlined), label: 'Notifications'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+          NavigationDestination(icon: Icon(OneHubIcons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(OneHubIcons.search), label: 'Search'),
+          NavigationDestination(icon: Icon(OneHubIcons.documentList), label: 'My Requests'),
+          NavigationDestination(icon: Icon(OneHubIcons.notification), label: 'Notifications'),
+          NavigationDestination(icon: Icon(OneHubIcons.profile), label: 'Profile'),
         ],
         selectedIndex: 0,
         // Only "My Requests" is wired — Search, Notifications, and Profile
@@ -92,7 +93,7 @@ class _ProminentCtaPlaceholder extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Row(
             children: [
-              Icon(Icons.add_circle, color: colorScheme.onPrimaryContainer),
+              Icon(OneHubIcons.plus, color: colorScheme.onPrimaryContainer),
               const SizedBox(width: 12),
               Text(
                 label,

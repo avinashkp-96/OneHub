@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/signup_screen.dart';
 import 'features/dashboard/dashboard_screen.dart';
 import 'features/requirements/bid_list_screen.dart';
 import 'features/requirements/post_requirement_screen.dart';
@@ -19,6 +20,7 @@ class OneHubCustomerApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginScreen(),
+        '/signup': (_) => const SignupScreen(),
         '/dashboard': (_) => const DashboardScreen(),
       },
       onGenerateRoute: (settings) {

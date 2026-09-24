@@ -63,7 +63,7 @@ class _RatingScreenState extends State<RatingScreen> {
                   IconButton(
                     iconSize: 36,
                     icon: Icon(
-                      i <= _stars ? Icons.star : Icons.star_border,
+                      i <= _stars ? OneHubIcons.starFilled : OneHubIcons.starOutline,
                       color: context.statusWarning,
                     ),
                     onPressed: () => setState(() => _stars = i),

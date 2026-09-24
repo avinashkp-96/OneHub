@@ -137,13 +137,19 @@ class _SignupScreenState extends State<SignupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _step == _Step.otp
-          ? AppBar(leading: BackButton(onPressed: () => setState(() => _step = _Step.form)))
+          ? AppBar(
+              leading: IconButton(
+                icon: const Icon(OneHubIcons.arrowLeft),
+                onPressed: () => setState(() => _step = _Step.form),
+              ),
+            )
           : null,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: switch (_step) {
-            _Step.form => _FormStep(
+        child: GlowBackground(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: switch (_step) {
+              _Step.form => _FormStep(
                 fullName: _fullName,
                 mobile: _mobile,
                 email: _email,
@@ -171,8 +177,9 @@ class _SignupScreenState extends State<SignupScreen> {
                 busy: _busy,
                 onVerify: _verifyAndCreateAccount,
               ),
-            _Step.success => _SuccessStep(onGoToDashboard: () => Navigator.of(context).pushReplacementNamed('/dashboard')),
-          },
+              _Step.success => _SuccessStep(onGoToDashboard: () => Navigator.of(context).pushReplacementNamed('/dashboard')),
+            },
+          ),
         ),
       ),
     );
@@ -213,6 +220,15 @@ class _FormStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 16),
+        const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TintedBadge(label: 'NEW ACCOUNT', color: OneHubColors.primary),
+            SizedBox(width: 8),
+            TintedBadge(label: 'FREE SIGNUP', color: OneHubColors.accentPurple),
+          ],
+        ),
+        const SizedBox(height: 16),
         Text('Create Account', textAlign: TextAlign.center, style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Text(
@@ -228,64 +244,86 @@ class _FormStep extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (error != null) Padding(padding: const EdgeInsets.only(bottom: 16), child: Text(error!, style: TextStyle(color: context.statusDanger))),
-                const FieldLabel('FULL NAME', required: true),
+                const FieldLabel('FULL NAME', required: true, icon: OneHubIcons.user),
                 const SizedBox(height: 6),
-                TextField(controller: fullName, decoration: const InputDecoration(hintText: 'John Doe', prefixIcon: Icon(Icons.person_outline))),
+                TextField(controller: fullName, decoration: const InputDecoration(hintText: 'John Doe')),
                 const SizedBox(height: 16),
-                const FieldLabel('MOBILE NUMBER', required: true),
+                const FieldLabel('MOBILE NUMBER', required: true, icon: OneHubIcons.phone),
                 const SizedBox(height: 6),
                 TextField(
                   controller: mobile,
                   keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(hintText: '10-digit number', prefixIcon: Icon(Icons.phone_outlined)),
+                  decoration: const InputDecoration(hintText: '10-digit number'),
                 ),
                 const SizedBox(height: 16),
-                const FieldLabel('EMAIL ID (optional)'),
+                const FieldLabel('EMAIL ID (optional)', icon: OneHubIcons.email),
                 const SizedBox(height: 6),
                 TextField(
                   controller: email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: 'you@example.com', prefixIcon: Icon(Icons.email_outlined)),
+                  decoration: const InputDecoration(hintText: 'you@example.com'),
                 ),
                 const SizedBox(height: 16),
-                const FieldLabel('PASSWORD', required: true),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: password,
-                  obscureText: obscurePassword,
-                  decoration: InputDecoration(
-                    hintText: 'Min. 6 characters',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                      onPressed: onTogglePassword,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const FieldLabel('PASSWORD', required: true, icon: OneHubIcons.lock),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: password,
+                            obscureText: obscurePassword,
+                            decoration: InputDecoration(
+                              hintText: 'Min. 6 chars',
+                              suffixIcon: IconButton(
+                                icon: Icon(obscurePassword ? OneHubIcons.hide : OneHubIcons.show),
+                                onPressed: onTogglePassword,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const FieldLabel('CONFIRM PASSWORD', required: true),
-                const SizedBox(height: 6),
-                TextField(
-                  controller: confirmPassword,
-                  obscureText: obscureConfirmPassword,
-                  decoration: InputDecoration(
-                    hintText: 'Re-enter password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(obscureConfirmPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                      onPressed: onToggleConfirmPassword,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const FieldLabel('CONFIRM', required: true, icon: OneHubIcons.confirmed),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: confirmPassword,
+                            obscureText: obscureConfirmPassword,
+                            decoration: InputDecoration(
+                              hintText: 'Re-enter',
+                              suffixIcon: IconButton(
+                                icon: Icon(obscureConfirmPassword ? OneHubIcons.hide : OneHubIcons.show),
+                                onPressed: onToggleConfirmPassword,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 16),
-                const FieldLabel('CITY / LOCATION', required: true),
+                const FieldLabel('CITY / LOCATION', required: true, icon: OneHubIcons.location),
                 const SizedBox(height: 6),
                 TextField(
                   controller: city,
                   decoration: InputDecoration(
                     hintText: 'e.g. Mumbai',
-                    prefixIcon: const Icon(Icons.location_on_outlined),
-                    suffixIcon: TextButton(onPressed: onUseGps, child: const Text('GPS')),
+                    suffixIcon: Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Center(
+                        widthFactor: 1,
+                        child: TintedBadge(label: 'GPS', color: OneHubColors.primary, onTap: onUseGps),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -294,7 +332,23 @@ class _FormStep extends StatelessWidget {
                   controlAffinity: ListTileControlAffinity.leading,
                   value: acceptedTerms,
                   onChanged: onAcceptedTermsChanged,
-                  title: const Text('I agree to the Terms & Conditions and Privacy Policy'),
+                  title: Text.rich(
+                    TextSpan(
+                      style: textTheme.bodyMedium,
+                      children: [
+                        const TextSpan(text: 'I agree to the '),
+                        TextSpan(
+                          text: 'Terms & Conditions',
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+                        ),
+                        const TextSpan(text: ' and '),
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 PrimaryCta(onPressed: busy ? null : onSubmit, child: const Text('Create Account')),
@@ -397,7 +451,7 @@ class _SuccessStep extends StatelessWidget {
             width: 88,
             height: 88,
             decoration: BoxDecoration(color: context.statusSuccess.withValues(alpha: 0.12), shape: BoxShape.circle),
-            child: Icon(Icons.check_rounded, color: context.statusSuccess, size: 48),
+            child: Icon(OneHubIcons.successCheck, color: context.statusSuccess, size: 48),
           ),
         ),
         const SizedBox(height: 24),

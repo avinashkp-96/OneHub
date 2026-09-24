@@ -5,33 +5,27 @@ import 'onehub_colors.dart';
 /// should use this instead of building their own ThemeData, so a palette or
 /// typography change only has to happen in one place.
 ///
-/// Style reference: a Figma Make prototype the user supplied directly for
-/// the signup screen — purple accent (#6C63FF exactly), Outfit for
-/// headings, Inter for body copy, pill-shaped gradient CTAs with a shadow,
-/// large-radius shadowed (not outlined) cards, icon-in-field text inputs.
-/// Superseded an earlier "PetCare"-referenced indigo-on-lavender look on
-/// 2026-09-23 — palette/typography/shape only, not a pixel clone of that
-/// prototype's specific screens.
+/// Style reference: a Figma Make prototype the user linked directly, read
+/// at its "Version 5" iteration (2026-09-24) by extracting computed CSS
+/// from the live rendered page, not by eyeballing a screenshot — see
+/// OneHubColors' doc comment for exact values and where each one came from.
+/// Dark-first: Tailwind blue-500/700 gradient CTAs, translucent white-on-dark
+/// cards and inputs with a visible ~10% white border (not the shadow-only,
+/// borderless cards from an earlier reading of an older version of the same
+/// file), 14px rounded-rect buttons (not a full pill), one font throughout
+/// (Plus Jakarta Sans) rather than the previous two-font Outfit/Inter split.
 ///
-/// Outfit/Inter over Noto Sans: this drops the Devanagari/regional-script
-/// coverage Noto Sans had, which was chosen earlier specifically for the
-/// provider base's likely regional-language needs. That tradeoff wasn't
-/// re-litigated here — the user handed over an explicit font spec — but
-/// it's a real regression to revisit before any localization work starts
-/// (tracked in CLAUDE.md).
-///
-/// Both fonts are referenced by family name rather than through the
+/// Plus Jakarta Sans is referenced by family name rather than through the
 /// `google_fonts` package: that package's runtime API fetches fonts over
 /// the network with no offline fallback, which broke every widget test
 /// touching this theme and would be a real production risk (a customer on
 /// a bad connection shouldn't be blocked from seeing basic UI text). On
-/// web, `apps/*/web/index.html` loads both via a Google Fonts stylesheet
-/// `<link>`. On mobile, until the actual .ttf files are bundled as assets
+/// web, `apps/*/web/index.html` loads it via a Google Fonts stylesheet
+/// `<link>`. On mobile, until the actual .ttf is bundled as an asset
 /// (tracked as a known gap in CLAUDE.md), this falls back to the platform's
 /// default font rather than failing.
 abstract final class OneHubTheme {
-  static const headingFontFamily = 'Outfit';
-  static const bodyFontFamily = 'Inter';
+  static const fontFamily = 'Plus Jakarta Sans';
 
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -43,6 +37,7 @@ abstract final class OneHubTheme {
       brightness: brightness,
     );
     final textTheme = _textTheme(dark ? ThemeData.dark().textTheme : ThemeData.light().textTheme);
+    final cardBorder = dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return ThemeData(
       useMaterial3: true,
@@ -56,40 +51,48 @@ abstract final class OneHubTheme {
         centerTitle: true,
         titleTextStyle: textTheme.titleLarge?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
       ),
-      // Large radius + a soft shadow instead of an outline — cards read as
-      // "floating" on the background rather than as bordered Material
-      // containers.
+      // Translucent surface + a visible subtle border, not a shadow-only
+      // card — reads as "a panel on the dark background" rather than as a
+      // Material-elevation card.
       cardTheme: CardThemeData(
-        elevation: 2,
-        shadowColor: colorScheme.shadow.withValues(alpha: 0.08),
+        elevation: 0,
         margin: EdgeInsets.zero,
-        color: dark ? OneHubColors.inputFillDark : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        color: dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: cardBorder),
+        ),
       ),
-      // Pill-shaped, per the reference, not just rounded-rectangle. A fixed
-      // 48px minimum height (not full width, by design — see PrimaryCta
-      // below for page-level CTAs) so every button is an easy outdoor/
-      // gloved-hand tap target, whether it's a page-level CTA or one of a
-      // pair in a Row.
+      // 14px rounded rectangles, not a full pill — a real shape change from
+      // the previous StadiumBorder reading. A fixed 48px minimum height
+      // (not full width, by design — see PrimaryCta below for page-level
+      // CTAs) so every button is an easy outdoor/gloved-hand tap target.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 48),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(shape: const StadiumBorder()),
+        style: TextButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight),
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       navigationBarTheme: NavigationBarThemeData(
@@ -100,38 +103,36 @@ abstract final class OneHubTheme {
     );
   }
 
-  /// Outfit for display/headline/title slots, Inter for body/label — every
-  /// slot is set explicitly rather than relying on ThemeData's fontFamily
-  /// default + textTheme merge behavior, so this is deterministic and
-  /// trivial to unit test.
+  /// Plus Jakarta Sans for every TextTheme slot — one font throughout,
+  /// replacing the earlier Outfit/Inter split. Still set explicitly per
+  /// slot rather than via ThemeData's fontFamily-default-plus-merge
+  /// behavior, so it stays deterministic and trivial to unit test.
   static TextTheme _textTheme(TextTheme base) {
-    TextStyle heading(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: headingFontFamily);
-    TextStyle body(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: bodyFontFamily);
-
+    TextStyle apply(TextStyle? style) => (style ?? const TextStyle()).copyWith(fontFamily: fontFamily);
     return base.copyWith(
-      displayLarge: heading(base.displayLarge),
-      displayMedium: heading(base.displayMedium),
-      displaySmall: heading(base.displaySmall),
-      headlineLarge: heading(base.headlineLarge),
-      headlineMedium: heading(base.headlineMedium),
-      headlineSmall: heading(base.headlineSmall),
-      titleLarge: heading(base.titleLarge),
-      titleMedium: heading(base.titleMedium),
-      titleSmall: heading(base.titleSmall),
-      bodyLarge: body(base.bodyLarge),
-      bodyMedium: body(base.bodyMedium),
-      bodySmall: body(base.bodySmall),
-      labelLarge: body(base.labelLarge),
-      labelMedium: body(base.labelMedium),
-      labelSmall: body(base.labelSmall),
+      displayLarge: apply(base.displayLarge),
+      displayMedium: apply(base.displayMedium),
+      displaySmall: apply(base.displaySmall),
+      headlineLarge: apply(base.headlineLarge),
+      headlineMedium: apply(base.headlineMedium),
+      headlineSmall: apply(base.headlineSmall),
+      titleLarge: apply(base.titleLarge),
+      titleMedium: apply(base.titleMedium),
+      titleSmall: apply(base.titleSmall),
+      bodyLarge: apply(base.bodyLarge),
+      bodyMedium: apply(base.bodyMedium),
+      bodySmall: apply(base.bodySmall),
+      labelLarge: apply(base.labelLarge),
+      labelMedium: apply(base.labelMedium),
+      labelSmall: apply(base.labelSmall),
     );
   }
 }
 
 /// A page-level primary CTA ("Login", "Send Request", "Submit Bid") that
-/// spans the full width available, rendered as a gradient pill with a soft
-/// shadow, per the reference. Buttons used inline (e.g. Accept/Reject side
-/// by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
+/// spans the full width available, rendered as a gradient rounded-rect with
+/// a soft shadow, per the reference. Buttons used inline (e.g. Accept/Reject
+/// side by side in a Row) should stay plain `FilledButton`/`OutlinedButton` —
 /// forcing full width there fights the Row's layout instead of the other
 /// widget in it, and the gradient look is meant to read as "the one primary
 /// action on this screen," not as decoration on every button.
@@ -152,10 +153,10 @@ class PrimaryCta extends StatelessWidget {
       height: 48,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(14),
           gradient: disabled
               ? null
-              : LinearGradient(colors: [scheme.primary, gradientEnd], begin: Alignment.centerLeft, end: Alignment.centerRight),
+              : LinearGradient(colors: [scheme.primary, gradientEnd], begin: Alignment.topLeft, end: Alignment.bottomRight),
           color: disabled ? scheme.onSurface.withValues(alpha: 0.12) : null,
           boxShadow: disabled
               ? null
@@ -164,7 +165,7 @@ class PrimaryCta extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: InkWell(
-            borderRadius: BorderRadius.circular(999),
+            borderRadius: BorderRadius.circular(14),
             onTap: onPressed,
             child: Center(
               child: DefaultTextStyle.merge(
@@ -182,6 +183,34 @@ class PrimaryCta extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A small tinted rounded-rect badge ("NEW ACCOUNT", "GPS"), per the
+/// reference — 15% tinted background, ~22% tinted border, tinted text,
+/// small radius (6px, not a pill).
+class TintedBadge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  const TintedBadge({super.key, required this.label, required this.color, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final content = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+      ),
+    );
+    if (onTap == null) return content;
+    return InkWell(borderRadius: BorderRadius.circular(6), onTap: onTap, child: content);
   }
 }
 

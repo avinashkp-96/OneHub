@@ -17,3 +17,19 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+
+# Iconly's own Flutter wrapper packages (iconly, flutter_iconly) subclass
+# IconData, which became a `final class` in this Flutter version — both
+# fail to compile. The font assets themselves are fine (MIT licensed, see
+# assets/fonts/IconlyFont-LICENSE.txt); OneHubIcons defines its own
+# IconData constants directly against these bundled fonts instead of
+# depending on either package. Bundled here (not in each app) so both apps
+# get them via the onehub_shared dependency without duplicating the fonts.
+flutter:
+  fonts:
+    - family: IconlyLight
+      fonts:
+        - asset: assets/fonts/IconlyLight.ttf
+    - family: IconlyBold
+      fonts:
+        - asset: assets/fonts/IconlyBold.ttf
