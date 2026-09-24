@@ -161,12 +161,23 @@ opens the real, API-backed `CategoryGridScreen`. Active Requests, Nearby
 Providers, and the promo banner are unchanged — that screenshot didn't
 show them, so they keep the second pass's real-data/honest-prompt
 treatment. The hero card changed from a solid blue gradient to `GlowCard`
-(dark, per that screenshot), with a `TintedBadge` ("FREE TO POST") and a
+(dark, per that screenshot), with a "FREE TO POST" tinted pill badge and a
 pill CTA (white icon-circle + label) replacing the earlier white-on-blue
 button. Two new `OneHubIcons` entries support this: `filter` (search bar)
 and `chevronDown` (location chip dropdown); `danger` and `edit` are
 approximate stand-ins for "electrician"/"painter" since Iconly has no
 trade-specific glyphs.
+
+A fourth, same-day polish round against a follow-up screenshot: the hero
+card's faint watermark icon was removed entirely; the "FREE TO POST" badge
+was rebuilt inline (not `TintedBadge`) to drop its letter-spacing and bump
+its size slightly, matching the reference's styling more closely; the
+search bar's radius went from a full pill (`radiusPillBadge`) down to
+`radiusFormCard`, a softer rounded rectangle instead of a stadium shape.
+`PageGlow` gained a second glow — a soft blue one (`OneHubColors.glowBlue1`)
+anchored bottom-right, alongside the existing top-right light glow —
+applied consistently everywhere `PageGlow` already wraps a screen (all
+auth screens and the dashboard), not just this one.
 
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/

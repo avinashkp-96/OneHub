@@ -254,7 +254,7 @@ class _SearchBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
       decoration: BoxDecoration(
         color: inputFill,
-        borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
         border: Border.all(color: inputBorder),
       ),
       child: Row(
@@ -303,71 +303,67 @@ class _HeroCard extends StatelessWidget {
     return GlowCard(
       child: Padding(
         padding: const EdgeInsets.all(22),
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Transform.rotate(
-                angle: -0.3,
-                child: Icon(OneHubIcons.work,
-                    size: 140, color: textPrimary.withValues(alpha: 0.06)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: OneHubColors.warning.withValues(alpha: 0.14),
+                borderRadius:
+                    BorderRadius.circular(OneHubTheme.radiusPillBadge),
+                border: Border.all(
+                    color: OneHubColors.warning.withValues(alpha: 0.22)),
+              ),
+              child: Text(
+                'FREE TO POST',
+                style: OneHubTextStyles.badgeLabel(OneHubColors.warning)
+                    .copyWith(letterSpacing: 0, fontSize: 12),
               ),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const TintedBadge(
-                    label: 'FREE TO POST',
-                    color: OneHubColors.warning,
-                    pill: true),
-                const SizedBox(height: 14),
-                Text(
-                  "Tell us what's broken",
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 22),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: 230,
-                  child: Text(
-                    'Describe the job once and nearby pros send you bids.',
-                    style: OneHubTextStyles.bodyText(textSecondary),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                InkWell(
-                  borderRadius:
-                      BorderRadius.circular(OneHubTheme.radiusPillBadge),
-                  onTap: onTap,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
-                    decoration: BoxDecoration(
-                        color: ctaFill,
-                        borderRadius:
-                            BorderRadius.circular(OneHubTheme.radiusPillBadge)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                              shape: BoxShape.circle, color: Colors.white),
-                          child: const Center(
-                            child: Icon(OneHubIcons.chevronRight,
-                                size: 16, color: OneHubColors.primary),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text('Post requirement',
-                            style: OneHubTextStyles.buttonLabel(textPrimary)),
-                      ],
+            const SizedBox(height: 14),
+            Text(
+              "Tell us what's broken",
+              style: OneHubTextStyles.pageHeading(textPrimary)
+                  .copyWith(fontSize: 22),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 230,
+              child: Text(
+                'Describe the job once and nearby pros send you bids.',
+                style: OneHubTextStyles.bodyText(textSecondary),
+              ),
+            ),
+            const SizedBox(height: 18),
+            InkWell(
+              borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+                decoration: BoxDecoration(
+                    color: ctaFill,
+                    borderRadius:
+                        BorderRadius.circular(OneHubTheme.radiusPillBadge)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: const BoxDecoration(
+                          shape: BoxShape.circle, color: Colors.white),
+                      child: const Center(
+                        child: Icon(OneHubIcons.chevronRight,
+                            size: 16, color: OneHubColors.primary),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 10),
+                    Text('Post requirement',
+                        style: OneHubTextStyles.buttonLabel(textPrimary)),
+                  ],
                 ),
-              ],
+              ),
             ),
           ],
         ),
