@@ -108,8 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       bottomNavigationBar: CurvedNavBar(
         items: const [
-          CurvedNavItem(icon: OneHubIcons.category, label: 'Home'),
+          CurvedNavItem(icon: OneHubIcons.home, label: 'Home'),
           CurvedNavItem(icon: OneHubIcons.documentList, label: 'Requests'),
+          CurvedNavItem(icon: OneHubIcons.category, label: 'Category'),
           CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
         ],
         selectedIndex: 0,
@@ -117,6 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // NavigationBar's convention of leaving unbuilt destinations unwired.
         onSelected: (index) {
           if (index == 1) openMyRequests();
+          if (index == 2) openCategories();
         },
       ),
     );

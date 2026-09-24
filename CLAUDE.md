@@ -179,6 +179,52 @@ anchored bottom-right, alongside the existing top-right light glow —
 applied consistently everywhere `PageGlow` already wraps a screen (all
 auth screens and the dashboard), not just this one.
 
+`CurvedNavBar` later dropped its solid fill for a frosted-glass look:
+`BackdropFilter(ImageFilter.blur(...))` clipped to the same wavy-top path
+(`_wavePath`, now shared by the clip, the shadow, and the border painters
+instead of duplicated), with a translucent tint
+(`OneHubColors.navBarFillDark`/`.navBarFillLight` at 45% alpha) over the
+blur rather than a semi-transparent app color — the blur is what keeps
+scrolled content legible through the bar, not just dimming it.
+
+That blur only had real content to blur once `DashboardScreen`'s `Scaffold`
+also got `extendBody: true` — without it, `Scaffold` reduces the body's
+layout height so it stops short of the `bottomNavigationBar` slot, and the
+area behind the bar's translucent/wavy gaps was just the flat
+`scaffoldBackgroundColor` (a solid dark box) instead of actual scrolled
+content for the `BackdropFilter` to blur.
+
+`CurvedNavBar`'s selected tab now gets a pill-shaped selection background
+plus its label next to the icon (`Icon` + `SizedBox` + `Text` in a
+rounded, tinted `Container`); unselected tabs stay icon-only, per a
+reference screenshot. Items switched from equal-width `Expanded` cells to
+naturally-sized children in a `spaceBetween` `Row`, so the wider selected
+pill doesn't have to fight fixed-width columns designed for icon-only
+content; the whole row is now wrapped in `Positioned.fill(child: Center(...))`
+instead of a fixed top padding, so it stays vertically centered regardless
+of the pill/icon height difference.
+
+All three of the above (frosted blur, `extendBody`, pill+label selection)
+were superseded the same day by an explicit "redesign the entire navbar"
+request against a specific external reference
+(dribbble.com/shots/26136769, "Navigation bar liquid-style"). Per the
+user's explicit choices when the conflict was flagged: solid opaque fill
+instead of blur (`BackdropFilter`/`ClipPath`/the wave painters and
+`_wavePath` all removed, `extendBody: true` reverted), icon-only tabs
+instead of label-on-select (no tab ever paints its label; `label` is kept
+only for `Semantics`), and a static gradient "liquid" blob (not the
+reference's actual shape-morphing animation, which was explicitly
+descoped as more involved than warranted) that `AnimatedPositioned`-slides
+to whichever tab is selected — `_LiquidBlob`, a circle with a radial
+`OneHubColors.accentPurple` → `.primary` gradient, a soft glow, and a
+glossy top-left highlight, reusing the app's existing palette rather than
+introducing new colors. The bar itself is now a plain `Container` with
+`BorderRadius.circular(radiusPillBadge)`, not a custom-painted wave shape.
+Also grew from 3 items to 4 (Home/Requests/Category/Profile) per explicit
+instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
+already used elsewhere on this screen); Profile stays unwired, matching
+the standing convention for not-yet-built destinations.
+
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If

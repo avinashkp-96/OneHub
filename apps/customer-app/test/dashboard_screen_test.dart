@@ -65,4 +65,22 @@ void main() {
     expect(find.text('Carpenter'), findsOneWidget);
     expect(find.text('12 available pros'), findsOneWidget);
   });
+
+  testWidgets(
+      'the bottom nav has 4 items (Home, Requests, Category, Profile) with Home selected',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
+    );
+
+    final navBar = tester.widget<CurvedNavBar>(find.byType(CurvedNavBar));
+    expect(navBar.items.map((i) => i.label),
+        ['Home', 'Requests', 'Category', 'Profile']);
+    expect(navBar.selectedIndex, 0);
+  });
 }

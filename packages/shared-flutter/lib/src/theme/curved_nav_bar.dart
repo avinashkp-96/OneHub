@@ -1,6 +1,6 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'onehub_colors.dart';
+import 'onehub_theme.dart';
 
 class CurvedNavItem {
   final IconData icon;
@@ -8,12 +8,20 @@ class CurvedNavItem {
   const CurvedNavItem({required this.icon, required this.label});
 }
 
-/// A floating bottom navigation bar with a gently wavy top edge, per a
-/// reference screenshot: icon-only tabs (no visible labels) on a dark,
-/// rounded bar that floats above the screen edge, distinct from Material's
-/// square-edged, full-width `NavigationBar` used previously. `label` is
-/// still carried per item for semantics/tooltips even though it isn't
-/// painted, so each tab stays accessible.
+/// A floating bottom navigation bar, per a reference design
+/// (dribbble.com/shots/26136769, "Navigation bar liquid-style"): a solid,
+/// opaque, fully-rounded pill with icon-only tabs (no labels, not even on
+/// the selected one — `label` is still carried per item for semantics) and
+/// a glowing gradient "liquid" blob that slides to whichever tab is
+/// selected. Replaced an earlier wavy-top, frosted-glass, label-on-select
+/// design per explicit instruction to match this reference instead —
+/// solid over blurred, icon-only over labeled.
+///
+/// The blob's look (radial purple-to-blue gradient, soft outer glow, a
+/// glossy highlight) is static; only its position animates between tabs.
+/// The reference's own shape-morphing liquid animation is a lot more
+/// involved (a custom animated painter deforming the blob's outline in
+/// transit) and was explicitly descoped in favor of this simpler version.
 class CurvedNavBar extends StatelessWidget {
   final List<CurvedNavItem> items;
   final int selectedIndex;
@@ -30,8 +38,6 @@ class CurvedNavBar extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final fill =
         dark ? OneHubColors.navBarFillDark : OneHubColors.navBarFillLight;
-    final border =
-        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
     final inactive =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
 
@@ -40,36 +46,60 @@ class CurvedNavBar extends StatelessWidget {
       minimum: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: SizedBox(
+        child: Container(
           height: 64,
-          child: CustomPaint(
-            painter: _WaveNavPainter(fill: fill, border: border),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8))
+            ],
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final slotWidth = constraints.maxWidth / items.length;
+              return Stack(
                 children: [
-                  for (var i = 0; i < items.length; i++)
-                    Expanded(
-                      child: Semantics(
-                        button: true,
-                        selected: i == selectedIndex,
-                        label: items[i].label,
-                        child: InkWell(
-                          onTap: () => onSelected(i),
-                          customBorder: const CircleBorder(),
-                          child: Icon(
-                            items[i].icon,
-                            size: 22,
-                            color: i == selectedIndex
-                                ? OneHubColors.primary
-                                : inactive,
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                    left: slotWidth * selectedIndex,
+                    top: 0,
+                    bottom: 0,
+                    width: slotWidth,
+                    child: const Center(child: _LiquidBlob(size: 44)),
+                  ),
+                  Row(
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        Expanded(
+                          child: Semantics(
+                            button: true,
+                            selected: i == selectedIndex,
+                            label: items[i].label,
+                            child: InkWell(
+                              onTap: () => onSelected(i),
+                              customBorder: const CircleBorder(),
+                              child: Center(
+                                child: Icon(
+                                  items[i].icon,
+                                  size: 22,
+                                  color: i == selectedIndex
+                                      ? Colors.white
+                                      : inactive,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                    ],
+                  ),
                 ],
-              ),
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -77,51 +107,47 @@ class CurvedNavBar extends StatelessWidget {
   }
 }
 
-/// Paints a rounded-bottom bar shape whose top edge undulates in a gentle
-/// wave instead of running straight, matching the reference's curved-top
-/// silhouette.
-class _WaveNavPainter extends CustomPainter {
-  final Color fill;
-  final Color border;
-  static const _amplitude = 6.0;
-  static const _cycles = 1.5;
-  static const _bottomRadius = 26.0;
-
-  const _WaveNavPainter({required this.fill, required this.border});
-
-  double _waveY(double x, double width) {
-    const baseline = _amplitude + 6;
-    return baseline - _amplitude * math.sin(2 * math.pi * _cycles * x / width);
-  }
+/// The glowing gradient circle behind the selected tab — purple-to-blue
+/// radial gradient (`OneHubColors.accentPurple` -> `.primary`, the app's
+/// existing palette, not new colors), a soft outer glow, and a small
+/// glossy highlight offset toward the top-left like a light reflection.
+class _LiquidBlob extends StatelessWidget {
+  final double size;
+  const _LiquidBlob({required this.size});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()..moveTo(0, _waveY(0, size.width));
-    const steps = 48;
-    for (var i = 1; i <= steps; i++) {
-      final x = size.width * i / steps;
-      path.lineTo(x, _waveY(x, size.width));
-    }
-    path
-      ..lineTo(size.width, size.height - _bottomRadius)
-      ..quadraticBezierTo(
-          size.width, size.height, size.width - _bottomRadius, size.height)
-      ..lineTo(_bottomRadius, size.height)
-      ..quadraticBezierTo(0, size.height, 0, size.height - _bottomRadius)
-      ..close();
-
-    canvas.drawShadow(path, Colors.black.withValues(alpha: 0.35), 10, false);
-    canvas.drawPath(path, Paint()..color = fill);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = border
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          center: Alignment(-0.3, -0.3),
+          radius: 0.9,
+          colors: [OneHubColors.accentPurple, OneHubColors.primary],
+        ),
+        boxShadow: [
+          BoxShadow(
+              color: OneHubColors.primary.withValues(alpha: 0.5),
+              blurRadius: 16,
+              spreadRadius: 1)
+        ],
+      ),
+      child: Align(
+        alignment: const Alignment(-0.4, -0.4),
+        child: Container(
+          width: size * 0.35,
+          height: size * 0.35,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [
+              Colors.white.withValues(alpha: 0.55),
+              Colors.white.withValues(alpha: 0)
+            ]),
+          ),
+        ),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(covariant _WaveNavPainter oldDelegate) =>
-      oldDelegate.fill != fill || oldDelegate.border != border;
 }
