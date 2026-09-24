@@ -65,4 +65,22 @@ void main() {
     expect(find.text('Carpenter'), findsOneWidget);
     expect(find.text('12 available pros'), findsOneWidget);
   });
+
+  testWidgets(
+      'the Scaffold extends its body behind CurvedNavBar so the blur has real content to blur',
+      (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
+    );
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(
+      scaffold.extendBody,
+      isTrue,
+      reason:
+          'without this, Scaffold reserves body height above the bottom nav bar, so '
+          "there's nothing but the flat scaffoldBackgroundColor behind CurvedNavBar's "
+          'translucent/wavy gaps for its BackdropFilter to actually blur',
+    );
+  });
 }

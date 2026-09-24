@@ -187,6 +187,13 @@ instead of duplicated), with a translucent tint
 blur rather than a semi-transparent app color — the blur is what keeps
 scrolled content legible through the bar, not just dimming it.
 
+That blur only had real content to blur once `DashboardScreen`'s `Scaffold`
+also got `extendBody: true` — without it, `Scaffold` reduces the body's
+layout height so it stops short of the `bottomNavigationBar` slot, and the
+area behind the bar's translucent/wavy gaps was just the flat
+`scaffoldBackgroundColor` (a solid dark box) instead of actual scrolled
+content for the `BackdropFilter` to blur.
+
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If

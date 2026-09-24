@@ -61,6 +61,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .push(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
 
     return Scaffold(
+      // Lets the ListView's scrolled content actually run underneath
+      // CurvedNavBar instead of stopping short of it — without this, the
+      // area behind the bar's translucent/wavy gaps is just the flat
+      // Scaffold background (a solid dark box), not real content for the
+      // bar's BackdropFilter to blur.
+      extendBody: true,
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
