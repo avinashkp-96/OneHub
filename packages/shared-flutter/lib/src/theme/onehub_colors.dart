@@ -27,13 +27,18 @@ abstract final class OneHubColors {
   // exact tokens. Light is a derived equivalent (same alpha-over-white
   // logic mirrored from alpha-over-black), not separately specified.
   static const surfaceDark = Color(0xFF111318); // "Background"
-  static const cardFillDark = Color(0x0DFFFFFF); // "Surface": rgba(255,255,255,0.05)
-  static const cardBorderDark = Color(0x1AFFFFFF); // ~rgba(255,255,255,0.1), not separately named in the guide
+  static const cardFillDark =
+      Color(0x0DFFFFFF); // "Surface": rgba(255,255,255,0.05)
+  static const cardBorderDark = Color(
+      0x1AFFFFFF); // ~rgba(255,255,255,0.1), not separately named in the guide
   static const inputFillDark = Color(0x0DFFFFFF);
   static const inputBorderDark = Color(0x1AFFFFFF);
-  static const textPrimaryDark = Color(0xEBFFFFFF); // "Text Primary": rgba(255,255,255,0.92)
-  static const textSecondaryDark = Color(0x8CFFFFFF); // "Text Secondary": rgba(255,255,255,0.55)
-  static const textMutedDark = Color(0x59FFFFFF); // "Text Muted": rgba(255,255,255,0.35)
+  static const textPrimaryDark =
+      Color(0xEBFFFFFF); // "Text Primary": rgba(255,255,255,0.92)
+  static const textSecondaryDark =
+      Color(0x8CFFFFFF); // "Text Secondary": rgba(255,255,255,0.55)
+  static const textMutedDark =
+      Color(0x59FFFFFF); // "Text Muted": rgba(255,255,255,0.35)
 
   static const surfaceLight = Color(0xFFF7F8FA);
   static const cardFillLight = Colors.white;
@@ -44,12 +49,11 @@ abstract final class OneHubColors {
   static const textSecondaryLight = Color(0x8C000000);
   static const textMutedLight = Color(0x59000000);
 
-  // The reference's decorative background: three radial-gradient glow blobs
-  // over the flat surfaceDark. Not in this style guide PDF (it documents
-  // the signup screen's components/tokens, not the page background effect)
-  // — kept from the prior day's live-CSS reading, which is still the best
-  // source for this specific detail.
-  static const glowBlue1 = Color(0x382563EB); // rgba(37,99,235,0.22), bottom-left
-  static const glowPurple = Color(0x2E503C8C); // rgba(80,60,140,0.18), top-right
-  static const glowBlue2 = Color(0x472563EB); // rgba(37,99,235,0.28), bottom-center
+  // GlowCard's two ambient blobs: a soft blue glow anchored bottom-left and
+  // a subtle light glow anchored top-right, both clipped inside the card
+  // (see glow_card.dart) — never on the page background.
+  static const glowBlue1 =
+      Color(0x382563EB); // rgba(37,99,235,0.22), bottom-left
+  static const glowLight =
+      Color(0x1FFFFFFF); // rgba(255,255,255,0.12), top-right
 }

@@ -78,11 +78,26 @@ it's coming back later, not deleted for good; the signup API call now sends
 Signup's Password/Confirm moved from a side-by-side `Row` back to two full-
 width stacked fields. And the glow effect moved from a page-level
 `GlowBackground` (three blobs behind the whole screen, now deleted) to a new
-`GlowCard` (`packages/shared-flutter/lib/src/theme/glow_card.dart`) — a single
-glow clipped to and anchored bottom-left *inside* a form card, replacing bare
-`Card` usage on the auth screens. This is a general principle now, not a
-one-off: any future ambient-glow effect belongs to its own component,
-clipped to that component's bounds, never bled onto the page background.
+`GlowCard` (`packages/shared-flutter/lib/src/theme/glow_card.dart`) — clipped
+*inside* a form card, replacing bare `Card` usage on the auth screens. This
+is a general principle now, not a one-off: any future ambient-glow effect
+belongs to its own component, clipped to that component's bounds, never
+bled onto the page background.
+
+A same-day follow-up (still 2026-09-24) extended `GlowCard` with a second
+glow: it now renders both a bottom-left blue glow (`OneHubColors.glowBlue1`,
+`#2563EB`) and a subtle top-right light glow (`OneHubColors.glowLight`),
+confirmed explicitly to apply "across all screens" but *only for form-card*-
+style content (the single primary card on a screen, e.g. login/signup) —
+not repeated list-item cards (dashboard sections, category tiles, request/
+bid list rows), which would turn a subtle effect into a distracting,
+repeated one. Since `GlowCard` is the shared component, any screen that
+adopts the form-card pattern gets both glows automatically; existing
+list-tile `Card` usage elsewhere in the app was deliberately left alone.
+Login's content is also now vertically centered on the page (was top-
+aligned) via a `LayoutBuilder` + `ConstrainedBox(minHeight: ...)` wrapping
+the `SingleChildScrollView`'s child, so it still scrolls if content
+overflows a short viewport.
 `admin-web` was deliberately left on the original teal palette throughout
 all four design rounds; it is not "the one shared brand across all three
 surfaces" and that's intentional, not drift — don't "fix" it back without asking.

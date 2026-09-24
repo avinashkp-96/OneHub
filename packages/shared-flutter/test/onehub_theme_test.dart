@@ -186,7 +186,8 @@ void main() {
     expect(OneHubColors.textMutedDark, const Color(0x59FFFFFF));
   });
 
-  testWidgets('GlowCard clips its glow to the card, not the page',
+  testWidgets(
+      'GlowCard renders a bottom-left blue glow and a top-right light glow, both clipped to the card',
       (tester) async {
     await tester.pumpWidget(
       MaterialApp(
@@ -195,6 +196,24 @@ void main() {
     );
     expect(find.byType(ClipRRect), findsOneWidget);
     expect(find.text('content'), findsOneWidget);
+
+    final gradients = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((box) => (box.decoration as BoxDecoration).gradient)
+        .whereType<RadialGradient>()
+        .toList();
+    expect(gradients.map((g) => g.colors.first),
+        containsAll([OneHubColors.glowBlue1, OneHubColors.glowLight]));
+    expect(
+        gradients
+            .firstWhere((g) => g.colors.first == OneHubColors.glowBlue1)
+            .center,
+        Alignment.bottomLeft);
+    expect(
+        gradients
+            .firstWhere((g) => g.colors.first == OneHubColors.glowLight)
+            .center,
+        Alignment.topRight);
 
     await tester.pumpWidget(
       MaterialApp(
