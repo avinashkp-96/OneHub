@@ -145,45 +145,47 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
             )
           : null,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-              horizontal: OneHubTheme.pageMargin,
-              vertical: OneHubTheme.pagePaddingY),
-          child: switch (_step) {
-            _Step.form => _FormStep(
-                fullName: _fullName,
-                mobile: _mobile,
-                email: _email,
-                password: _password,
-                confirmPassword: _confirmPassword,
-                obscurePassword: _obscurePassword,
-                obscureConfirmPassword: _obscureConfirmPassword,
-                onTogglePassword: () =>
-                    setState(() => _obscurePassword = !_obscurePassword),
-                onToggleConfirmPassword: () => setState(
-                    () => _obscureConfirmPassword = !_obscureConfirmPassword),
-                acceptedTerms: _acceptedTerms,
-                onAcceptedTermsChanged: (v) =>
-                    setState(() => _acceptedTerms = v ?? false),
-                error: _error,
-                busy: _busy,
-                onSubmit: _submitForm,
-                onBackToLogin: () => Navigator.of(context).pop(),
-              ),
-            _Step.otp => _OtpStep(
-                mobile: _mobile.text.trim(),
-                onChanged: (code) => _otp = code,
-                resendSecondsLeft: _resendSecondsLeft,
-                onResend: _resendOtp,
-                error: _error,
-                busy: _busy,
-                onVerify: _verifyAndCreateAccount,
-              ),
-            _Step.success => _SuccessStep(
-                onGoToDashboard: () =>
-                    Navigator.of(context).pushReplacementNamed('/dashboard')),
-          },
+      body: PageGlow(
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+                horizontal: OneHubTheme.pageMargin,
+                vertical: OneHubTheme.pagePaddingY),
+            child: switch (_step) {
+              _Step.form => _FormStep(
+                  fullName: _fullName,
+                  mobile: _mobile,
+                  email: _email,
+                  password: _password,
+                  confirmPassword: _confirmPassword,
+                  obscurePassword: _obscurePassword,
+                  obscureConfirmPassword: _obscureConfirmPassword,
+                  onTogglePassword: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
+                  onToggleConfirmPassword: () => setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  acceptedTerms: _acceptedTerms,
+                  onAcceptedTermsChanged: (v) =>
+                      setState(() => _acceptedTerms = v ?? false),
+                  error: _error,
+                  busy: _busy,
+                  onSubmit: _submitForm,
+                  onBackToLogin: () => Navigator.of(context).pop(),
+                ),
+              _Step.otp => _OtpStep(
+                  mobile: _mobile.text.trim(),
+                  onChanged: (code) => _otp = code,
+                  resendSecondsLeft: _resendSecondsLeft,
+                  onResend: _resendOtp,
+                  error: _error,
+                  busy: _busy,
+                  onVerify: _verifyAndCreateAccount,
+                ),
+              _Step.success => _SuccessStep(
+                  onGoToDashboard: () =>
+                      Navigator.of(context).pushReplacementNamed('/dashboard')),
+            },
+          ),
         ),
       ),
     );
