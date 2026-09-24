@@ -179,6 +179,14 @@ anchored bottom-right, alongside the existing top-right light glow —
 applied consistently everywhere `PageGlow` already wraps a screen (all
 auth screens and the dashboard), not just this one.
 
+`CurvedNavBar` later dropped its solid fill for a frosted-glass look:
+`BackdropFilter(ImageFilter.blur(...))` clipped to the same wavy-top path
+(`_wavePath`, now shared by the clip, the shadow, and the border painters
+instead of duplicated), with a translucent tint
+(`OneHubColors.navBarFillDark`/`.navBarFillLight` at 45% alpha) over the
+blur rather than a semi-transparent app color — the blur is what keeps
+scrolled content legible through the bar, not just dimming it.
+
 Other customer screens (category browsing, requirements, ratings) still
 use earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If
