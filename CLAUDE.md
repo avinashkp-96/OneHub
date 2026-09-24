@@ -64,6 +64,40 @@ on that live page); the actual reference screenshot that came with this PDF
 doesn't have them — the style guide's "Badges" section is a component
 showcase, not a spec for this screen's layout, so they were removed.
 Figma source (superseded, kept for history): https://www.figma.com/make/EaytjRnHfHfvqaMMKUdeDD/App-Signup-Screen-UI
+
+A **fifth** round (2026-09-24) corrected the implementation directly against
+verbal instructions, superseding the PDF/screenshot reading on five points:
+`PrimaryCta`'s gradient/label color now use the literal `OneHubColors.primary`
+→ `.primaryGradientEnd` and `Colors.white` rather than
+`Theme.of(context).colorScheme.primary`/`.onPrimary` — `ColorScheme.fromSeed`
+derives a tonal-palette color from a seed and doesn't guarantee the result
+equals the seed's own hex, so the button was silently off the exact spec.
+Signup's City/Location field (with its GPS badge) was removed entirely —
+it's coming back later, not deleted for good; the signup API call now sends
+`'city': ''` since the backend DTO requires a string with no `@IsOptional()`.
+Signup's Password/Confirm moved from a side-by-side `Row` back to two full-
+width stacked fields. And the glow effect moved from a page-level
+`GlowBackground` (three blobs behind the whole screen, now deleted) to a new
+`GlowCard` (`packages/shared-flutter/lib/src/theme/glow_card.dart`) — clipped
+*inside* a form card, replacing bare `Card` usage on the auth screens. This
+is a general principle now, not a one-off: any future ambient-glow effect
+belongs to its own component, clipped to that component's bounds, never
+bled onto the page background.
+
+A same-day follow-up (still 2026-09-24) extended `GlowCard` with a second
+glow: it now renders both a bottom-left blue glow (`OneHubColors.glowBlue1`,
+`#2563EB`) and a subtle top-right light glow (`OneHubColors.glowLight`),
+confirmed explicitly to apply "across all screens" but *only for form-card*-
+style content (the single primary card on a screen, e.g. login/signup) —
+not repeated list-item cards (dashboard sections, category tiles, request/
+bid list rows), which would turn a subtle effect into a distracting,
+repeated one. Since `GlowCard` is the shared component, any screen that
+adopts the form-card pattern gets both glows automatically; existing
+list-tile `Card` usage elsewhere in the app was deliberately left alone.
+Login's content is also now vertically centered on the page (was top-
+aligned) via a `LayoutBuilder` + `ConstrainedBox(minHeight: ...)` wrapping
+the `SingleChildScrollView`'s child, so it still scrolls if content
+overflows a short viewport.
 `admin-web` was deliberately left on the original teal palette throughout
 all four design rounds; it is not "the one shared brand across all three
 surfaces" and that's intentional, not drift — don't "fix" it back without asking.
@@ -86,7 +120,7 @@ color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
 original design.
 
-- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubTextStyles`, `OneHubIcons`, `GlowBackground`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, `OneHubTextStyles.*` rather than generic `Theme.of(context).textTheme` slots on screens this style guide documents, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern). **Named spacing/radius constants exist specifically so a value can't silently drift out of sync the way it already did once** — two retheme rounds' worth of hardcoded `24`s survived a card-radius change from 24→16→20 in four call sites and two tests before this pass caught it; every remaining radius reference now points at `OneHubTheme.radiusFormCard` etc. instead of a bare number.
+- Mobile: `packages/shared-flutter/lib/src/theme/` (`OneHubColors`, `OneHubTheme`, `OneHubTextStyles`, `OneHubIcons`, `GlowCard`, `TintedBadge`). Both apps must use `OneHubTheme.light()`/`.dark()` rather than building their own `ThemeData`, `OneHubTextStyles.*` rather than generic `Theme.of(context).textTheme` slots on screens this style guide documents, and `OneHubIcons.*` rather than `Icons.*` or a raw Iconly reference. `PrimaryCta` is a custom gradient rounded-rect (not a themed `FilledButton`) — widget tests that find it by button type need to find it by ancestor/type instead (see `packages/shared-flutter/test/screens/reset_password_screen_test.dart` for the pattern). **Named spacing/radius constants exist specifically so a value can't silently drift out of sync the way it already did once** — two retheme rounds' worth of hardcoded `24`s survived a card-radius change from 24→16→20 in four call sites and two tests before this pass caught it; every remaining radius reference now points at `OneHubTheme.radiusFormCard` etc. instead of a bare number.
 - Admin web: `apps/admin-web/src/theme.css` (CSS custom properties, teal palette, unchanged), loaded once in `main.tsx`.
 - **Icons**: Iconly, vendored directly rather than via the `iconly` or `flutter_iconly` pub packages — both subclass `IconData`, which became a `final class` in this Flutter version, so neither compiles. `OneHubIcons` defines plain `IconData` constants against `packages/shared-flutter/assets/fonts/IconlyLight.ttf`/`IconlyBold.ttf` (MIT-licensed, see `IconlyFont-LICENSE.txt` next to them), with codepoints read directly out of the `iconly` package's source rather than guessed. If a future Flutter/Dart release fixes the subclassing issue and a maintained package appears, this vendoring could be dropped, but there's no urgency — it works and has no runtime dependency risk.
 - Plus Jakarta Sans is referenced by family name (`TextTheme` per-slot, not `ThemeData.fontFamily`), not through the `google_fonts` package — that package's runtime API fetches fonts over the network with no offline fallback, which broke every test touching this theme and would be a real production risk on a bad connection. Web loads it via a `<link>` in `web/index.html`; mobile falls back to the platform default until the actual `.ttf` is bundled as an asset (not done yet). This also means no Devanagari/regional-script coverage (Noto Sans, used earlier, had it) — a real regression to revisit before any localization work starts, not re-litigated when each reference was adopted since the user handed over an explicit spec each time.
