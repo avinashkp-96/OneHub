@@ -361,20 +361,30 @@ class _HeroCard extends StatelessWidget {
                       decoration: const BoxDecoration(
                           shape: BoxShape.circle, color: Colors.white),
                       // A slide-button affordance ("»") — Iconly has no
-                      // double-chevron glyph, so this is two chevronRight
-                      // icons overlapped instead of a single arrow.
-                      child: Center(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(OneHubIcons.chevronRight,
-                                size: 14, color: OneHubColors.surfaceDark),
-                            Transform.translate(
-                              offset: const Offset(-6, 0),
-                              child: const Icon(OneHubIcons.chevronRight,
-                                  size: 14, color: OneHubColors.surfaceDark),
-                            ),
-                          ],
+                      // double-chevron glyph, so this is two overlapped
+                      // chevronRight icons in a Stack (not Row +
+                      // Transform.translate: the translated icon keeps its
+                      // original layout width, so the Row's bounding box was
+                      // wider than what actually got painted, throwing off
+                      // Center's alignment).
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 14,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 0,
+                                child: Icon(OneHubIcons.chevronRight,
+                                    size: 14, color: OneHubColors.surfaceDark),
+                              ),
+                              Positioned(
+                                left: 6,
+                                child: Icon(OneHubIcons.chevronRight,
+                                    size: 14, color: OneHubColors.surfaceDark),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

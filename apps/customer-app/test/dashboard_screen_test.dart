@@ -82,6 +82,14 @@ void main() {
         .widgetList<Icon>(find.byIcon(OneHubIcons.chevronRight))
         .where((icon) => icon.color == OneHubColors.surfaceDark);
     expect(chevrons, hasLength(2));
+
+    // The pair is laid out in a fixed-size Stack (not Row + Transform), so
+    // its bounding box matches what's actually painted and Center's
+    // alignment isn't thrown off by an oversized, invisible layout width.
+    final iconBox = tester
+        .widgetList<SizedBox>(find.byType(SizedBox))
+        .where((box) => box.width == 20 && box.height == 14);
+    expect(iconBox, hasLength(1));
   });
 
   testWidgets('the hero CTA is full width, bordered, and centers its label',
