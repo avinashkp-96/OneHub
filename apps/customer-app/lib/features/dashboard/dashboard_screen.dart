@@ -299,8 +299,13 @@ class _HeroCard extends StatelessWidget {
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
-    final ctaFill =
-        dark ? OneHubColors.navBarFillDark : OneHubColors.navBarFillLight;
+    // Lighter than the card behind it (per the reference) rather than the
+    // solid, darker navBarFillDark/Light tone used elsewhere.
+    final ctaFill = dark
+        ? Colors.white.withValues(alpha: 0.12)
+        : Colors.black.withValues(alpha: 0.06);
+    final ctaBorder =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return GlowCard(
       child: Padding(
@@ -342,27 +347,55 @@ class _HeroCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
               onTap: onTap,
               child: Container(
-                padding: const EdgeInsets.fromLTRB(6, 6, 18, 6),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                 decoration: BoxDecoration(
-                    color: ctaFill,
-                    borderRadius:
-                        BorderRadius.circular(OneHubTheme.radiusPillBadge)),
+                  color: ctaFill,
+                  borderRadius:
+                      BorderRadius.circular(OneHubTheme.radiusPillBadge),
+                  border: Border.all(color: ctaBorder),
+                ),
                 child: Row(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
                       width: 32,
                       height: 32,
                       decoration: const BoxDecoration(
                           shape: BoxShape.circle, color: Colors.white),
+                      // A slide-button affordance ("»") — Iconly has no
+                      // double-chevron glyph, so this is two overlapped
+                      // chevronRight icons in a Stack (not Row +
+                      // Transform.translate: the translated icon keeps its
+                      // original layout width, so the Row's bounding box was
+                      // wider than what actually got painted, throwing off
+                      // Center's alignment).
                       child: const Center(
-                        child: Icon(OneHubIcons.chevronRight,
-                            size: 16, color: OneHubColors.primary),
+                        child: SizedBox(
+                          width: 20,
+                          height: 14,
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: 0,
+                                child: Icon(OneHubIcons.chevronRight,
+                                    size: 14, color: OneHubColors.surfaceDark),
+                              ),
+                              Positioned(
+                                left: 6,
+                                child: Icon(OneHubIcons.chevronRight,
+                                    size: 14, color: OneHubColors.surfaceDark),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text('Post requirement',
-                        style: OneHubTextStyles.buttonLabel(textPrimary)),
+                    Expanded(
+                      child: Center(
+                        child: Text('Post requirement',
+                            style: OneHubTextStyles.buttonLabel(textPrimary)),
+                      ),
+                    ),
                   ],
                 ),
               ),

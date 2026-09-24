@@ -67,6 +67,66 @@ void main() {
   });
 
   testWidgets(
+      'the hero CTA\'s icon is two overlapped chevrons ("slide" affordance), not a single arrow',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
+    );
+
+    final chevrons = tester
+        .widgetList<Icon>(find.byIcon(OneHubIcons.chevronRight))
+        .where((icon) => icon.color == OneHubColors.surfaceDark);
+    expect(chevrons, hasLength(2));
+
+    // The pair is laid out in a fixed-size Stack (not Row + Transform), so
+    // its bounding box matches what's actually painted and Center's
+    // alignment isn't thrown off by an oversized, invisible layout width.
+    final iconBox = tester
+        .widgetList<SizedBox>(find.byType(SizedBox))
+        .where((box) => box.width == 20 && box.height == 14);
+    expect(iconBox, hasLength(1));
+  });
+
+  testWidgets('the hero CTA is full width, bordered, and centers its label',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
+    );
+
+    final ctaContainer = tester.widget<Container>(
+      find
+          .ancestor(
+              of: find.text('Post requirement'),
+              matching: find.byType(Container))
+          .first,
+    );
+    expect(ctaContainer.constraints?.maxWidth, double.infinity,
+        reason:
+            'the button should stretch to the card width, not just wrap its content');
+    final decoration = ctaContainer.decoration as BoxDecoration;
+    expect(decoration.border, isNotNull,
+        reason: 'the button needs a visible border per the reference');
+
+    // The label sits inside an Expanded + Center, not directly next to the
+    // icon circle, so it reads as centered in the button's remaining space.
+    expect(
+      find.ancestor(
+          of: find.text('Post requirement'), matching: find.byType(Center)),
+      findsWidgets,
+    );
+  });
+
+  testWidgets(
       'the bottom nav has 4 items (Home, Requests, Category, Profile) with Home selected',
       (tester) async {
     tester.view.physicalSize = const Size(800, 3000);

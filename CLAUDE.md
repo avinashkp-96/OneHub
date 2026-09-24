@@ -179,6 +179,22 @@ anchored bottom-right, alongside the existing top-right light glow —
 applied consistently everywhere `PageGlow` already wraps a screen (all
 auth screens and the dashboard), not just this one.
 
+A fifth round matched the hero card's CTA icon exactly: it's a "»"
+slide-button affordance, not a single chevron — Iconly has no
+double-chevron glyph, so it's built from two `OneHubIcons.chevronRight`
+icons overlapped via `Transform.translate`, recolored from
+`OneHubColors.primary` (blue) to `OneHubColors.surfaceDark` (near-black)
+to match the reference's dark icon on the white circle.
+
+A sixth round matched that same CTA's overall styling: it's now full
+width (was content-hugging) with the label centered in the space next to
+the icon circle (`Expanded(child: Center(...))`) rather than sitting
+immediately beside it; gained a visible border
+(`OneHubColors.cardBorderDark`/`.cardBorderLight`); and its fill is now a
+translucent white/black overlay (12%/6% alpha) instead of the solid,
+darker `navBarFillDark`/`.navBarFillLight` — lighter than the card behind
+it, matching the reference, rather than similarly dark.
+
 `CurvedNavBar` later dropped its solid fill for a frosted-glass look:
 `BackdropFilter(ImageFilter.blur(...))` clipped to the same wavy-top path
 (`_wavePath`, now shared by the clip, the shadow, and the border painters
