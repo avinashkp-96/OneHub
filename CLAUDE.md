@@ -241,11 +241,11 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-Other customer screens (category browsing, My Requests/Bids) still use
-earlier layout conventions, just with the current colors/fonts/shapes/
-icons applied automatically since those come from the shared theme. If
-provider screens or the rest of customer screens are wanted in this style
-too, that's a separate ask.
+Other customer screens (category browsing, My Requests) still use earlier
+layout conventions, just with the current colors/fonts/shapes/icons
+applied automatically since those come from the shared theme. If provider
+screens or the rest of customer screens are wanted in this style too,
+that's a separate ask.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
 restyled to the current design system per explicit request, with no
@@ -278,6 +278,26 @@ unchanged. New test files (`post_requirement_screen_test.dart`,
 override as `dashboard_screen_test.dart`, for the same reason: `ListView`'s
 lazy sliver won't build a below-the-fold `PrimaryCta` under the default
 600px test viewport.
+
+2026-09-28: `bid_list_screen.dart` (docx 4.4, "Confirm Provider" — the
+"confirm" step of the home → request → confirm flow) restyled the same
+way, after a live preview of that flow surfaced it as the one screen still
+on raw Material next to two already-restyled ones. Same `PageGlow` +
+back-only `AppBar` + in-body heading shell as the other two requirement
+screens. Bid tiles are plain bordered `Card`s, not `GlowCard` — this
+screen has no single "form" to hold the glow, just a repeated list, same
+reasoning as `PostRequirementScreen`'s provider tiles. Each tile shows the
+price range, a `TintedBadge` for contact status (success tint if
+contacted, warning tint if not), and either an outlined "Confirm" button
+or a success-tinted "CONFIRMED" pill badge with the card's border tinted
+to match. Also added the same `if (!mounted) return;` guards `_load()` and
+`_confirm()` were missing (present already in the sibling screens' fetch
+methods). `bid_list_screen_test.dart` only asserts the first-frame state
+(heading renders immediately, list is behind its own loading spinner) —
+unlike `PostRequirementScreen`, nothing here has offline-available content
+to pull out from under the loading gate, so there's no way to make the
+list itself render synchronously in tests without a fake API client, which
+wasn't worth building for this pass.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
