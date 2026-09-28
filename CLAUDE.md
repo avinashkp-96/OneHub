@@ -241,11 +241,43 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-Other customer screens (category browsing, requirements, ratings) still
-use earlier layout conventions, just with the current colors/fonts/shapes/
+Other customer screens (category browsing, My Requests/Bids) still use
+earlier layout conventions, just with the current colors/fonts/shapes/
 icons applied automatically since those come from the shared theme. If
 provider screens or the rest of customer screens are wanted in this style
 too, that's a separate ask.
+
+2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
+restyled to the current design system per explicit request, with no
+external reference supplied ("use your judgment") — applied the existing
+tokens/components and general UX principles rather than inventing new
+ones. Both screens now get a back-only `AppBar` plus an in-body heading
+(matching the pattern already set by `SignupScreen`'s OTP step) instead of
+an `AppBar` title, wrapped in `PageGlow`. Each screen's form fields sit in
+a single `GlowCard` — the one primary "form card" per screen, per the
+standing rule that the glow doesn't repeat onto list items — with
+`FieldLabel` above each field instead of `InputDecoration(labelText:)`.
+`PostRequirementScreen`'s provider list moved off raw `CheckboxListTile`
+onto bordered `Card`/`InkWell` tiles that highlight with
+`OneHubColors.primary` when selected and show rating/certification via
+`TintedBadge`; its date-picker trigger is now a themed pill matching the
+input-field visual language instead of an `OutlinedButton.icon`. Loading
+was also un-nested from a single full-screen gate: the description/date
+fields render on the first frame regardless of the provider fetch, with
+loading/empty states scoped to just the provider section — better UX
+(nothing waits on a network call it doesn't need), and it also sidesteps a
+real flaky-test trap: a full-screen `_loading` gate made every assertion
+depend on a real (non-fake-clock) network round trip resolving before the
+test's `pump()`, which is exactly the kind of timing dependency that
+produces intermittent failures. `RatingScreen`'s star row keeps its
+`GlowCard` too, with a plain-language rating label ("Great", "Excellent"
+etc.) shown under the stars once one is picked. Both screens kept their
+already-correct `PrimaryCta`/`OneHubIcons`/`context.status*` usages
+unchanged. New test files (`post_requirement_screen_test.dart`,
+`rating_screen_test.dart`) needed the same tall `tester.view.physicalSize`
+override as `dashboard_screen_test.dart`, for the same reason: `ListView`'s
+lazy sliver won't build a below-the-fold `PrimaryCta` under the default
+600px test viewport.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
