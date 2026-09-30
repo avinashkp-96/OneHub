@@ -241,7 +241,7 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-Other customer screens (category browsing, My Requests) still use earlier
+Other customer screens (My Requests, Reset Password) still use earlier
 layout conventions, just with the current colors/fonts/shapes/icons
 applied automatically since those come from the shared theme. If provider
 screens or the rest of customer screens are wanted in this style too,
@@ -298,6 +298,27 @@ unlike `PostRequirementScreen`, nothing here has offline-available content
 to pull out from under the loading gate, so there's no way to make the
 list itself render synchronously in tests without a fake API client, which
 wasn't worth building for this pass.
+
+2026-09-30: `category_grid_screen.dart` and `sub_service_list_screen.dart`
+(docx 4.1 — Service Categories) restyled the same way, closing out the
+"Category browsing" gap this file had been tracking since the first
+restyle round. Same `PageGlow` + back-only `AppBar` + in-body heading
+shell as the other requirement screens. `CategoryGridScreen`'s category
+tiles reuse the exact card layout `DashboardScreen`'s "Expert services"
+section already established (40px icon-circle badge, bold name, muted
+caption) rather than the plain `CircleAvatar` + `bodySmall` text this
+screen had — the category's optional `description` field stands in for
+the caption that section uses for a "pros available" count, since
+`ServiceCategory` has no such count. `SubServiceListScreen`'s rows became
+bordered `Card`/`InkWell` tiles with a `TintedBadge` price range (omitted
+entirely when a sub-service has no suggested price, rather than showing a
+blank badge) and a trailing chevron, matching the tile pattern already
+used for provider/bid rows. Both screens' `_load()` gained the same
+`if (!mounted) return;` guards added to the sibling screens' fetch methods
+in the last two rounds. Tests follow the same first-frame-only pattern as
+`bid_list_screen_test.dart`, for the same reason (no fake API client in
+this codebase yet to make the network-gated content render
+synchronously).
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
