@@ -241,11 +241,11 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-Other customer screens (My Requests, Reset Password) still use earlier
-layout conventions, just with the current colors/fonts/shapes/icons
-applied automatically since those come from the shared theme. If provider
-screens or the rest of customer screens are wanted in this style too,
-that's a separate ask.
+Other customer screens (Reset Password) still use earlier layout
+conventions, just with the current colors/fonts/shapes/icons applied
+automatically since those come from the shared theme. If provider screens
+or the rest of customer screens are wanted in this style too, that's a
+separate ask.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
 restyled to the current design system per explicit request, with no
@@ -319,6 +319,23 @@ in the last two rounds. Tests follow the same first-frame-only pattern as
 `bid_list_screen_test.dart`, for the same reason (no fake API client in
 this codebase yet to make the network-gated content render
 synchronously).
+
+2026-09-30: `my_requests_screen.dart` (docx 4.4 "My Requests — Status
+View" + 4.5 "Booking / Request History") restyled the same way. Same
+`PageGlow` + back-only `AppBar` + in-body heading shell, and request rows
+as bordered cards (not `GlowCard`, same repeated-list reasoning as the
+other tile screens) with a `TintedBadge` status pill and a trailing
+chevron. The status label/color mapping is lifted directly from
+`DashboardScreen`'s `_ActiveRequestCard` — both read the same
+`RequestStatus` enum off the same `/requirements/mine` data — but this
+screen shows a single badge instead of that card's 4-step tracker, since
+this list also covers terminal statuses (Completed, Expired, Cancelled,
+Rejected) that don't have a sensible position on a 4-step "Sent → Accepted
+→ Bids → Confirmed" progress bar. Added the same `if (!mounted) return;`
+guard to `_load()` that the other requirement screens picked up in earlier
+rounds. Test follows the established first-frame-only pattern (heading
+renders immediately; the list itself is behind its own loading spinner and
+there's no fake API client yet to make it render synchronously).
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
