@@ -11,12 +11,13 @@ void main() {
         home: ResetPasswordScreen(client: client),
       );
 
-  // find.text('Reset Password') is ambiguous with the AppBar title of the
-  // same text. PrimaryCta no longer wraps a FilledButton (it's a custom
-  // gradient InkWell), so find the button by its PrimaryCta ancestor instead.
-  Finder resetPasswordCta() => find.ancestor(of: find.text('Reset Password'), matching: find.byType(PrimaryCta));
+  // PrimaryCta no longer wraps a FilledButton (it's a custom gradient
+  // InkWell), so find the button by its PrimaryCta ancestor instead.
+  Finder resetPasswordCta() =>
+      find.widgetWithText(PrimaryCta, 'Reset Password');
 
-  testWidgets('walks through request-OTP, reset, and the success step', (tester) async {
+  testWidgets('walks through request-OTP, reset, and the success step',
+      (tester) async {
     final client = ApiClient(
       baseUrl: 'https://example.test',
       httpClient: MockClient((request) async {
@@ -33,36 +34,64 @@ void main() {
     await tester.pumpWidget(wrap(client));
 
     expect(find.text('Send OTP'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'Mobile Number or Email'), '9876543210');
+    await tester.enterText(
+        find.widgetWithText(TextField, '10-digit number or email'),
+        '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
 
     expect(find.text('OTP'), findsOneWidget);
-    await tester.enterText(find.widgetWithText(TextField, 'OTP'), '1234');
-    await tester.enterText(find.widgetWithText(TextField, 'New Password'), 'newpass1');
-    await tester.enterText(find.widgetWithText(TextField, 'Confirm New Password'), 'newpass1');
+    await tester.enterText(
+        find.widgetWithText(TextField, '6-digit code'), '1234');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Min. 6 chars'), 'newpass1');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Re-enter'), 'newpass1');
     await tester.tap(resetPasswordCta());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Password reset.'), findsOneWidget);
+    expect(find.text('Password Reset!'), findsOneWidget);
+    expect(find.text('Log in with your new password.'), findsOneWidget);
   });
 
-  testWidgets('shows an error instead of advancing when passwords do not match', (tester) async {
+  testWidgets('shows an error instead of advancing when passwords do not match',
+      (tester) async {
     final client = ApiClient(
       baseUrl: 'https://example.test',
-      httpClient: MockClient((request) async => http.Response(jsonEncode({'sent': true}), 200)),
+      httpClient: MockClient(
+          (request) async => http.Response(jsonEncode({'sent': true}), 200)),
     );
 
     await tester.pumpWidget(wrap(client));
-    await tester.enterText(find.widgetWithText(TextField, 'Mobile Number or Email'), '9876543210');
+    await tester.enterText(
+        find.widgetWithText(TextField, '10-digit number or email'),
+        '9876543210');
     await tester.tap(find.text('Send OTP'));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.widgetWithText(TextField, 'New Password'), 'newpass1');
-    await tester.enterText(find.widgetWithText(TextField, 'Confirm New Password'), 'different');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Min. 6 chars'), 'newpass1');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Re-enter'), 'different');
     await tester.tap(resetPasswordCta());
     await tester.pumpAndSettle();
 
-    expect(find.text('New password and confirmation must match.'), findsOneWidget);
+    expect(
+        find.text('New password and confirmation must match.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'the whole screen is wrapped in PageGlow, with a GlowCard per step',
+      (tester) async {
+    final client = ApiClient(
+      baseUrl: 'https://example.test',
+      httpClient: MockClient(
+          (request) async => http.Response(jsonEncode({'sent': true}), 200)),
+    );
+
+    await tester.pumpWidget(wrap(client));
+
+    expect(find.byType(PageGlow), findsOneWidget);
+    expect(find.byType(GlowCard), findsOneWidget);
   });
 }
