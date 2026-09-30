@@ -241,10 +241,10 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-Other customer screens (Reset Password) still use earlier layout
-conventions, just with the current colors/fonts/shapes/icons applied
-automatically since those come from the shared theme. If provider screens
-or the rest of customer screens are wanted in this style too, that's a
+All customer-app screens now follow this style. Provider-app screens
+still use earlier layout conventions, just with the current
+colors/fonts/shapes/icons applied automatically since those come from the
+shared theme. If provider screens are wanted in this style too, that's a
 separate ask.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
@@ -336,6 +336,30 @@ guard to `_load()` that the other requirement screens picked up in earlier
 rounds. Test follows the established first-frame-only pattern (heading
 renders immediately; the list itself is behind its own loading spinner and
 there's no fake API client yet to make it render synchronously).
+
+2026-09-30: `packages/shared-flutter/lib/src/screens/reset_password_screen.dart`
+(docx 2.5, "Forgot / Reset Password") restyled the same way — the last
+screen in the customer app still on raw Material. This one lives in the
+shared package (used by both apps), which changes two things from the
+usual pattern: it can't import `FieldLabel` from the customer app's
+`core/widgets/` (wrong dependency direction — apps depend on this
+package, not the reverse), so it gets its own private `_FieldLabel`
+duplicating that widget's visuals, flagged in a comment as a promotion
+candidate rather than auto-promoted, per the reusability framework; and
+its three-step flow (enter contact → enter OTP + new password → done)
+mirrors `SignupScreen`'s shape closely enough that the done step reuses
+that screen's exact success-step layout (icon-in-circle, heading,
+subtitle, CTA) verbatim. Each of the first two steps gets its own
+`GlowCard` rather than one persisting across the step change, since
+they're really two different forms shown in sequence, not one form that
+grows. `reset_password_screen_test.dart` already injected a fake
+`ApiClient` (`http.testing.MockClient`) rather than hitting a real
+network — the one screen in this codebase set up that way already, and
+worth following elsewhere before adding more network-gated widget tests
+— so unlike every other restyled screen this pass, its existing
+`pumpAndSettle()`-based tests needed no timing workarounds, just updated
+finders (hint text instead of label text) and updated success-step
+assertions for the new heading/subtitle text.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
