@@ -241,11 +241,12 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-All customer-app screens now follow this style. Provider-app screens
-still use earlier layout conventions, just with the current
-colors/fonts/shapes/icons applied automatically since those come from the
-shared theme. If provider screens are wanted in this style too, that's a
-separate ask.
+All customer-app screens now follow this style. Provider-app Login and
+Signup do too (see the 2026-10-06 entry below); the rest of the provider
+app (dashboard, incoming requests, active jobs, price range) still uses
+earlier layout conventions, just with the current colors/fonts/shapes/
+icons applied automatically since those come from the shared theme. Those
+are a separate ask.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
 restyled to the current design system per explicit request, with no
@@ -360,6 +361,28 @@ worth following elsewhere before adding more network-gated widget tests
 `pumpAndSettle()`-based tests needed no timing workarounds, just updated
 finders (hint text instead of label text) and updated success-step
 assertions for the new heading/subtitle text.
+
+2026-10-06: provider-app `login_screen.dart` and `signup_screen.dart`
+(docx 2.4 / 2.3) restyled to match the customer app's login and signup,
+starting the provider side of the redesign. Login is a near copy of the
+customer one (`PageGlow`, centered heading, one `GlowCard`, `FieldLabel`
+above each field, password toggle); the "pending verification" message
+keeps its warning color. Signup is one `GlowCard` holding the whole form,
+split into account details, "Your services" and "Business details" groups.
+Sub-services became selectable bordered rows instead of
+`CheckboxListTile`s, the old "Account created" `AlertDialog` became a
+success step matching the customer signup's, and the category list loads
+inside its own field rather than gating the whole form behind a spinner.
+The provider app has no `FieldLabel`, so `core/widgets/field_label.dart`
+is a third copy of the customer one (the shared-package reset screen has a
+private variant); logged in `REUSABILITY_LOG.md` as a promotion candidate
+instead of being promoted here. Added the missing `if (!mounted)` guards
+to the screens' async handlers. New `login_screen_test.dart` and
+`signup_screen_test.dart` cover structure, validation errors, password
+toggles and navigation; they lifted provider-app line coverage from about
+15% to 43%, still well under the 85% CI floor. Only the top half of
+Signup was checked visually; the browser pane stopped redrawing when
+scrolling.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
