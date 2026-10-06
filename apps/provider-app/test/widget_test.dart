@@ -6,6 +6,6 @@ void main() {
     await tester.pumpWidget(const OneHubProviderApp());
     expect(find.text('OneHub for Providers'), findsOneWidget);
     expect(find.text('Login'), findsOneWidget);
-    expect(find.text('Mobile Number or Email'), findsOneWidget);
+    expect(find.text('MOBILE NUMBER OR EMAIL'), findsOneWidget);
   });
 }
