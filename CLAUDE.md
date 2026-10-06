@@ -241,12 +241,12 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-All customer-app screens now follow this style. Provider-app Login and
-Signup do too (see the 2026-10-06 entry below); the rest of the provider
-app (dashboard, incoming requests, active jobs, price range) still uses
-earlier layout conventions, just with the current colors/fonts/shapes/
-icons applied automatically since those come from the shared theme. Those
-are a separate ask.
+All customer-app screens now follow this style. Provider-app Login,
+Signup, Incoming Requests and Price Range do too (see the 2026-10-06
+entries below); the rest of the provider app (dashboard, active jobs)
+still uses earlier layout conventions, just with the current
+colors/fonts/shapes/icons applied automatically since those come from the
+shared theme. Those are a separate ask.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
 restyled to the current design system per explicit request, with no
@@ -403,6 +403,26 @@ dev dependency of provider-app for that test. Password now has the same
 6-character minimum as the customer signup, and the OTP must be 6 digits.
 Step 2 was checked in the browser with seeded data; step 3 only through
 tests.
+
+2026-10-06 (provider requests): provider `incoming_requests_screen.dart`
+(docx 5.3) and `price_range_screen.dart` (docx 5.4) restyled with the same
+`PageGlow` + back-only `AppBar` + in-body heading shell. Incoming requests
+are bordered cards, not `GlowCard`, since it is a repeated list; each shows
+the description, a photo-count badge when there are photos, and a Reject
+outline button beside a full-size Accept `PrimaryCta` (the old small text
+and filled buttons were hard to hit with gloves). Accepting now reloads
+the list when the user comes back from the price screen. Price Range is one
+`GlowCard` with labelled min/max fields and whichever action fits the
+stage: Submit Bid, then Pay Rs 50 to unlock contact (replaced by a
+"CONTACT UNLOCKED" badge once paid), then Update Bid. A refine with
+missing prices now shows an error instead of silently doing nothing. Both
+screens take an optional `ApiClient` like `SignupScreen`, plus `if
+(!mounted)` guards on every async handler. New tests cover list, empty,
+error, accept, reject and the whole bid / unlock / refine sequence against
+a fake API. Provider-app line coverage is now about 83% (was 66%), just
+under the 85% CI floor; the dashboard and active jobs screens are what is
+left uncovered. Seen in the browser: incoming requests, and the first
+stage of price range.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
