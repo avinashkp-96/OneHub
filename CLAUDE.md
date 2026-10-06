@@ -241,12 +241,8 @@ instruction — "Category" opens `CategoryGridScreen` (`openCategories`,
 already used elsewhere on this screen); Profile stays unwired, matching
 the standing convention for not-yet-built destinations.
 
-All customer-app screens now follow this style. Provider-app Login,
-Signup, Incoming Requests and Price Range do too (see the 2026-10-06
-entries below); the rest of the provider app (dashboard, active jobs)
-still uses earlier layout conventions, just with the current
-colors/fonts/shapes/icons applied automatically since those come from the
-shared theme. Those are a separate ask.
+All customer-app and provider-app screens now follow this style; see the
+2026-10-06 entries below for the provider side.
 
 2026-09-28: `post_requirement_screen.dart` and `rating_screen.dart`
 restyled to the current design system per explicit request, with no
@@ -423,6 +419,27 @@ a fake API. Provider-app line coverage is now about 83% (was 66%), just
 under the 85% CI floor; the dashboard and active jobs screens are what is
 left uncovered. Seen in the browser: incoming requests, and the first
 stage of price range.
+
+2026-10-06 (provider home): provider `dashboard_screen.dart` (docx 5.1)
+and `active_jobs_screen.dart` (docx 5.6) restyled, which finishes the
+provider app. The dashboard was text placeholders in plain cards; it now
+mirrors the customer dashboard: an Online badge and notification bell,
+"Hello, Asha", one `GlowCard` summary (new requests, active jobs, earned
+today), tiles for incoming requests and active jobs, a wallet and
+subscription card, a certification progress bar, and the shared
+`CurvedNavBar` with Home / Requests / Jobs / Profile (Profile unwired, as in
+the customer app). Every number and name on it is explicit dummy data,
+agreed when the redesign was scoped, kept in `_dummy*` constants at the top
+of the file so each can be replaced when its endpoint exists; only the two
+job tiles lead to real screens. The Online control is a display-only badge:
+the old switch was permanently disabled and nothing sets availability yet.
+Earnings and Notifications left the bottom nav (four items fit the floating
+bar; notifications moved to the bell). Active jobs got the same shell as
+the other list screens, with a status badge per job and a full-size Mark as
+Completed button on selected ones; it takes an optional `ApiClient` and has
+`if (!mounted)` guards. New dashboard and active-jobs tests bring provider-app
+line coverage to about 94%, over the 85% CI floor.
+Dashboard seen in the browser; active jobs by tests only.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
