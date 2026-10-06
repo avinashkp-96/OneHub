@@ -384,6 +384,26 @@ toggles and navigation; they lifted provider-app line coverage from about
 Signup was checked visually; the browser pane stopped redrawing when
 scrolling.
 
+2026-10-06 (follow-up): provider `signup_screen.dart` split into three
+steps because one card holding every field was too long. Step 1 is basic
+details plus password, with the OTP field always visible (disabled until
+Send OTP succeeds, where before it only appeared afterwards). Step 2 is
+service selection as 2-column grids of icon tiles: categories first
+(single choice, the category icon or a fallback), then that category's
+services (multiple choice) once one is picked. Step 3 is business
+details, ID proof and terms, with Create Account, then the success step.
+A segmented progress bar and "STEP n OF 3" sit above each heading, the
+app bar back button and the system back gesture step back through the
+form without losing what was typed, and each step validates before
+Continue. The screen now takes an optional `ApiClient` (as
+`ResetPasswordScreen` does), defaulting to the app's global one; that
+lets `signup_screen_test.dart` walk all three steps against a fake API,
+and it took provider-app line coverage from 43% to 66%. Added `http` as a
+dev dependency of provider-app for that test. Password now has the same
+6-character minimum as the customer signup, and the OTP must be 6 digits.
+Step 2 was checked in the browser with seeded data; step 3 only through
+tests.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
