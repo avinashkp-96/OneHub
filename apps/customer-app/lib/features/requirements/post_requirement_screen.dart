@@ -213,8 +213,9 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                       provider: p,
                       selected: _selectedProviderIds.contains(p.id),
                       onTap: () => setState(() {
-                        if (!_selectedProviderIds.remove(p.id))
+                        if (!_selectedProviderIds.remove(p.id)) {
                           _selectedProviderIds.add(p.id);
+                        }
                       }),
                     ),
                 const SizedBox(height: 20),

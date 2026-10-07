@@ -7,8 +7,9 @@ enum _JobState { awaitingSelection, selected, notSelected, completed }
 _JobState? _stateFor(Requirement r) {
   if (r.bids.isEmpty) return null; // this provider hasn't bid on it (yet)
   final myBid = r.bids.first;
-  if (r.status == RequestStatus.completed && myBid.confirmed)
+  if (r.status == RequestStatus.completed && myBid.confirmed) {
     return _JobState.completed;
+  }
   if (r.status == RequestStatus.confirmed ||
       r.status == RequestStatus.completed) {
     return myBid.confirmed ? _JobState.selected : _JobState.notSelected;

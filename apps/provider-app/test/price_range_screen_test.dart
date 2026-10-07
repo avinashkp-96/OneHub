@@ -26,8 +26,9 @@ void main() {
       baseUrl: 'https://example.test',
       httpClient: MockClient((request) async {
         calls.add('${request.method} ${request.url.path}');
-        if (request.url.path == '/requirements/r1/bids')
+        if (request.url.path == '/requirements/r1/bids') {
           return http.Response(jsonEncode({'id': 'b1'}), 200);
+        }
         if (request.url.path.endsWith('/unlock-contact') && failUnlock) {
           return http.Response(jsonEncode({'message': 'Payment failed'}), 402);
         }

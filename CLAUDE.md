@@ -467,6 +467,20 @@ the local `pre-commit` hook installed from `Engineering/hooks-templates/`) —
 it checks for *a* test file in the commit, not that it's the right one or
 that coverage moved in the right direction, so review test quality yourself.
 
+Mobile status as of 2026-10-07: customer-app line coverage is about 99% (90
+tests), provider-app about 94% (43), and `flutter analyze` exits 0 in both
+apps and the shared package. `flutter analyze` fails the whole run on
+*info*-level lints, not just errors, and Mobile CI runs it before the
+tests, so a single missing-braces lint (`curly_braces_in_flow_control_structures`)
+was enough to turn the job red before coverage was even measured. Keep
+analyze at zero issues, not just zero errors. Customer screens read the
+global `api` from `lib/core/api.dart`, which has a `@visibleForTesting`
+setter; `test/support/fake_api.dart` installs a fake HTTP backend through it
+(routes keyed `'METHOD /path'`, requests recorded in `calls` and `bodies`).
+Provider screens take an optional `ApiClient` instead. The mobile `build`
+job (`flutter build apk --debug`) has not been run locally, so it is still
+unverified.
+
 ## **Constraints**
 
 - No AI attribution in commits, comments, or file headers (Engineering default).

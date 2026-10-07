@@ -64,8 +64,9 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
           break;
         }
       }
-      if (confirmedBid == null)
+      if (confirmedBid == null) {
         return; // shouldn't happen, but nothing sane to open
+      }
       final providerId = confirmedBid
           .providerId; // captured as final so the closure below can use it
       final alreadyRated = await api.get('/ratings/requirement/${r.id}');

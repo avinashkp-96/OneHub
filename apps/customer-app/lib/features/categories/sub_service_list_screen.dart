@@ -122,7 +122,9 @@ class _SubServiceTile extends StatelessWidget {
 
   String? get _priceRangeLabel {
     if (subService.suggestedMinPrice == null ||
-        subService.suggestedMaxPrice == null) return null;
+        subService.suggestedMaxPrice == null) {
+      return null;
+    }
     return '₹${subService.suggestedMinPrice!.toStringAsFixed(0)}–₹${subService.suggestedMaxPrice!.toStringAsFixed(0)}';
   }
 
