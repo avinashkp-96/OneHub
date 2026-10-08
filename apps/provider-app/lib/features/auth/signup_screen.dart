@@ -137,16 +137,20 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _validateStep(int step) {
     switch (step) {
       case 0:
-        if (_businessName.text.trim().isEmpty)
+        if (_businessName.text.trim().isEmpty) {
           return 'Enter your name or business name.';
-        if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim()))
+        }
+        if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
           return 'Enter a valid 10-digit mobile number.';
+        }
         if (!_otpSent) return 'Tap Send OTP to verify your mobile number.';
         if (_otp.text.trim().length != 6) return 'Enter the 6-digit code.';
-        if (_password.text.length < 6)
+        if (_password.text.length < 6) {
           return 'Password must be at least 6 characters.';
-        if (_password.text != _confirmPassword.text)
+        }
+        if (_password.text != _confirmPassword.text) {
           return 'Password and confirmation must match.';
+        }
         return null;
       case 1:
         if (_selectedCategoryId == null || _selectedSubServiceIds.isEmpty) {
@@ -154,10 +158,12 @@ class _SignupScreenState extends State<SignupScreen> {
         }
         return null;
       default:
-        if (_idProofUrl.text.trim().isEmpty)
+        if (_idProofUrl.text.trim().isEmpty) {
           return 'ID proof is required for verification.';
-        if (!_acceptedTerms)
+        }
+        if (!_acceptedTerms) {
           return 'Accept the Terms & Conditions to continue.';
+        }
         return null;
     }
   }
@@ -437,8 +443,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     fallbackIcon: OneHubIcons.work,
                     selected: _selectedSubServiceIds.contains(s.id),
                     onTap: () => setState(() {
-                      if (!_selectedSubServiceIds.remove(s.id))
+                      if (!_selectedSubServiceIds.remove(s.id)) {
                         _selectedSubServiceIds.add(s.id);
+                      }
                       _error = null;
                     }),
                   ),

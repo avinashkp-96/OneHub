@@ -47,8 +47,9 @@ void main() {
       baseUrl: 'https://example.test',
       httpClient: MockClient((request) async {
         calls.add('${request.method} ${request.url.path}');
-        if (request.url.path == '/requirements/incoming')
+        if (request.url.path == '/requirements/incoming') {
           return http.Response(jsonEncode(items), 200);
+        }
         if (request.url.path.endsWith('/accept') && failAccept) {
           return http.Response(jsonEncode({'message': 'Already taken'}), 409);
         }

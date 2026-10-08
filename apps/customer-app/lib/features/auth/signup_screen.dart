@@ -50,12 +50,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
   String? _validateForm() {
     if (_fullName.text.trim().isEmpty) return 'Full name is required.';
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim()))
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
       return 'Enter a valid 10-digit mobile number.';
-    if (_password.text.length < 6)
+    }
+    if (_password.text.length < 6) {
       return 'Password must be at least 6 characters.';
-    if (_password.text != _confirmPassword.text)
+    }
+    if (_password.text != _confirmPassword.text) {
       return 'Password and confirmation must match.';
+    }
     if (!_acceptedTerms) return 'Accept the Terms & Conditions to continue.';
     return null;
   }
@@ -319,24 +322,29 @@ class _FormStep extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  value: acceptedTerms,
-                  onChanged: onAcceptedTermsChanged,
-                  title: Text.rich(
-                    TextSpan(
-                      style: OneHubTextStyles.bodyText(textSecondary),
-                      children: [
-                        const TextSpan(text: 'I agree to the '),
-                        TextSpan(
-                            text: 'Terms & Conditions',
-                            style: OneHubTextStyles.linkText(primary)),
-                        const TextSpan(text: ' and '),
-                        TextSpan(
-                            text: 'Privacy Policy',
-                            style: OneHubTextStyles.linkText(primary)),
-                      ],
+                // Its own Material, because GlowCard paints a coloured box
+                // that would otherwise hide the tile's ink splash.
+                Material(
+                  type: MaterialType.transparency,
+                  child: CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                    value: acceptedTerms,
+                    onChanged: onAcceptedTermsChanged,
+                    title: Text.rich(
+                      TextSpan(
+                        style: OneHubTextStyles.bodyText(textSecondary),
+                        children: [
+                          const TextSpan(text: 'I agree to the '),
+                          TextSpan(
+                              text: 'Terms & Conditions',
+                              style: OneHubTextStyles.linkText(primary)),
+                          const TextSpan(text: ' and '),
+                          TextSpan(
+                              text: 'Privacy Policy',
+                              style: OneHubTextStyles.linkText(primary)),
+                        ],
+                      ),
                     ),
                   ),
                 ),

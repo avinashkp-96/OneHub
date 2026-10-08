@@ -103,10 +103,12 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
   }
 
   String get _subtitle {
-    if (_bidId == null)
+    if (_bidId == null) {
       return 'Give the customer a range. You can refine it after you talk.';
-    if (!_contactUnlocked)
+    }
+    if (!_contactUnlocked) {
       return 'Bid sent. Unlock the customer\'s contact to talk and refine your price.';
+    }
     return 'Contact unlocked. Call or message the customer, then update your price.';
   }
 
