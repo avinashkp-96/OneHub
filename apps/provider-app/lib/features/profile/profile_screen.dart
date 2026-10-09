@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import '../availability/availability_screen.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // Provider Profile, reached from the Profile item in the dashboard's nav bar.
@@ -16,7 +17,6 @@ const _dummyName = 'Asha Electricals';
 const _dummyPhone = '+91 98765 12345';
 const _dummyEmail = 'asha@example.com';
 const _dummyCategory = 'Electrician';
-const _dummyCoverage = '5 km radius';
 const _dummyExperience = '8 years';
 
 /// Takes an optional [client], like the other provider screens, so tests can
@@ -60,8 +60,6 @@ class ProfileScreen extends StatelessWidget {
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final iconFill =
-        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
     final iconBorder =
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
@@ -173,10 +171,13 @@ class ProfileScreen extends StatelessWidget {
                           label: 'SERVICE CATEGORY',
                           value: _dummyCategory),
                       Divider(height: 1, color: iconBorder),
-                      const _DetailRow(
-                          icon: OneHubIcons.location,
-                          label: 'COVERAGE',
-                          value: _dummyCoverage),
+                      ValueListenableBuilder<Availability>(
+                        valueListenable: providerAvailability,
+                        builder: (_, a, __) => _DetailRow(
+                            icon: OneHubIcons.location,
+                            label: 'COVERAGE',
+                            value: '${a.radiusKm} km radius'),
+                      ),
                       Divider(height: 1, color: iconBorder),
                       const _DetailRow(
                           icon: OneHubIcons.calendar,
@@ -191,53 +192,21 @@ class ProfileScreen extends StatelessWidget {
                   style: OneHubTextStyles.pageHeading(textPrimary)
                       .copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
-                child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                        builder: (_) => ActiveJobsScreen(client: client)),
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(OneHubTheme.radiusFormCard),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: iconFill,
-                            border: Border.all(color: iconBorder),
-                          ),
-                          child: Icon(OneHubIcons.documentList,
-                              color: textPrimary, size: 18),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Active jobs',
-                                  style: OneHubTextStyles.bodyText(textPrimary)
-                                      .copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15)),
-                              const SizedBox(height: 2),
-                              Text('Track and finish your jobs',
-                                  style: OneHubTextStyles.fieldLabel(textMuted)
-                                      .copyWith(
-                                          letterSpacing: 0, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                        Icon(OneHubIcons.chevronRight,
-                            size: 18, color: textMuted),
-                      ],
-                    ),
-                  ),
+              _LinkTile(
+                icon: OneHubIcons.calendar,
+                title: 'Availability',
+                subtitle: 'Hours, days and service area',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const AvailabilityScreen())),
+              ),
+              const SizedBox(height: 12),
+              _LinkTile(
+                icon: OneHubIcons.documentList,
+                title: 'Active jobs',
+                subtitle: 'Track and finish your jobs',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => ActiveJobsScreen(client: client)),
                 ),
               ),
               const SizedBox(height: 32),
@@ -250,6 +219,72 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 child: const Text('Log out'),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LinkTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  const _LinkTile(
+      {required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textMuted =
+        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final iconFill =
+        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
+    final iconBorder =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: iconFill,
+                  border: Border.all(color: iconBorder),
+                ),
+                child: Icon(icon, color: textPrimary, size: 18),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: OneHubTextStyles.bodyText(textPrimary).copyWith(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: OneHubTextStyles.fieldLabel(textMuted)
+                            .copyWith(letterSpacing: 0, fontSize: 11)),
+                  ],
+                ),
+              ),
+              Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
             ],
           ),
         ),

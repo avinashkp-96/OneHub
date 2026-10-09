@@ -538,6 +538,20 @@ one place to do it. The timeline is derived from the status alone; there are
 no timestamps because the API returns none. Tests: customer 101, provider
 67, shared 49; coverage about 99% and 95%.
 
+2026-10-09 (provider availability): provider `availability_screen.dart` added,
+reached from a new "Availability" tile on the provider Profile screen (the
+"Active jobs" tile there now shares the same private `_LinkTile`). Same shell
+as the other provider screens: a `GlowCard` with opens/closes time buttons
+(the system time picker), then selectable chips for working days (Mon to Sun)
+and for the service radius (2, 5, 10, 15 or 25 km). Save changes rejects an
+empty set of days and a closing time that is not after opening, then pops
+with an "Availability saved." snackbar. There is no availability endpoint, so
+saving only updates an in-memory `providerAvailability` notifier, which the
+Profile coverage row listens to (it replaces the old `_dummyCoverage` string).
+It resets on app restart and tells the backend nothing; the screen says so.
+The dashboard Online badge is still its own local toggle and is not linked to
+this screen. Provider-app tests: 74, line coverage about 96%.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
