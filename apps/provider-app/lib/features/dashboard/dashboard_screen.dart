@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../certification/certification_screen.dart';
 import '../profile/profile_screen.dart';
 import '../requirements/active_jobs_screen.dart';
 
@@ -19,8 +20,6 @@ const _dummyEarnedToday = '₹1,850';
 const _dummyWalletBalance = '₹1,250';
 const _dummyPlan = 'PRO PLAN';
 const _dummyRenewal = 'Renews 12 Nov';
-const _dummyCertSteps = 5;
-const _dummyCertDone = 3;
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -380,48 +379,55 @@ class _CertificationCard extends StatelessWidget {
     final lineColor =
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
+    final total = certificationSteps.length;
+    final done = certificationStepsDone;
+
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text('Get certified',
-                      style: OneHubTextStyles.bodyText(textPrimary)
-                          .copyWith(fontWeight: FontWeight.w700, fontSize: 15)),
-                ),
-                Text('$_dummyCertDone of $_dummyCertSteps steps',
-                    style: OneHubTextStyles.fieldLabel(textMuted)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                for (var i = 0; i < _dummyCertSteps; i++)
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CertificationScreen())),
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
                   Expanded(
-                    child: Container(
-                      height: 5,
-                      margin: EdgeInsets.only(
-                          right: i == _dummyCertSteps - 1 ? 0 : 5),
-                      decoration: BoxDecoration(
-                        color: i < _dummyCertDone
-                            ? OneHubColors.primary
-                            : lineColor,
-                        borderRadius: BorderRadius.circular(3),
+                    child: Text('Get certified',
+                        style: OneHubTextStyles.bodyText(textPrimary).copyWith(
+                            fontWeight: FontWeight.w700, fontSize: 15)),
+                  ),
+                  Text('$done of $total steps',
+                      style: OneHubTextStyles.fieldLabel(textMuted)),
+                  const SizedBox(width: 8),
+                  Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  for (var i = 0; i < total; i++)
+                    Expanded(
+                      child: Container(
+                        height: 5,
+                        margin: EdgeInsets.only(right: i == total - 1 ? 0 : 5),
+                        decoration: BoxDecoration(
+                          color: i < done ? OneHubColors.primary : lineColor,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text('Certified providers get more requests.',
-                style: OneHubTextStyles.fieldLabel(textMuted)
-                    .copyWith(letterSpacing: 0, fontSize: 12)),
-          ],
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text('Certified providers get more requests.',
+                  style: OneHubTextStyles.fieldLabel(textMuted)
+                      .copyWith(letterSpacing: 0, fontSize: 12)),
+            ],
+          ),
         ),
       ),
     );
