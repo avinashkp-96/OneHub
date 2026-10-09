@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
+import '../profile/profile_screen.dart';
 import '../requirements/my_requests_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Structure follows an
@@ -59,6 +60,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .push(MaterialPageRoute(builder: (_) => const CategoryGridScreen()));
     void openMyRequests() => Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
+    void openProfile() => Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
 
     return Scaffold(
       body: PageGlow(
@@ -114,11 +117,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
         ],
         selectedIndex: 0,
-        // Home is this screen; Profile isn't built yet, matching the prior
-        // NavigationBar's convention of leaving unbuilt destinations unwired.
+        // Index 0 is this screen, so there's nothing to open for it.
         onSelected: (index) {
           if (index == 1) openMyRequests();
           if (index == 2) openCategories();
+          if (index == 3) openProfile();
         },
       ),
     );

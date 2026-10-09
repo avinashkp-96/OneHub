@@ -16,6 +16,10 @@ class ApiClient {
   Future<void> _saveToken(String token) => _storage.write(key: 'access_token', value: token);
   Future<String?> get token => _storage.read(key: 'access_token');
 
+  // Signs out locally by forgetting the stored token; there is no server-side
+  // session to end, since requests authenticate with the bearer token alone.
+  Future<void> logout() => _storage.delete(key: 'access_token');
+
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool auth = false}) =>
       _send(_http.post, path, body, auth);
 
