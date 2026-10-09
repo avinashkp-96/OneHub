@@ -497,6 +497,18 @@ leave it, and the red dot on the bell does not change; both need a real
 backend to mean anything. The two dashboard tests that expected the old
 snackbar now check that the bell opens the list.
 
+2026-10-09 (provider earnings): provider `earnings_screen.dart` added, opened
+from the wallet card on the dashboard, which is now tappable with a chevron.
+Same shell as the other provider screens: a `GlowCard` with the wallet
+balance, plan badge and renewal date, a bordered card of earned-today /
+this-week / this-month rows, and a list of recent activity tiles with signed
+amounts (credits in the success colour, fees and subscription in danger). A
+muted note says payouts and card payments are not set up. Everything is
+explicit dummy data until wallet and billing endpoints exist. The four values
+the dashboard also shows (`dummyEarnedToday`, `dummyWalletBalance`,
+`dummyPlan`, `dummyRenewal`) moved out of the dashboard into this file, so the
+summary, wallet card and this screen cannot disagree. Provider-app tests: 62.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
