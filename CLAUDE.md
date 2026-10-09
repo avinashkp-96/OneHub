@@ -454,7 +454,18 @@ stack cleared, so Back cannot return to a signed-in screen. Tests in
 `profile_screen_test.dart` and `api_client_test.dart` cover the details,
 the My requests link, cancelling, and confirming, including checking the
 storage plugin is asked to delete the token. The provider app's Profile
-item is still unwired.
+screen is the next entry below.
+
+2026-10-09 (provider profile): provider `profile_screen.dart` added behind the
+Profile item in the provider nav bar, the last unwired nav destination.
+Same shell and log-out flow as the customer profile (confirm dialog, then
+`ApiClient.logout()` and back to `/login` with the stack cleared), with a
+"VERIFIED" badge on the account card and a Business card listing service
+category, coverage radius and experience, plus an Active jobs link. All
+details are explicit dummy data in `_dummy*` constants until a profile
+endpoint exists. It takes an optional `ApiClient` like the other provider
+screens, which is what lets the tests assert the token is really deleted.
+Provider-app line coverage is about 94%.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
