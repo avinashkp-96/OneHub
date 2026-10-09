@@ -481,6 +481,22 @@ card's "3 of 5 steps" and this screen cannot drift apart. Replace the list
 when a certification endpoint exists. Provider-app line coverage is about
 95%.
 
+2026-10-09 (notifications): the bell on both dashboards, which only showed a
+"Notifications aren't set up yet." snackbar, now opens a notifications
+list. The screen is `NotificationsScreen` in the shared package, because it
+is identical for both apps: each app passes its own list of
+`OneHubNotification` items (title, body, time label, icon, unread). Same
+shell as the other screens (`PageGlow`, back-only `AppBar`, in-body
+heading) with bordered tiles; unread ones get a primary-coloured border and
+dot, tapping one marks it read, and "Mark all as read" clears the rest,
+with an "You're all caught up." state and a "No notifications yet." empty
+state. The lists are explicit dummy data in each app's
+`features/notifications/dummy_notifications.dart` (no notifications
+endpoint exists). Read state lives on the screen only, so it resets when you
+leave it, and the red dot on the bell does not change; both need a real
+backend to mean anything. The two dashboard tests that expected the old
+snackbar now check that the bell opens the list.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

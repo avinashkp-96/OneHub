@@ -4,6 +4,7 @@ export 'src/api_client.dart';
 export 'src/models/category.dart';
 export 'src/models/provider_summary.dart';
 export 'src/models/requirement.dart';
+export 'src/screens/notifications_screen.dart';
 export 'src/screens/reset_password_screen.dart';
 export 'src/theme/curved_nav_bar.dart';
 export 'src/theme/glow_card.dart';

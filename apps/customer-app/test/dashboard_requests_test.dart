@@ -205,14 +205,16 @@ void main() {
     expect(find.text("Location detection isn't set up yet."), findsOneWidget);
   });
 
-  testWidgets('the notification bell says it is not set up yet',
+  testWidgets('the notification bell opens the notifications list',
       (tester) async {
     await pumpScreen(tester, {});
 
     await tester.tap(find.byIcon(OneHubIcons.notification));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text("Notifications aren't set up yet."), findsOneWidget);
+    expect(find.byType(NotificationsScreen), findsOneWidget);
+    expect(find.text('New bid on your request'), findsOneWidget);
+    expect(find.text('2 unread'), findsOneWidget);
   });
 
   testWidgets('pull to refresh reloads the requests', (tester) async {

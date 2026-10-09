@@ -128,13 +128,15 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
-  testWidgets('the notification bell shows a not-set-up message',
+  testWidgets('the notification bell opens the notifications list',
       (tester) async {
     await pumpScreen(tester);
 
     await tester.tap(find.byIcon(OneHubIcons.notification));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    expect(find.text("Notifications aren't set up yet."), findsOneWidget);
+    expect(find.byType(NotificationsScreen), findsOneWidget);
+    expect(find.text('New request nearby'), findsOneWidget);
+    expect(find.text('2 unread'), findsOneWidget);
   });
 }
