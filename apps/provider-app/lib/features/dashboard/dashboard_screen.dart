@@ -103,8 +103,17 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-class _TopRow extends StatelessWidget {
+class _TopRow extends StatefulWidget {
   const _TopRow();
+
+  @override
+  State<_TopRow> createState() => _TopRowState();
+}
+
+class _TopRowState extends State<_TopRow> {
+  // Local only: there is no availability endpoint yet, so this resets when
+  // the dashboard is rebuilt. Wire to the backend when one exists.
+  bool _online = true;
 
   @override
   Widget build(BuildContext context) {
@@ -118,10 +127,13 @@ class _TopRow extends StatelessWidget {
 
     return Row(
       children: [
-        // Display-only: going offline isn't wired to the backend yet, which
-        // is also why the old switch was permanently disabled.
-        TintedBadge(
-            label: '● ONLINE', color: context.statusSuccess, pill: true),
+        GestureDetector(
+          onTap: () => setState(() => _online = !_online),
+          child: TintedBadge(
+              label: _online ? '● ONLINE' : '● OFFLINE',
+              color: _online ? context.statusSuccess : textMuted,
+              pill: true),
+        ),
         const Spacer(),
         Stack(
           clipBehavior: Clip.none,

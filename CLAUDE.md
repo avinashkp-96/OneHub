@@ -509,6 +509,16 @@ the dashboard also shows (`dummyEarnedToday`, `dummyWalletBalance`,
 `dummyPlan`, `dummyRenewal`) moved out of the dashboard into this file, so the
 summary, wallet card and this screen cannot disagree. Provider-app tests: 62.
 
+2026-10-09 (dashboard leftovers): two dashboard controls that only showed a
+snackbar or did nothing now respond. The customer location chip opens a
+bottom sheet of service areas (`dummyServiceAreas`, a fixed list because
+there is no geolocation or areas endpoint) and the chosen area replaces the
+chip text; dismissing keeps the current one. The provider status badge is
+now tappable and toggles between ONLINE and OFFLINE. That state is local to
+the dashboard, so it resets on rebuild and tells the backend nothing; it
+needs an availability endpoint to mean anything. The Nearby Providers
+prompt and promo banner stay as they were. Tests: customer 98, provider 63.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
