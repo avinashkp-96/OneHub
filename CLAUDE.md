@@ -467,6 +467,20 @@ endpoint exists. It takes an optional `ApiClient` like the other provider
 screens, which is what lets the tests assert the token is really deleted.
 Provider-app line coverage is about 94%.
 
+2026-10-09 (provider certification): provider `certification_screen.dart`
+added, opened from the "Get certified" card on the dashboard, which is now
+tappable (it had no screen behind it). Same shell as the other provider
+screens: a `GlowCard` progress summary with a segmented bar, then a
+checklist of five bordered step tiles (a check for done, the step number
+otherwise, and a DONE / IN PROGRESS / TO DO badge; the current step gets a
+primary-coloured border). The "Apply for certification" button is shown
+disabled with a "Finish all 5 steps" note, and stays disabled because there
+is no backend to apply to. The steps and their states are explicit dummy
+data in `certificationSteps`, which the dashboard card also reads, so the
+card's "3 of 5 steps" and this screen cannot drift apart. Replace the list
+when a certification endpoint exists. Provider-app line coverage is about
+95%.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
