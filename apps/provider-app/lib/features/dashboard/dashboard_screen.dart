@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../certification/certification_screen.dart';
+import '../notifications/dummy_notifications.dart';
 import '../profile/profile_screen.dart';
 import '../requirements/active_jobs_screen.dart';
 
@@ -139,9 +140,9 @@ class _TopRow extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 icon:
                     Icon(OneHubIcons.notification, size: 18, color: textMuted),
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Notifications aren't set up yet."))),
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(
+                        items: dummyProviderNotifications))),
               ),
             ),
             Positioned(
