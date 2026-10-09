@@ -128,6 +128,20 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
+  testWidgets('tapping the status badge toggles between online and offline',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('● ONLINE'));
+    await tester.pump();
+    expect(find.text('● OFFLINE'), findsOneWidget);
+    expect(find.text('● ONLINE'), findsNothing);
+
+    await tester.tap(find.text('● OFFLINE'));
+    await tester.pump();
+    expect(find.text('● ONLINE'), findsOneWidget);
+  });
+
   testWidgets('the notification bell opens the notifications list',
       (tester) async {
     await pumpScreen(tester);

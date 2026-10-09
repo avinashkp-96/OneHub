@@ -196,13 +196,33 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
-  testWidgets('the location chip says it is not set up yet', (tester) async {
+  testWidgets('the location chip opens an area picker and shows the choice',
+      (tester) async {
     await pumpScreen(tester, {});
 
     await tester.tap(find.text('Edappally, Kochi'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your area'), findsOneWidget);
 
-    expect(find.text("Location detection isn't set up yet."), findsOneWidget);
+    await tester.tap(find.text('Kakkanad, Kochi'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your area'), findsNothing);
+    expect(find.text('Kakkanad, Kochi'), findsOneWidget);
+    expect(find.text('Edappally, Kochi'), findsNothing);
+  });
+
+  testWidgets('dismissing the area picker keeps the current area',
+      (tester) async {
+    await pumpScreen(tester, {});
+
+    await tester.tap(find.text('Edappally, Kochi'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose your area'), findsNothing);
+    expect(find.text('Edappally, Kochi'), findsOneWidget);
   });
 
   testWidgets('the notification bell opens the notifications list',

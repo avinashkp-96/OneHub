@@ -131,7 +131,54 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // --- Header row: location chip + notification bell -------------------------
 
-class _TopRow extends StatelessWidget {
+// Dummy service areas: geolocation and an areas endpoint don't exist yet, so
+// the chip opens a picker over this fixed list. Replace with detected /
+// fetched locations later.
+const dummyServiceAreas = [
+  'Edappally, Kochi',
+  'Kakkanad, Kochi',
+  'Vyttila, Kochi',
+  'Fort Kochi',
+  'Aluva',
+];
+
+class _TopRow extends StatefulWidget {
+  @override
+  State<_TopRow> createState() => _TopRowState();
+}
+
+class _TopRowState extends State<_TopRow> {
+  String _location = dummyServiceAreas.first;
+
+  Future<void> _pickLocation() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Choose your area')),
+            ),
+            for (final area in dummyServiceAreas)
+              ListTile(
+                title: Text(area),
+                trailing: area == _location
+                    ? const Icon(OneHubIcons.successCheck,
+                        size: 18, color: OneHubColors.primary)
+                    : null,
+                onTap: () => Navigator.of(ctx).pop(area),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _location = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -148,9 +195,7 @@ class _TopRow extends StatelessWidget {
       children: [
         InkWell(
           borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text("Location detection isn't set up yet."))),
+          onTap: _pickLocation,
           child: Container(
             padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
             decoration: BoxDecoration(
@@ -164,10 +209,10 @@ class _TopRow extends StatelessWidget {
                 const Icon(OneHubIcons.location,
                     size: 16, color: OneHubColors.primary),
                 const SizedBox(width: 6),
-                // Dummy location text — geolocation isn't wired up yet, but
-                // the reference screenshot calls for a real-looking value
-                // here rather than a generic "Set your location" prompt.
-                Text('Edappally, Kochi',
+                // Starts on a dummy area — geolocation isn't wired up yet,
+                // but the reference screenshot calls for a real-looking
+                // value here rather than a generic "Set your location".
+                Text(_location,
                     style: OneHubTextStyles.linkText(textPrimary)),
                 const SizedBox(width: 2),
                 Icon(OneHubIcons.chevronDown, size: 14, color: textMuted),
