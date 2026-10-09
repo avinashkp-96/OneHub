@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../profile/profile_screen.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen). Restyled to match the
@@ -30,6 +31,8 @@ class DashboardScreen extends StatelessWidget {
         Navigator.of(context).pushNamed('/incoming-requests');
     void openJobs() => Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen()));
+    void openProfile() => Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
 
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
@@ -92,10 +95,11 @@ class DashboardScreen extends StatelessWidget {
           CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
         ],
         selectedIndex: 0,
-        // Profile isn't built yet, so it stays unwired, like the customer app.
+        // Index 0 is this screen, so there's nothing to open for it.
         onSelected: (index) {
           if (index == 1) openRequests();
           if (index == 2) openJobs();
+          if (index == 3) openProfile();
         },
       ),
     );

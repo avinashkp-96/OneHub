@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_provider/features/dashboard/dashboard_screen.dart';
+import 'package:onehub_provider/features/profile/profile_screen.dart';
 import 'package:onehub_provider/features/requirements/active_jobs_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
@@ -114,6 +115,17 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(ActiveJobsScreen), findsOneWidget);
+  });
+
+  testWidgets('the Profile nav item opens the profile screen', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.descendant(
+        of: find.byType(CurvedNavBar),
+        matching: find.byIcon(OneHubIcons.profile)));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
   testWidgets('the notification bell shows a not-set-up message',
