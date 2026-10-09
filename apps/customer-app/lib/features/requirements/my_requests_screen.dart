@@ -18,6 +18,67 @@ import 'rating_screen.dart';
 // Expired) rather than DashboardScreen's in-progress-only preview, so it
 // uses a single badge instead of that card's 4-step tracker, which has no
 // sensible position for a terminal status.
+String requestStatusLabel(Requirement r) => switch (r.status) {
+      RequestStatus.sent => 'SENT',
+      RequestStatus.accepted => 'ACCEPTED',
+      RequestStatus.rejected => 'REJECTED',
+      RequestStatus.bidReceived => '${r.bids.length} BIDS',
+      RequestStatus.confirmed => 'CONFIRMED',
+      RequestStatus.completed => 'COMPLETED',
+      RequestStatus.cancelled => 'CANCELLED',
+      RequestStatus.expired => 'EXPIRED',
+    };
+
+Color requestStatusColor(BuildContext context, RequestStatus status) =>
+    switch (status) {
+      RequestStatus.confirmed ||
+      RequestStatus.completed =>
+        context.statusSuccess,
+      RequestStatus.bidReceived => context.statusWarning,
+      RequestStatus.rejected ||
+      RequestStatus.cancelled ||
+      RequestStatus.expired =>
+        context.statusDanger,
+      _ => OneHubColors.primary,
+    };
+
+// The happy path is Sent → Accepted → Bids received → Confirmed → Completed.
+// A request that ended any other way (rejected, cancelled, expired) shows
+// Sent followed by how it ended, since the rest never happened.
+List<TimelineStep> requestTimeline(RequestStatus status) {
+  const path = [
+    ('Sent', RequestStatus.sent),
+    ('Accepted by a provider', RequestStatus.accepted),
+    ('Bids received', RequestStatus.bidReceived),
+    ('Provider confirmed', RequestStatus.confirmed),
+    ('Job completed', RequestStatus.completed),
+  ];
+  final index = path.indexWhere((p) => p.$2 == status);
+  if (index == -1) {
+    final ended = switch (status) {
+      RequestStatus.rejected => 'Rejected',
+      RequestStatus.cancelled => 'Cancelled',
+      _ => 'Expired',
+    };
+    return [
+      const TimelineStep('Sent', TimelineState.done),
+      TimelineStep(ended, TimelineState.current),
+    ];
+  }
+  return [
+    for (var i = 0; i < path.length; i++)
+      TimelineStep(
+          path[i].$1,
+          i < index
+              ? TimelineState.done
+              : i == index
+                  ? (status == RequestStatus.completed
+                      ? TimelineState.done
+                      : TimelineState.current)
+                  : TimelineState.todo),
+  ];
+}
+
 class MyRequestsScreen extends StatefulWidget {
   const MyRequestsScreen({super.key});
 
@@ -89,6 +150,38 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     _load();
   }
 
+  // Tapping a row opens the detail view first; the old tap behaviour (bids
+  // or rating) is now its action button.
+  Future<void> _openDetail(Requirement r) async {
+    final String? actionLabel = r.status == RequestStatus.completed
+        ? (r.bids.any((b) => b.confirmed) ? 'Rate provider' : null)
+        : switch (r.status) {
+            RequestStatus.accepted ||
+            RequestStatus.bidReceived ||
+            RequestStatus.confirmed =>
+              'View bids',
+            _ => null,
+          };
+
+    await Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => RequestDetailScreen(
+        heading: 'Request',
+        description: r.description,
+        statusLabel: requestStatusLabel(r),
+        statusColor: requestStatusColor(context, r.status),
+        steps: requestTimeline(r.status),
+        facts: [
+          DetailFact('Bids', '${r.bids.length}'),
+          DetailFact('Photos', '${r.photoUrls.length}'),
+        ],
+        action: actionLabel == null
+            ? null
+            : PrimaryCta(onPressed: () => _open(r), child: Text(actionLabel)),
+      ),
+    ));
+    if (mounted) _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -138,7 +231,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                   )
                 else
                   for (final r in _requirements)
-                    _RequestTile(requirement: r, onTap: () => _open(r)),
+                    _RequestTile(requirement: r, onTap: () => _openDetail(r)),
               ],
             ),
           ),
@@ -153,30 +246,6 @@ class _RequestTile extends StatelessWidget {
   final VoidCallback onTap;
   const _RequestTile({required this.requirement, required this.onTap});
 
-  String _statusLabel(RequestStatus status) => switch (status) {
-        RequestStatus.sent => 'SENT',
-        RequestStatus.accepted => 'ACCEPTED',
-        RequestStatus.rejected => 'REJECTED',
-        RequestStatus.bidReceived => '${requirement.bids.length} BIDS',
-        RequestStatus.confirmed => 'CONFIRMED',
-        RequestStatus.completed => 'COMPLETED',
-        RequestStatus.cancelled => 'CANCELLED',
-        RequestStatus.expired => 'EXPIRED',
-      };
-
-  Color _statusColor(BuildContext context, RequestStatus status) =>
-      switch (status) {
-        RequestStatus.confirmed ||
-        RequestStatus.completed =>
-          context.statusSuccess,
-        RequestStatus.bidReceived => context.statusWarning,
-        RequestStatus.rejected ||
-        RequestStatus.cancelled ||
-        RequestStatus.expired =>
-          context.statusDanger,
-        _ => OneHubColors.primary,
-      };
-
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -184,7 +253,7 @@ class _RequestTile extends StatelessWidget {
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final statusColor = _statusColor(context, requirement.status);
+    final statusColor = requestStatusColor(context, requirement.status);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -208,7 +277,7 @@ class _RequestTile extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     TintedBadge(
-                        label: _statusLabel(requirement.status),
+                        label: requestStatusLabel(requirement),
                         color: statusColor),
                   ],
                 ),

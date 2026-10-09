@@ -519,6 +519,25 @@ the dashboard, so it resets on rebuild and tells the backend nothing; it
 needs an availability endpoint to mean anything. The Nearby Providers
 prompt and promo banner stay as they were. Tests: customer 98, provider 63.
 
+2026-10-09 (request and job detail): rows in both apps now open a detail
+view instead of acting straight away. The screen is `RequestDetailScreen` in
+the shared package, since it is the same for both: each app passes a
+heading, the request text, a status badge, a progress timeline
+(`TimelineStep` with done / current / to do), optional label-and-value facts
+and an optional action button. One `GlowCard` holds the text and status; the
+timeline and facts are plain bordered cards. Customer My requests: tapping a
+row opens the detail, and the old tap behaviour is now its button ("View
+bids" for accepted, bid-received and confirmed requests; "Rate provider" for
+a completed job with a confirmed bid; no button otherwise). The timeline is
+Sent, Accepted, Bids received, Confirmed, Completed; a request that was
+rejected, cancelled or expired shows Sent and how it ended. Provider Active
+jobs: tapping a card opens a read-only detail with the provider's own bid
+range and a timeline (Bid submitted, Customer chooses, Job in progress,
+Completed, or Not selected). Mark as Completed stays on the card so there is
+one place to do it. The timeline is derived from the status alone; there are
+no timestamps because the API returns none. Tests: customer 101, provider
+67, shared 49; coverage about 99% and 95%.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
