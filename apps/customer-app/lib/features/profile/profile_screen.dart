@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import 'profile_state.dart';
 import '../requirements/my_requests_screen.dart';
 
 // Customer Profile, reached from the Profile item in the dashboard's nav bar.
@@ -10,12 +11,10 @@ import '../requirements/my_requests_screen.dart';
 //
 // The name, phone and email are explicit dummy data: there is no profile
 // endpoint to read them from yet, so they mirror the dummy "Meera" the
-// dashboard already greets. Replace the `_dummy*` constants when one exists.
+// dashboard already greets (see profile_state.dart; Edit profile changes them
+// in memory only).
 // "My requests" and "Log out" are real; logging out clears the stored token
 // and returns to the login screen with no way back.
-const _dummyName = 'Meera Nair';
-const _dummyPhone = '+91 98765 43210';
-const _dummyEmail = 'meera@example.com';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -47,7 +46,12 @@ class ProfileScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<ProfileDetails>(
+        valueListenable: customerProfile,
+        builder: _buildWith,
+      );
+
+  Widget _buildWith(BuildContext context, ProfileDetails d, Widget? _) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
@@ -55,10 +59,6 @@ class ProfileScreen extends StatelessWidget {
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final iconFill =
-        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
-    final iconBorder =
-        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return Scaffold(
       appBar: AppBar(
@@ -97,7 +97,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          _dummyName.substring(0, 1),
+                          d.name.substring(0, 1),
                           style: OneHubTextStyles.pageHeading(Colors.white)
                               .copyWith(fontSize: 24),
                         ),
@@ -107,7 +107,7 @@ class ProfileScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_dummyName,
+                            Text(d.name,
                                 style: OneHubTextStyles.pageHeading(textPrimary)
                                     .copyWith(fontSize: 20)),
                             const SizedBox(height: 6),
@@ -116,27 +116,29 @@ class ProfileScreen extends StatelessWidget {
                                 Icon(OneHubIcons.phone,
                                     size: 14, color: textMuted),
                                 const SizedBox(width: 6),
-                                Text(_dummyPhone,
+                                Text(d.phone,
                                     style: OneHubTextStyles.bodyText(
                                         textSecondary)),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(OneHubIcons.email,
-                                    size: 14, color: textMuted),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    _dummyEmail,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: OneHubTextStyles.bodyText(
-                                        textSecondary),
+                            if (d.email.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(OneHubIcons.email,
+                                      size: 14, color: textMuted),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      d.email,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: OneHubTextStyles.bodyText(
+                                          textSecondary),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -145,56 +147,42 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 26),
+              Text('Account',
+                  style: OneHubTextStyles.pageHeading(textPrimary)
+                      .copyWith(fontSize: 18)),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.user,
+                title: 'Edit profile',
+                subtitle: 'Name and email',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => EditProfileScreen(
+                          initial: customerProfile.value,
+                          onSave: (name, email) => customerProfile.value =
+                              customerProfile.value
+                                  .copyWith(name: name, email: email),
+                        ))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.notification,
+                title: 'Settings',
+                subtitle: 'Notifications and about',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SettingsScreen(
+                        appName: 'OneHub', toggles: customerSettingsToggles))),
+              ),
+              const SizedBox(height: 26),
               Text('Activity',
                   style: OneHubTextStyles.pageHeading(textPrimary)
                       .copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
-                child: InkWell(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MyRequestsScreen()),
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(OneHubTheme.radiusFormCard),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: iconFill,
-                            border: Border.all(color: iconBorder),
-                          ),
-                          child: Icon(OneHubIcons.documentList,
-                              color: textPrimary, size: 18),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('My requests',
-                                  style: OneHubTextStyles.bodyText(textPrimary)
-                                      .copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 15)),
-                              const SizedBox(height: 2),
-                              Text('Track and review your jobs',
-                                  style: OneHubTextStyles.fieldLabel(textMuted)
-                                      .copyWith(
-                                          letterSpacing: 0, fontSize: 11)),
-                            ],
-                          ),
-                        ),
-                        Icon(OneHubIcons.chevronRight,
-                            size: 18, color: textMuted),
-                      ],
-                    ),
-                  ),
+              OneHubLinkTile(
+                icon: OneHubIcons.documentList,
+                title: 'My requests',
+                subtitle: 'Track and review your jobs',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MyRequestsScreen()),
                 ),
               ),
               const SizedBox(height: 32),

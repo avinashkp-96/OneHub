@@ -552,6 +552,22 @@ It resets on app restart and tells the backend nothing; the screen says so.
 The dashboard Online badge is still its own local toggle and is not linked to
 this screen. Provider-app tests: 74, line coverage about 96%.
 
+2026-10-09 (edit profile and settings): both Profile screens gained an
+Account section with "Edit profile" and "Settings" tiles. Both screens live
+in the shared package because they are identical for the two apps:
+`EditProfileScreen` (name, locked phone number, email; a name is required and
+an email, if given, must look valid; the provider labels the name field
+BUSINESS NAME) and `SettingsScreen` (a GlowCard of switches plus an About
+card with the app name and version). The phone number is locked because
+changing it would need a new OTP, which has no flow. The Profile tiles now use
+a shared `OneHubLinkTile`, replacing the provider's private copy and the
+customer's inline card. Each app keeps its account details and toggles in
+`features/profile/profile_state.dart` as in-memory notifiers seeded with the
+old dummy values; saving or flipping a switch updates them, the Profile
+screen listens, and they reset on app restart (no profile or settings
+endpoint). The customer dashboard greeting still says "Meera" regardless of
+the edited name. Shared package tests: 56; customer 103, provider 76.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

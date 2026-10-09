@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../availability/availability_screen.dart';
+import 'profile_state.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // Provider Profile, reached from the Profile item in the dashboard's nav bar.
@@ -10,12 +11,10 @@ import '../requirements/active_jobs_screen.dart';
 // request — plus a card of business details.
 //
 // Every detail shown is explicit dummy data: there is no profile endpoint to
-// read them from yet. Replace the `_dummy*` constants when one exists.
+// read them from yet (see profile_state.dart; Edit profile changes the account
+// details in memory only).
 // "Active jobs" and "Log out" are real; logging out clears the stored token
 // and returns to the login screen with no way back.
-const _dummyName = 'Asha Electricals';
-const _dummyPhone = '+91 98765 12345';
-const _dummyEmail = 'asha@example.com';
 const _dummyCategory = 'Electrician';
 const _dummyExperience = '8 years';
 
@@ -52,7 +51,12 @@ class ProfileScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<ProfileDetails>(
+        valueListenable: providerProfile,
+        builder: _buildWith,
+      );
+
+  Widget _buildWith(BuildContext context, ProfileDetails d, Widget? _) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
@@ -100,7 +104,7 @@ class ProfileScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          _dummyName.substring(0, 1),
+                          d.name.substring(0, 1),
                           style: OneHubTextStyles.pageHeading(Colors.white)
                               .copyWith(fontSize: 24),
                         ),
@@ -110,7 +114,7 @@ class ProfileScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(_dummyName,
+                            Text(d.name,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: OneHubTextStyles.pageHeading(textPrimary)
@@ -121,27 +125,29 @@ class ProfileScreen extends StatelessWidget {
                                 Icon(OneHubIcons.phone,
                                     size: 14, color: textMuted),
                                 const SizedBox(width: 6),
-                                Text(_dummyPhone,
+                                Text(d.phone,
                                     style: OneHubTextStyles.bodyText(
                                         textSecondary)),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(OneHubIcons.email,
-                                    size: 14, color: textMuted),
-                                const SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    _dummyEmail,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: OneHubTextStyles.bodyText(
-                                        textSecondary),
+                            if (d.email.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(OneHubIcons.email,
+                                      size: 14, color: textMuted),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      d.email,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: OneHubTextStyles.bodyText(
+                                          textSecondary),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                                ],
+                              ),
+                            ],
                             const SizedBox(height: 8),
                             TintedBadge(
                                 label: 'VERIFIED',
@@ -188,11 +194,39 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 26),
+              Text('Account',
+                  style: OneHubTextStyles.pageHeading(textPrimary)
+                      .copyWith(fontSize: 18)),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.user,
+                title: 'Edit profile',
+                subtitle: 'Business name and email',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => EditProfileScreen(
+                          initial: providerProfile.value,
+                          nameLabel: 'BUSINESS NAME',
+                          onSave: (name, email) => providerProfile.value =
+                              providerProfile.value
+                                  .copyWith(name: name, email: email),
+                        ))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.notification,
+                title: 'Settings',
+                subtitle: 'Notifications and about',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => SettingsScreen(
+                        appName: 'OneHub Provider',
+                        toggles: providerSettingsToggles))),
+              ),
+              const SizedBox(height: 26),
               Text('Activity',
                   style: OneHubTextStyles.pageHeading(textPrimary)
                       .copyWith(fontSize: 18)),
               const SizedBox(height: 12),
-              _LinkTile(
+              OneHubLinkTile(
                 icon: OneHubIcons.calendar,
                 title: 'Availability',
                 subtitle: 'Hours, days and service area',
@@ -200,7 +234,7 @@ class ProfileScreen extends StatelessWidget {
                     builder: (_) => const AvailabilityScreen())),
               ),
               const SizedBox(height: 12),
-              _LinkTile(
+              OneHubLinkTile(
                 icon: OneHubIcons.documentList,
                 title: 'Active jobs',
                 subtitle: 'Track and finish your jobs',
@@ -219,72 +253,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 child: const Text('Log out'),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _LinkTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  const _LinkTile(
-      {required this.icon,
-      required this.title,
-      required this.subtitle,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    final textMuted =
-        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final iconFill =
-        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
-    final iconBorder =
-        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: iconFill,
-                  border: Border.all(color: iconBorder),
-                ),
-                child: Icon(icon, color: textPrimary, size: 18),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: OneHubTextStyles.bodyText(textPrimary).copyWith(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: OneHubTextStyles.fieldLabel(textMuted)
-                            .copyWith(letterSpacing: 0, fontSize: 11)),
-                  ],
-                ),
-              ),
-              Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
             ],
           ),
         ),
