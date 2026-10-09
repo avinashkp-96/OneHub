@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:onehub_customer/features/categories/category_grid_screen.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
+import 'package:onehub_customer/features/profile/profile_screen.dart';
 import 'package:onehub_customer/features/requirements/my_requests_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
@@ -177,18 +178,22 @@ void main() {
     expect(find.byType(MyRequestsScreen), findsOneWidget);
   });
 
-  testWidgets(
-      'the Category nav item opens category browsing; Profile does nothing yet',
-      (tester) async {
+  testWidgets('the Category nav item opens category browsing', (tester) async {
+    await pumpScreen(tester, {});
+
+    await tester.tap(navItem(OneHubIcons.category));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CategoryGridScreen), findsOneWidget);
+  });
+
+  testWidgets('the Profile nav item opens the profile screen', (tester) async {
     await pumpScreen(tester, {});
 
     await tester.tap(navItem(OneHubIcons.profile));
     await tester.pumpAndSettle();
-    expect(find.byType(DashboardScreen), findsOneWidget);
 
-    await tester.tap(navItem(OneHubIcons.category));
-    await tester.pumpAndSettle();
-    expect(find.byType(CategoryGridScreen), findsOneWidget);
+    expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
   testWidgets('the location chip says it is not set up yet', (tester) async {

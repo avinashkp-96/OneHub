@@ -441,6 +441,21 @@ Completed button on selected ones; it takes an optional `ApiClient` and has
 line coverage to about 94%, over the 85% CI floor.
 Dashboard seen in the browser; active jobs by tests only.
 
+2026-10-09: customer `profile_screen.dart` added, behind the Profile item in
+the dashboard nav bar, which was unwired until now. Same shell as the other
+screens (`PageGlow`, back-only `AppBar`, in-body heading), a single
+`GlowCard` with an initial avatar, name, phone and email, a bordered
+"My requests" tile, and a danger-outlined Log out button. The name, phone
+and email are explicit dummy data in `_dummy*` constants (no profile
+endpoint exists; they mirror the dashboard's dummy "Meera"). Log out asks
+for confirmation, then calls the new `ApiClient.logout()` (shared package;
+deletes the stored `access_token`) and goes to `/login` with the whole route
+stack cleared, so Back cannot return to a signed-in screen. Tests in
+`profile_screen_test.dart` and `api_client_test.dart` cover the details,
+the My requests link, cancelling, and confirming, including checking the
+storage plugin is asked to delete the token. The provider app's Profile
+item is still unwired.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
@@ -467,7 +482,7 @@ the local `pre-commit` hook installed from `Engineering/hooks-templates/`) —
 it checks for *a* test file in the commit, not that it's the right one or
 that coverage moved in the right direction, so review test quality yourself.
 
-Mobile status as of 2026-10-07: customer-app line coverage is about 99% (90
+Mobile status as of 2026-10-07: customer-app line coverage is about 99% (97
 tests), provider-app about 94% (43), and `flutter analyze` exits 0 in both
 apps and the shared package. `flutter analyze` fails the whole run on
 *info*-level lints, not just errors, and Mobile CI runs it before the
