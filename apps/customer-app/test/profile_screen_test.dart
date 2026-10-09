@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_customer/features/profile/profile_screen.dart';
 import 'package:onehub_customer/features/requirements/my_requests_screen.dart';
+import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 import 'support/fake_api.dart';
@@ -23,7 +24,7 @@ void main() {
         return null;
       },
     );
-    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.physicalSize = const Size(800, 2600);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -119,5 +120,44 @@ void main() {
     expect(find.byType(ProfileScreen), findsNothing);
     expect(find.text('open'), findsNothing,
         reason: 'the whole stack was cleared');
+  });
+
+  testWidgets('Edit profile saves a new name and the profile shows it',
+      (tester) async {
+    final original = customerProfile.value;
+    addTearDown(() => customerProfile.value = original);
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditProfileScreen), findsOneWidget);
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Meera Nair'), 'New Name');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'meera@example.com'), '');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditProfileScreen), findsNothing);
+    expect(find.text('New Name'), findsOneWidget);
+    expect(find.text('meera@example.com'), findsNothing);
+    expect(find.text('Profile updated.'), findsOneWidget);
+  });
+
+  testWidgets('Settings opens with this app\'s toggles and remembers a change',
+      (tester) async {
+    final toggle = customerSettingsToggles.first.value;
+    final before = toggle.value;
+    addTearDown(() => toggle.value = before);
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+    expect(find.text('OneHub'), findsOneWidget);
+
+    await tester.tap(find.text(customerSettingsToggles.first.title));
+    await tester.pump();
+    expect(toggle.value, !before);
   });
 }
