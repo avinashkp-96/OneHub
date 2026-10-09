@@ -143,4 +143,53 @@ void main() {
 
     expect(find.textContaining('Could not load active jobs'), findsOneWidget);
   });
+
+  testWidgets('tapping a job opens its detail with the bid and a timeline',
+      (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.tap(find.text('Awaiting job'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.text('Job'), findsOneWidget);
+    expect(find.text('₹500 - ₹900'), findsOneWidget);
+    expect(find.text('Customer chooses a provider'), findsOneWidget);
+    expect(find.text('Job in progress'), findsOneWidget);
+    expect(find.byType(PrimaryCta), findsNothing);
+
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+    expect(find.byType(RequestDetailScreen), findsNothing);
+  });
+
+  testWidgets('a job the provider lost ends at Not selected', (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.tap(find.text('Lost job'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Not selected'), findsOneWidget);
+    expect(find.text('Job in progress'), findsNothing);
+  });
+
+  testWidgets('a completed job shows every step done', (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.tap(find.text('Done job'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Completed'), findsOneWidget);
+    expect(find.text('Job in progress'), findsOneWidget);
+  });
+
+  testWidgets('the Mark as Completed button does not open the detail',
+      (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Mark as Completed'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RequestDetailScreen), findsNothing);
+  });
 }

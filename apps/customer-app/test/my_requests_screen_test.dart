@@ -103,6 +103,9 @@ void main() {
 
     await tester.tap(find.text('Fan job'));
     await tester.pumpAndSettle();
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    await tester.tap(find.widgetWithText(PrimaryCta, 'View bids'));
+    await tester.pumpAndSettle();
     expect(find.byType(BidListScreen), findsOneWidget);
 
     await tester.tap(find.byType(BackButton));
@@ -127,6 +130,8 @@ void main() {
 
     await tester.tap(find.text('Paint job'));
     await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Rate provider'));
+    await tester.pumpAndSettle();
 
     expect(find.byType(RatingScreen), findsOneWidget);
   });
@@ -144,6 +149,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Paint job'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Rate provider'));
     await tester.pumpAndSettle();
 
     expect(find.text("You've already rated this job."), findsOneWidget);
@@ -163,8 +170,67 @@ void main() {
 
     await tester.tap(find.text('Paint job'));
     await tester.pumpAndSettle();
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.byType(PrimaryCta), findsNothing);
+    await tester.pumpAndSettle();
 
     expect(find.byType(RatingScreen), findsNothing);
     expect(fake.calls.where((c) => c.contains('/ratings/')), isEmpty);
+  });
+
+  testWidgets('the detail view shows the status, facts and a progress timeline',
+      (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan job', 'BID_RECEIVED',
+                bids: [bidJson('b1'), bidJson('b2')])
+          ],
+    });
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fan job'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.text('2 BIDS'), findsWidgets);
+    expect(find.text('Bids received'), findsOneWidget);
+    expect(find.text('Provider confirmed'), findsOneWidget);
+    expect(find.text('BIDS'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+  });
+
+  testWidgets('a request that ended early shows Sent then how it ended',
+      (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Old job', 'EXPIRED'),
+          ],
+    });
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Old job'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sent'), findsOneWidget);
+    expect(find.text('Expired'), findsOneWidget);
+    expect(find.text('Bids received'), findsNothing);
+    expect(find.byType(PrimaryCta), findsNothing);
+  });
+
+  test('requestTimeline marks earlier steps done and later ones to do', () {
+    final steps = requestTimeline(RequestStatus.confirmed);
+    expect(steps.map((s) => s.state), [
+      TimelineState.done,
+      TimelineState.done,
+      TimelineState.done,
+      TimelineState.current,
+      TimelineState.todo,
+    ]);
+    expect(requestTimeline(RequestStatus.completed).last.state,
+        TimelineState.done);
+    expect(requestTimeline(RequestStatus.rejected).last.label, 'Rejected');
+    expect(requestTimeline(RequestStatus.cancelled).last.label, 'Cancelled');
   });
 }
