@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../certification/certification_screen.dart';
+import '../earnings/earnings_screen.dart';
 import '../notifications/dummy_notifications.dart';
 import '../profile/profile_screen.dart';
 import '../requirements/active_jobs_screen.dart';
@@ -17,10 +18,6 @@ import '../requirements/active_jobs_screen.dart';
 const _dummyProviderName = 'Asha';
 const _dummyNewRequests = 3;
 const _dummyActiveJobs = 2;
-const _dummyEarnedToday = '₹1,850';
-const _dummyWalletBalance = '₹1,250';
-const _dummyPlan = 'PRO PLAN';
-const _dummyRenewal = 'Renews 12 Nov';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -212,7 +209,7 @@ class _SummaryCard extends StatelessWidget {
                 Container(width: 1, height: 36, color: divider),
                 stat('$_dummyActiveJobs', 'ACTIVE JOBS'),
                 Container(width: 1, height: 36, color: divider),
-                stat(_dummyEarnedToday, 'EARNED TODAY'),
+                stat(dummyEarnedToday, 'EARNED TODAY'),
               ],
             ),
           ],
@@ -328,39 +325,46 @@ class _WalletCard extends StatelessWidget {
 
     return Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const _IconCircle(OneHubIcons.wallet),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: InkWell(
+        onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const EarningsScreen())),
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const _IconCircle(OneHubIcons.wallet),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Wallet balance',
+                        style: OneHubTextStyles.fieldLabel(textMuted)),
+                    const SizedBox(height: 2),
+                    Text(dummyWalletBalance,
+                        style: OneHubTextStyles.pageHeading(textPrimary)
+                            .copyWith(fontSize: 22)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Wallet balance',
-                      style: OneHubTextStyles.fieldLabel(textMuted)),
-                  const SizedBox(height: 2),
-                  Text(_dummyWalletBalance,
-                      style: OneHubTextStyles.pageHeading(textPrimary)
-                          .copyWith(fontSize: 22)),
+                  TintedBadge(
+                      label: dummyPlan,
+                      color: context.statusSuccess,
+                      pill: true),
+                  const SizedBox(height: 4),
+                  Text(dummyRenewal,
+                      style: OneHubTextStyles.fieldLabel(textMuted)
+                          .copyWith(letterSpacing: 0, fontSize: 11)),
                 ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                TintedBadge(
-                    label: _dummyPlan,
-                    color: context.statusSuccess,
-                    pill: true),
-                const SizedBox(height: 4),
-                Text(_dummyRenewal,
-                    style: OneHubTextStyles.fieldLabel(textMuted)
-                        .copyWith(letterSpacing: 0, fontSize: 11)),
-              ],
-            ),
-          ],
+              const SizedBox(width: 8),
+              Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
+            ],
+          ),
         ),
       ),
     );
