@@ -51,6 +51,26 @@ void main() {
     expect(await api.token, 'abc123');
   });
 
+  test('put sends a PUT with the bearer token', () async {
+    stored['access_token'] = 'tok';
+    late http.Request seen;
+    final api = ApiClient(
+      baseUrl: 'https://example.test',
+      httpClient: MockClient((request) async {
+        seen = request;
+        return http.Response(jsonEncode({'ok': true}), 200);
+      }),
+    );
+
+    final result = await api
+        .put('/providers/p1/subscription', {'plan': 'MONTHLY_99'}, auth: true);
+
+    expect(seen.method, 'PUT');
+    expect(seen.headers['Authorization'], 'Bearer tok');
+    expect(jsonDecode(seen.body), {'plan': 'MONTHLY_99'});
+    expect(result, {'ok': true});
+  });
+
   test('logout forgets the stored token', () async {
     final api = client();
     await api.post('/auth/login', {});

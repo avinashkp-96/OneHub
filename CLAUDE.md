@@ -608,6 +608,23 @@ replaces the one on screen rather than queueing behind it; without that the
 inline red text. Profile and availability saves already had a message and keep
 the plain snackbar style. Tests: shared 72, customer 105, provider 78.
 
+2026-10-12 (provider plans): provider `plans_screen.dart` added (docx 5.5, Plan
+Management), reached from a "Plans" tile on Profile and a "Manage plan" tile on
+Earnings. A `GlowCard` shows the current plan with usage against the included
+unlocks, below it the three plans as selectable bordered cards (Pay per
+service at 50 rupees an unlock; Monthly 99 with 5 unlocks; Monthly 299 with
+10), and a Switch plan button that is disabled until another plan is picked,
+asks for confirmation, then saves and confirms. Unlike most of the recent
+screens this one uses real endpoints: `GET /users/me` for the provider's own
+id, then `GET` and `PUT /providers/:id/subscription`; an empty body (no
+subscription yet) is treated as pay per service. There is no payment gateway,
+so switching changes the record and charges nothing, and the screen says so.
+The plan names, prices and limits are constants in the screen that mirror
+`PLAN_LIMITS` in `SubscriptionsService`; keep the two in step. `ApiClient`
+gained `put`, because that route accepts only PUT. The wallet card and the
+Earnings figures remain dummy data. Tests: provider 87 (coverage about 96%),
+shared 73, customer 105.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

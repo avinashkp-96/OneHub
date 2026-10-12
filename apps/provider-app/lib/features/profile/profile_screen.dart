@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../availability/availability_screen.dart';
+import '../plans/plans_screen.dart';
 import '../help/help_content.dart';
 import 'profile_state.dart';
 import '../requirements/active_jobs_screen.dart';
@@ -211,6 +212,14 @@ class ProfileScreen extends StatelessWidget {
                               providerProfile.value
                                   .copyWith(name: name, email: email),
                         ))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.wallet,
+                title: 'Plans',
+                subtitle: 'Pay per unlock or go monthly',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => PlansScreen(client: client))),
               ),
               const SizedBox(height: 12),
               OneHubLinkTile(
