@@ -74,6 +74,8 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
     try {
       await _api.patch('/requirements/${r.id}/complete', {}, auth: true);
       await _load();
+      if (!mounted) return;
+      showSuccessMessage(context, 'Job marked as completed.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not mark this job complete: $e');

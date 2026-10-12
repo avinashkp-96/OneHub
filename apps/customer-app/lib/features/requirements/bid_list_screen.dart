@@ -53,6 +53,8 @@ class _BidListScreenState extends State<BidListScreen> {
     try {
       await api.patch('/bids/${bid.id}/confirm', {}, auth: true);
       await _load();
+      if (!mounted) return;
+      showSuccessMessage(context, 'Provider confirmed. They will be in touch.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not confirm this provider: $e');

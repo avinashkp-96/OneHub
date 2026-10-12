@@ -107,6 +107,7 @@ void main() {
     });
     expect(result, isTrue);
     expect(find.byType(RatingScreen), findsNothing);
+    expect(find.text('Thanks. Your rating was submitted.'), findsOneWidget);
   });
 
   testWidgets('leaves feedback out when none is written', (tester) async {

@@ -53,6 +53,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
     try {
       await _api.patch('/requirements/${r.id}/accept', {}, auth: true);
       if (!mounted) return;
+      showSuccessMessage(context, 'Request accepted. Send your price range.');
       await Navigator.of(context).push(
         MaterialPageRoute(
             builder: (_) =>
@@ -69,6 +70,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
     try {
       await _api.patch('/requirements/${r.id}/reject', {}, auth: true);
       await _load();
+      if (!mounted) return;
+      showSuccessMessage(context, 'Request rejected.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not reject: $e');

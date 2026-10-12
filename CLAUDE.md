@@ -594,6 +594,20 @@ the status instead. This was found by reading the backend against the client,
 not by the app tests, because the test fakes always sent a JSON body; keep
 that in mind when writing fakes. Shared package tests: 69.
 
+2026-10-12 (success confirmations): actions that finish now say so. A shared
+`successSnackBar` and `showSuccessMessage` (green, check icon, floating, three
+seconds) replace the earlier mix of plain snackbars and silence. Customer:
+"Request sent...", "Provider confirmed...", "Thanks. Your rating was
+submitted." Provider: "Request accepted...", "Request rejected.", "Bid sent to
+the customer.", "Contact unlocked...", "Bid updated.", "Job marked as
+completed." Where the screen pops straight after the action (send, rate,
+update bid) the message is built before the pop and shown on the messenger of
+the screen underneath, so it is not lost with the route. A new message
+replaces the one on screen rather than queueing behind it; without that the
+"Bid sent" message hid "Contact unlocked" for three seconds. Errors keep their
+inline red text. Profile and availability saves already had a message and keep
+the plain snackbar style. Tests: shared 72, customer 105, provider 78.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

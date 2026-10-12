@@ -112,6 +112,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(calls, contains('PATCH /requirements/j2/complete'));
+    expect(find.text('Job marked as completed.'), findsOneWidget);
     expect(calls.where((c) => c == 'GET /requirements/incoming').length, 2);
   });
 
