@@ -26,32 +26,39 @@ export class BidsController {
     return this.bids.submitInitialBid(requirementId, providerId, range);
   }
 
-  private async providerIdFor(userId: string): Promise<string> {
-    const provider = await this.prisma.provider.findUniqueOrThrow({ where: { userId } });
-    return provider.id;
-  }
-
   @Roles('CUSTOMER', 'PROVIDER')
   @Get('requirements/:requirementId/bids')
-  list(@Param('requirementId') requirementId: string) {
-    return this.bids.listForRequirement(requirementId);
+  async list(@Req() req: { user: JwtPayload }, @Param('requirementId') requirementId: string) {
+    const providerId = req.user.role === 'PROVIDER' ? await this.providerIdFor(req.user.sub) : undefined;
+    return this.bids.listForRequirement(requirementId, {
+      userId: req.user.sub,
+      role: req.user.role,
+      providerId,
+    });
   }
 
   @Roles('PROVIDER')
   @Post('bids/:id/unlock-contact')
-  unlock(@Param('id') id: string) {
-    return this.bids.unlockContact(id);
+  async unlock(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
+    const providerId = await this.providerIdFor(req.user.sub);
+    return this.bids.unlockContact(id, providerId);
   }
 
   @Roles('PROVIDER')
   @Patch('bids/:id/refine')
-  refine(@Param('id') id: string, @Body() range: PriceRangeDto) {
-    return this.bids.updateRefinedBid(id, range);
+  async refine(@Req() req: { user: JwtPayload }, @Param('id') id: string, @Body() range: PriceRangeDto) {
+    const providerId = await this.providerIdFor(req.user.sub);
+    return this.bids.updateRefinedBid(id, providerId, range);
   }
 
   @Roles('CUSTOMER')
   @Patch('bids/:id/confirm')
-  confirm(@Param('id') id: string) {
-    return this.bids.confirmBid(id);
+  confirm(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
+    return this.bids.confirmBid(id, req.user.sub);
+  }
+
+  private async providerIdFor(userId: string): Promise<string> {
+    const provider = await this.prisma.provider.findUniqueOrThrow({ where: { userId } });
+    return provider.id;
   }
 }

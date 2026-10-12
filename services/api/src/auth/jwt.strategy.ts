@@ -11,10 +11,19 @@ export interface JwtPayload {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
+    const secret = config.get<string>('JWT_SECRET');
+    // Refuse to start with a guessable secret: anyone who knows the
+    // placeholder could mint a valid admin token.
+    if (!secret) {
+      throw new Error('JWT_SECRET is not set');
+    }
+    if (secret === 'change-me' && config.get<string>('NODE_ENV') === 'production') {
+      throw new Error('JWT_SECRET must not be the placeholder value in production');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') ?? 'change-me',
+      secretOrKey: secret,
     });
   }
 

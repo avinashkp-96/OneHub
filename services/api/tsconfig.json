@@ -9,6 +9,7 @@
     "emitDecoratorMetadata": true,
     "sourceMap": true,
     "strict": true,
+    "strictPropertyInitialization": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 // docx section 6, Notification Matrix. Each row there maps directly to a call
@@ -18,7 +18,13 @@ export class NotificationsService {
     return this.prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
   }
 
-  markRead(id: string) {
-    return this.prisma.notification.update({ where: { id }, data: { readAt: new Date() } });
+  // Scoped to the owner: someone else's notification id behaves as not found.
+  async markRead(id: string, userId: string) {
+    const result = await this.prisma.notification.updateMany({
+      where: { id, userId },
+      data: { readAt: new Date() },
+    });
+    if (result.count === 0) throw new NotFoundException('notification not found');
+    return { id, read: true };
   }
 }

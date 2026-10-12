@@ -50,8 +50,9 @@ export class RequirementsController {
 
   @Roles('PROVIDER')
   @Patch(':id/complete')
-  complete(@Param('id') id: string) {
-    return this.requirements.markCompleted(id);
+  async complete(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
+    const providerId = await this.providerIdFor(req.user.sub);
+    return this.requirements.markCompleted(id, providerId);
   }
 
   private async providerIdFor(userId: string): Promise<string> {
