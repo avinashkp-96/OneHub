@@ -1,9 +1,10 @@
+import { PrismaService } from '../prisma/prisma.service';
 import { RatingsService } from './ratings.service';
 
 describe('RatingsService.forRequirement', () => {
   it('looks the rating up by its unique requirementId', async () => {
     const findUnique = jest.fn().mockResolvedValue({ id: 'rating-1', stars: 5 });
-    const prisma = { ratingFeedback: { findUnique } } as any;
+    const prisma = { ratingFeedback: { findUnique } } as unknown as PrismaService;
     const service = new RatingsService(prisma);
 
     const result = await service.forRequirement('req-1');
@@ -14,7 +15,7 @@ describe('RatingsService.forRequirement', () => {
 
   it('returns null when the job has not been rated yet', async () => {
     const findUnique = jest.fn().mockResolvedValue(null);
-    const prisma = { ratingFeedback: { findUnique } } as any;
+    const prisma = { ratingFeedback: { findUnique } } as unknown as PrismaService;
     const service = new RatingsService(prisma);
 
     expect(await service.forRequirement('req-2')).toBeNull();

@@ -1,3 +1,4 @@
+import { PrismaService } from '../prisma/prisma.service';
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
@@ -19,7 +20,7 @@ describe('AuthService.signupCustomer', () => {
         findUnique: jest.fn().mockResolvedValue(overrides.userExists ? { id: 'u1' } : null),
         create: jest.fn().mockResolvedValue({ id: 'u1' }),
       },
-    } as any;
+    } as unknown as PrismaService;
     const otp = { verify: jest.fn().mockReturnValue(overrides.otpValid ?? true) } as unknown as OtpService;
     const jwt = { sign: jest.fn().mockReturnValue('signed-token') } as unknown as JwtService;
     return new AuthService(prisma, jwt, otp);

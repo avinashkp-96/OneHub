@@ -1,9 +1,10 @@
+import { PrismaService } from '../prisma/prisma.service';
 import { RequirementsService } from './requirements.service';
 
 describe('RequirementsService.listForProvider', () => {
   it('filters the included bids to this provider only', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    const prisma = { requirement: { findMany } } as any;
+    const prisma = { requirement: { findMany } } as unknown as PrismaService;
     const service = new RequirementsService(prisma);
 
     await service.listForProvider('provider-1');
@@ -17,7 +18,7 @@ describe('RequirementsService.listForProvider', () => {
 
   it('scopes the query to requirements targeted at this provider', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    const prisma = { requirement: { findMany } } as any;
+    const prisma = { requirement: { findMany } } as unknown as PrismaService;
     const service = new RequirementsService(prisma);
 
     await service.listForProvider('provider-1');
