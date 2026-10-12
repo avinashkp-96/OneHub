@@ -6,6 +6,7 @@ import { ProvidersController } from './providers/providers.controller';
 import { ProvidersService } from './providers/providers.service';
 import { SubscriptionsController } from './subscriptions/subscriptions.controller';
 import { SubscriptionsService } from './subscriptions/subscriptions.service';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { PrismaService } from './prisma/prisma.service';
@@ -135,11 +136,7 @@ describe('ProvidersService and controller', () => {
 
     await service.findForSubService('s1');
 
-    expect(prisma.provider.findMany).toHaveBeenCalledWith({
-      where: { status: 'ACTIVE', subServices: { some: { subServiceId: 's1' } } },
-      include: { user: { select: { fullName: true, city: true } } },
-      orderBy: { averageRating: 'desc' },
-    });
+expect(prisma.provider.findMany).toHaveBeenCalledWith(      expect.objectContaining({        where: { status: 'ACTIVE', subServices: { some: { subServiceId: 's1' } } },        orderBy: { averageRating: 'desc' },      }),    );
   });
 
   it('controller passes the sub-service id through', async () => {
@@ -157,7 +154,7 @@ describe('NotificationsService and controller', () => {
       notification: {
         create: jest.fn().mockResolvedValue({ id: 'n1' }),
         findMany: jest.fn().mockResolvedValue([]),
-        update: jest.fn().mockResolvedValue({ id: 'n1' }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
     return { service: new NotificationsService(asPrisma(prisma)), prisma };
@@ -182,9 +179,9 @@ describe('NotificationsService and controller', () => {
 
   it('marks one read with a timestamp', async () => {
     const { service, prisma } = build();
-    await service.markRead('n1');
-    const args = prisma.notification.update.mock.calls[0][0];
-    expect(args.where).toEqual({ id: 'n1' });
+    await service.markRead('n1', 'u1');
+    const args = prisma.notification.updateMany.mock.calls[0][0];
+    expect(args.where).toEqual({ id: 'n1', userId: 'u1' });
     expect(args.data.readAt).toBeInstanceOf(Date);
   });
 
@@ -196,7 +193,8 @@ describe('NotificationsService and controller', () => {
     const controller = new NotificationsController(notifications as unknown as NotificationsService);
 
     expect(await controller.mine({ user: { sub: 'u1', role: 'CUSTOMER' } })).toBe('list');
-    expect(await controller.markRead('n1')).toBe('read');
+    expect(await controller.markRead({ user: { sub: 'u1', role: 'CUSTOMER' } }, 'n1')).toBe('read');
+    expect(notifications.markRead).toHaveBeenCalledWith('n1', 'u1');
     expect(notifications.listForUser).toHaveBeenCalledWith('u1');
   });
 });
@@ -239,11 +237,58 @@ describe('SubscriptionsService and controller', () => {
       current: jest.fn().mockResolvedValue('current'),
       setPlan: jest.fn().mockResolvedValue('set'),
     };
-    const controller = new SubscriptionsController(subscriptions as unknown as SubscriptionsService);
+    const prisma = { provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p1' }) } };
+    const controller = new SubscriptionsController(
+      subscriptions as unknown as SubscriptionsService,
+      asPrisma(prisma),
+    );
+    const req = { user: { sub: 'u1', role: 'PROVIDER' as const } };
 
-    expect(await controller.current('p1')).toBe('current');
-    expect(await controller.setPlan('p1', 'MONTHLY_99')).toBe('set');
+    expect(await controller.current(req, 'p1')).toBe('current');
+    expect(await controller.setPlan(req, 'p1', 'MONTHLY_99')).toBe('set');
     expect(subscriptions.setPlan).toHaveBeenCalledWith('p1', 'MONTHLY_99');
+  });
+
+  it("refuses to read or change another provider's subscription", async () => {
+    const subscriptions = { current: jest.fn(), setPlan: jest.fn() };
+    const prisma = { provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'mine' }) } };
+    const controller = new SubscriptionsController(
+      subscriptions as unknown as SubscriptionsService,
+      asPrisma(prisma),
+    );
+    const req = { user: { sub: 'u1', role: 'PROVIDER' as const } };
+
+    await expect(controller.current(req, 'theirs')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(controller.setPlan(req, 'theirs', 'MONTHLY_299')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(subscriptions.current).not.toHaveBeenCalled();
+    expect(subscriptions.setPlan).not.toHaveBeenCalled();
+  });
+});
+
+describe('Notifications ownership', () => {
+  it("treats someone else's notification as not found", async () => {
+    const prisma = { notification: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) } };
+    const service = new NotificationsService(asPrisma(prisma));
+
+    await expect(service.markRead('n1', 'intruder')).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.notification.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'n1', userId: 'intruder' } }),
+    );
+  });
+});
+
+describe('Public provider search', () => {
+  it('never selects the ID proof or bank details', async () => {
+    const prisma = { provider: { findMany: jest.fn().mockResolvedValue([]) } };
+    const service = new ProvidersService(asPrisma(prisma));
+
+    await service.findForSubService('s1');
+
+    const { select } = prisma.provider.findMany.mock.calls[0][0];
+    expect(select).toBeDefined();
+    expect(select).not.toHaveProperty('idProofUrl');
+    expect(select).not.toHaveProperty('bankOrUpiDetails');
+    expect(select).not.toHaveProperty('userId');
   });
 });
 

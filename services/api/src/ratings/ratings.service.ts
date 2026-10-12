@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitRatingDto } from './dto/submit-rating.dto';
 
@@ -14,6 +14,26 @@ export class RatingsService {
   // docx 4.6 "Submit Rating" -> updates the provider's average (docx 5.9) and
   // re-checks certification (docx 5.8).
   async submitRating(customerId: string, dto: SubmitRatingDto) {
+    // Only the customer who posted a finished job may rate the provider who
+    // did it, and only once.
+    const requirement = await this.prisma.requirement.findUnique({
+      where: { id: dto.requirementId },
+      select: { customerId: true, status: true, confirmedBidId: true },
+    });
+    if (!requirement || requirement.customerId !== customerId) {
+      throw new ForbiddenException('this is not your request');
+    }
+    if (requirement.status !== 'COMPLETED' || !requirement.confirmedBidId) {
+      throw new BadRequestException('only a completed job can be rated');
+    }
+    const bid = await this.prisma.bid.findUniqueOrThrow({ where: { id: requirement.confirmedBidId } });
+    if (bid.providerId !== dto.providerId) {
+      throw new BadRequestException('that provider did not do this job');
+    }
+    if (await this.prisma.ratingFeedback.findUnique({ where: { requirementId: dto.requirementId } })) {
+      throw new ConflictException('this job has already been rated');
+    }
+
     const rating = await this.prisma.ratingFeedback.create({
       data: {
         customerId,

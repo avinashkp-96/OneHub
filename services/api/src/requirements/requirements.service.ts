@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostRequirementDto } from './dto/post-requirement.dto';
 
@@ -66,7 +66,22 @@ export class RequirementsService {
   }
 
   // docx 5.6 "Mark as Completed" — triggers the customer's rating prompt (docx 4.6).
-  markCompleted(requirementId: string) {
+  // Only the provider whose bid was confirmed may complete it, and only once.
+  async markCompleted(requirementId: string, providerId: string) {
+    const requirement = await this.prisma.requirement.findUniqueOrThrow({
+      where: { id: requirementId },
+      select: { status: true, confirmedBidId: true },
+    });
+    if (!requirement.confirmedBidId) {
+      throw new BadRequestException('no provider has been confirmed for this request');
+    }
+    const bid = await this.prisma.bid.findUniqueOrThrow({ where: { id: requirement.confirmedBidId } });
+    if (bid.providerId !== providerId) {
+      throw new ForbiddenException('this job was not given to you');
+    }
+    if (requirement.status !== 'CONFIRMED') {
+      throw new BadRequestException('this job is not awaiting completion');
+    }
     return this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'COMPLETED' } });
   }
 }

@@ -52,8 +52,23 @@ describe('JwtStrategy', () => {
     expect(await strategy.validate({ sub: 'u1', role: 'ADMIN' })).toEqual({ sub: 'u1', role: 'ADMIN' });
   });
 
-  it('still constructs when JWT_SECRET is not configured', () => {
+  it('refuses to start without JWT_SECRET', () => {
     const config = { get: jest.fn().mockReturnValue(undefined) } as unknown as ConfigService;
-    expect(() => new JwtStrategy(config)).not.toThrow();
+    expect(() => new JwtStrategy(config)).toThrow('JWT_SECRET is not set');
+  });
+});
+
+describe('JwtStrategy placeholder secret', () => {
+  const withEnv = (nodeEnv: string | undefined) =>
+    ({
+      get: jest.fn((key: string) => (key === 'JWT_SECRET' ? 'change-me' : nodeEnv)),
+    }) as unknown as ConfigService;
+
+  it('is refused in production', () => {
+    expect(() => new JwtStrategy(withEnv('production'))).toThrow('placeholder');
+  });
+
+  it('is still allowed in development', () => {
+    expect(() => new JwtStrategy(withEnv('development'))).not.toThrow();
   });
 });

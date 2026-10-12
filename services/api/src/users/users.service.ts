@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UsersService {
@@ -13,7 +14,14 @@ export class UsersService {
     });
   }
 
-  updateProfile(userId: string, data: { fullName?: string; email?: string; profilePhotoUrl?: string }) {
+  updateProfile(userId: string, dto: UpdateProfileDto) {
+    // Pick the allowed fields explicitly so a caller can never pass more, even
+    // if the validation pipe is bypassed.
+    const data = {
+      fullName: dto.fullName,
+      email: dto.email,
+      profilePhotoUrl: dto.profilePhotoUrl,
+    };
     return this.prisma.user.update({ where: { id: userId }, data });
   }
 }

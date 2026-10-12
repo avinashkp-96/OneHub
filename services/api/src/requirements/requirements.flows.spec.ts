@@ -1,15 +1,21 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { RequirementsController } from './requirements.controller';
 import { RequirementsService } from './requirements.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-function buildService(link: object | null = { requirementId: 'r1', providerId: 'p1' }) {
+function buildService(
+  link: object | null = { requirementId: 'r1', providerId: 'p1' },
+  requirement: object = { status: 'CONFIRMED', confirmedBidId: 'b1' },
+  bid: object = { id: 'b1', providerId: 'p1' },
+) {
   const prisma = {
     requirement: {
       create: jest.fn().mockResolvedValue({ id: 'r1' }),
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({ id: 'r1', status: 'COMPLETED' }),
+      findUniqueOrThrow: jest.fn().mockResolvedValue(requirement),
     },
+    bid: { findUniqueOrThrow: jest.fn().mockResolvedValue(bid) },
     requirementProvider: {
       findUnique: jest.fn().mockResolvedValue(link),
       update: jest.fn().mockResolvedValue({}),
@@ -104,15 +110,36 @@ describe('RequirementsService.respond', () => {
 });
 
 describe('RequirementsService.markCompleted', () => {
-  it('sets the status to COMPLETED', async () => {
+  it('sets the status to COMPLETED for the confirmed provider', async () => {
     const { service, prisma } = buildService();
 
-    await service.markCompleted('r1');
+    await service.markCompleted('r1', 'p1');
 
     expect(prisma.requirement.update).toHaveBeenCalledWith({
       where: { id: 'r1' },
       data: { status: 'COMPLETED' },
     });
+  });
+
+  it('refuses a provider who was not confirmed for the job', async () => {
+    const { service, prisma } = buildService();
+
+    await expect(service.markCompleted('r1', 'p2')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.requirement.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a request nobody has been confirmed for', async () => {
+    const { service, prisma } = buildService(undefined, { status: 'BID_RECEIVED', confirmedBidId: null });
+
+    await expect(service.markCompleted('r1', 'p1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.requirement.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses a job that is already completed', async () => {
+    const { service, prisma } = buildService(undefined, { status: 'COMPLETED', confirmedBidId: 'b1' });
+
+    await expect(service.markCompleted('r1', 'p1')).rejects.toBeInstanceOf(BadRequestException);
+    expect(prisma.requirement.update).not.toHaveBeenCalled();
   });
 });
 
@@ -157,7 +184,8 @@ describe('RequirementsController', () => {
   });
 
   it('complete delegates', async () => {
-    const { controller } = build();
-    expect(await controller.complete('r1')).toBe('completed');
+    const { controller, requirements } = build();
+    expect(await controller.complete(req, 'r1')).toBe('completed');
+    expect(requirements.markCompleted).toHaveBeenCalledWith('r1', 'prov-1');
   });
 });

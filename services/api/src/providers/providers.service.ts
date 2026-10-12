@@ -9,13 +9,25 @@ export class ProvidersService {
   // providers offering the given sub-service. Distance/radius filtering needs
   // a geo query (PostGIS or a haversine calc) — left as a follow-up; for now
   // this returns everyone active for the sub-service, nearest-first is a TODO.
+  //
+  // This route is public, so it selects fields explicitly: the full provider
+  // row also holds the ID proof URL and bank/UPI details.
   async findForSubService(subServiceId: string) {
     return this.prisma.provider.findMany({
       where: {
         status: 'ACTIVE',
         subServices: { some: { subServiceId } },
       },
-      include: { user: { select: { fullName: true, city: true } } },
+      select: {
+        id: true,
+        businessName: true,
+        yearsExperience: true,
+        coverageRadiusKm: true,
+        averageRating: true,
+        ratingCount: true,
+        certified: true,
+        user: { select: { fullName: true, city: true } },
+      },
       orderBy: { averageRating: 'desc' },
     });
   }

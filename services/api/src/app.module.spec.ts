@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from './app.module';
@@ -10,6 +11,10 @@ describe('AppModule wiring', () => {
   let app: INestApplication;
   const prisma = {
     category: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Electrician' }]) },
+    user: { update: jest.fn().mockResolvedValue({}) },
+    provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }) },
+    bid: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'b1', providerId: 'p-other' }) },
+    payment: { create: jest.fn() },
     onModuleInit: jest.fn(),
     onModuleDestroy: jest.fn(),
   };
@@ -45,5 +50,40 @@ describe('AppModule wiring', () => {
       .send({})
       .expect(400);
     expect(JSON.stringify(res.body)).toContain('mobileOrEmail');
+  });
+
+  it('strips fields a caller must not set when updating their own profile', async () => {
+    const token = app.get(JwtService).sign({ sub: 'u1', role: 'CUSTOMER' });
+
+    await request(app.getHttpServer())
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ fullName: 'Asha', role: 'ADMIN', passwordHash: 'evil' })
+      .expect(200);
+
+    const data = prisma.user.update.mock.calls[0][0].data;
+    expect(data.fullName).toBe('Asha');
+    expect(data).not.toHaveProperty('role');
+    expect(data).not.toHaveProperty('passwordHash');
+  });
+
+  it("refuses a provider confirming another provider's unlock", async () => {
+    const token = app.get(JwtService).sign({ sub: 'u2', role: 'PROVIDER' });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/bids/b1/unlock-contact')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+
+    expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects a customer token on a provider-only route', async () => {
+    const token = app.get(JwtService).sign({ sub: 'u1', role: 'CUSTOMER' });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/bids/b1/unlock-contact')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
   });
 });

@@ -14,7 +14,7 @@ export class NotificationsController {
   }
 
   @Patch(':id/read')
-  markRead(@Param('id') id: string) {
-    return this.notifications.markRead(id);
+  markRead(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
+    return this.notifications.markRead(id, req.user.sub);
   }
 }
