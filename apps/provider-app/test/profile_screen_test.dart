@@ -180,4 +180,28 @@ void main() {
     await tester.pump();
     expect(toggle.value, !before);
   });
+
+  testWidgets('Help & support opens the FAQ and contact details',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Help & support'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HelpScreen), findsOneWidget);
+    expect(find.text('CONTACT US'), findsOneWidget);
+    expect(find.text('Frequently asked'), findsOneWidget);
+  });
+
+  testWidgets('Terms & privacy opens the text with the draft notice',
+      (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.text('Terms & privacy'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InfoScreen), findsOneWidget);
+    expect(find.text(legalPlaceholderNotice), findsOneWidget);
+    expect(find.text('Using OneHub'), findsOneWidget);
+  });
 }

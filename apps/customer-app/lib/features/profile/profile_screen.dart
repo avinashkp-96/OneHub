@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import '../help/help_content.dart';
 import 'profile_state.dart';
 import '../requirements/my_requests_screen.dart';
 
@@ -171,6 +172,32 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => SettingsScreen(
                         appName: 'OneHub', toggles: customerSettingsToggles))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.confirmed,
+                title: 'Help & support',
+                subtitle: 'FAQs and contact',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const HelpScreen(
+                        faqs: customerFaqs,
+                        supportEmail: customerSupportEmail,
+                        supportPhone: customerSupportPhone))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.lock,
+                title: 'Terms & privacy',
+                subtitle: 'How OneHub works and handles your data',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const InfoScreen(
+                            title: 'Terms & privacy',
+                            subtitle: 'The ground rules.',
+                            notice: legalPlaceholderNotice,
+                            sections: [
+                              ...onehubTermsSections,
+                              ...onehubPrivacySections
+                            ]))),
               ),
               const SizedBox(height: 26),
               Text('Activity',
