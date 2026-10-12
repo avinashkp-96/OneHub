@@ -605,8 +605,14 @@ global `api` from `lib/core/api.dart`, which has a `@visibleForTesting`
 setter; `test/support/fake_api.dart` installs a fake HTTP backend through it
 (routes keyed `'METHOD /path'`, requests recorded in `calls` and `bodies`).
 Provider screens take an optional `ApiClient` instead. The mobile `build`
-job (`flutter build apk --debug`) has not been run locally, so it is still
-unverified.
+job (`flutter build apk --debug`) had nothing to build until 2026-10-12: both
+apps only had a `web/` platform folder, so it could not have passed. Each app
+now has an `android/` project (`com.codelynks.onehub_customer` and
+`com.codelynks.onehub_provider`, generated with `flutter create
+--platforms=android`; iOS is not set up). There is no Android SDK on the dev
+machine, so the build is still unrun locally; the first CI run after pushing
+is the real check. Changing an application ID after a store release is not
+possible, so treat those two as fixed.
 
 ## **Constraints**
 
