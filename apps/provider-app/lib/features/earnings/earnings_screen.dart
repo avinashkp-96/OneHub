@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../plans/plans_screen.dart';
 
 // Provider earnings and wallet, opened from the wallet card on the
 // dashboard. Matches the other provider screens (PageGlow, back-only AppBar
@@ -101,6 +102,14 @@ class EarningsScreen extends StatelessWidget {
                     ],
                   ),
                 ),
+              ),
+              const SizedBox(height: 16),
+              OneHubLinkTile(
+                icon: OneHubIcons.wallet,
+                title: 'Manage plan',
+                subtitle: 'Switch between pay per unlock and monthly',
+                onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PlansScreen())),
               ),
               const SizedBox(height: 26),
               Text('Earned',

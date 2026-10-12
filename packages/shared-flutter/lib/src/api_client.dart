@@ -23,6 +23,9 @@ class ApiClient {
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool auth = false}) =>
       _send(_http.post, path, body, auth);
 
+  Future<Map<String, dynamic>> put(String path, Map<String, dynamic> body, {bool auth = false}) =>
+      _send(_http.put, path, body, auth);
+
   Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body, {bool auth = false}) =>
       _send(_http.patch, path, body, auth);
 
