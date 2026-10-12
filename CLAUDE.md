@@ -568,6 +568,20 @@ screen listens, and they reset on app restart (no profile or settings
 endpoint). The customer dashboard greeting still says "Meera" regardless of
 the edited name. Shared package tests: 56; customer 103, provider 76.
 
+2026-10-12 (help and terms): both Profile screens gained "Help & support" and
+"Terms & privacy" tiles in the Account section. `HelpScreen` (shared) shows
+the contact details in its one `GlowCard` and each question as a plain
+bordered card that expands in place; each app passes its own `FaqItem` list
+from `features/help/help_content.dart`. `InfoScreen` (shared) is a read-only
+text page that shows its sections in a `GlowCard`, with an optional warning
+notice above. Terms and privacy are one page, built from
+`onehubTermsSections` and `onehubPrivacySections`. All of this is placeholder:
+the support email and phone are made up, the FAQ answers describe the app as
+built, and the terms text is unreviewed draft wording, flagged on screen with
+`legalPlaceholderNotice`. None of it can ship as is; replace the contacts,
+answers and legal text first. The signup "Terms & Conditions" checkbox is not
+linked to the Terms page yet. Tests: shared 62, customer 105, provider 78.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

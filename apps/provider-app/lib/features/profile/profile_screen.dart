@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../availability/availability_screen.dart';
+import '../help/help_content.dart';
 import 'profile_state.dart';
 import '../requirements/active_jobs_screen.dart';
 
@@ -220,6 +221,32 @@ class ProfileScreen extends StatelessWidget {
                     builder: (_) => SettingsScreen(
                         appName: 'OneHub Provider',
                         toggles: providerSettingsToggles))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.confirmed,
+                title: 'Help & support',
+                subtitle: 'FAQs and contact',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const HelpScreen(
+                        faqs: providerFaqs,
+                        supportEmail: providerSupportEmail,
+                        supportPhone: providerSupportPhone))),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.lock,
+                title: 'Terms & privacy',
+                subtitle: 'How OneHub works and handles your data',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const InfoScreen(
+                            title: 'Terms & privacy',
+                            subtitle: 'The ground rules.',
+                            notice: legalPlaceholderNotice,
+                            sections: [
+                              ...onehubTermsSections,
+                              ...onehubPrivacySections
+                            ]))),
               ),
               const SizedBox(height: 26),
               Text('Activity',
