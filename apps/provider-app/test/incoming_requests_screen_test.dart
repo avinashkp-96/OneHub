@@ -114,6 +114,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(calls, contains('PATCH /requirements/r1/reject'));
+    expect(find.text('Request rejected.'), findsOneWidget);
     expect(calls.where((c) => c == 'GET /requirements/incoming').length, 2);
   });
 
@@ -125,6 +126,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(calls, contains('PATCH /requirements/r1/accept'));
+    expect(
+        find.text('Request accepted. Send your price range.'), findsOneWidget);
     expect(find.byType(PriceRangeScreen), findsOneWidget);
     expect(find.text('Your price range'), findsOneWidget);
   });

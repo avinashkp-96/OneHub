@@ -14,6 +14,7 @@ export 'src/screens/settings_screen.dart';
 export 'src/screens/reset_password_screen.dart';
 export 'src/theme/curved_nav_bar.dart';
 export 'src/widgets/link_tile.dart';
+export 'src/widgets/success_snack_bar.dart';
 export 'src/theme/glow_card.dart';
 export 'src/theme/onehub_colors.dart';
 export 'src/theme/onehub_icons.dart';

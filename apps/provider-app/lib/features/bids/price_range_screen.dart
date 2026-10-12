@@ -48,6 +48,7 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
       );
       if (!mounted) return;
       setState(() => _bidId = result['id'] as String);
+      showSuccessMessage(context, 'Bid sent to the customer.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not submit bid: $e');
@@ -69,6 +70,8 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
       await _api.post('/bids/$_bidId/unlock-contact', {}, auth: true);
       if (!mounted) return;
       setState(() => _contactUnlocked = true);
+      showSuccessMessage(
+          context, 'Contact unlocked. You can now call the customer.');
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not unlock contact: $e');
@@ -93,7 +96,14 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
       await _api.patch(
           '/bids/$_bidId/refine', {'minPrice': min, 'maxPrice': max},
           auth: true);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        final bar = successSnackBar(context, 'Bid updated.');
+        Navigator.of(context).pop(true);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(bar);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = 'Could not update bid: $e');

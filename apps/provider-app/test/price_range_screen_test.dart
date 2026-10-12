@@ -100,6 +100,7 @@ void main() {
     await submitBid(tester);
 
     expect(calls, contains('POST /requirements/r1/bids'));
+    expect(find.text('Bid sent to the customer.'), findsOneWidget);
     expect(find.text('Pay ₹50 to Contact Customer'), findsOneWidget);
     expect(find.widgetWithText(PrimaryCta, 'Submit Bid'), findsNothing);
     final update = tester
@@ -116,6 +117,8 @@ void main() {
 
     expect(calls, contains('POST /bids/b1/unlock-contact'));
     expect(find.text('CONTACT UNLOCKED'), findsOneWidget);
+    expect(find.text('Contact unlocked. You can now call the customer.'),
+        findsOneWidget);
     final update = tester
         .widget<PrimaryCta>(find.widgetWithText(PrimaryCta, 'Update Bid'));
     expect(update.onPressed, isNotNull);
@@ -145,6 +148,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(calls, contains('PATCH /bids/b1/refine'));
+    expect(find.text('Bid updated.'), findsOneWidget);
     expect(find.byType(PriceRangeScreen), findsNothing);
   });
 }

@@ -47,7 +47,15 @@ class _RatingScreenState extends State<RatingScreen> {
               'feedback': _feedback.text.trim(),
           },
           auth: true);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        final bar =
+            successSnackBar(context, 'Thanks. Your rating was submitted.');
+        Navigator.of(context).pop(true);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(bar);
+      }
     } catch (e) {
       setState(() => _error = 'Could not submit your rating: $e');
     } finally {

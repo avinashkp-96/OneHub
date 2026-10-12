@@ -174,6 +174,8 @@ void main() {
     expect(fake.bodies.single.containsKey('preferredAt'), isFalse);
     expect(result, isTrue);
     expect(find.byType(PostRequirementScreen), findsNothing);
+    expect(find.text('Request sent. Providers will reply with their prices.'),
+        findsOneWidget);
   });
 
   testWidgets('includes the preferred date when one is picked', (tester) async {

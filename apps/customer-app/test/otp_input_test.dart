@@ -3,7 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_customer/core/widgets/otp_input.dart';
 
 void main() {
-  Future<List<TextField>> pumpOtp(WidgetTester tester, ValueChanged<String> onChanged) async {
+  Future<List<TextField>> pumpOtp(
+      WidgetTester tester, ValueChanged<String> onChanged) async {
     await tester.pumpWidget(
       MaterialApp(home: Scaffold(body: OtpInput(onChanged: onChanged))),
     );
@@ -35,7 +36,8 @@ void main() {
     expect(secondField.focusNode?.hasFocus, isTrue);
   });
 
-  testWidgets('moves focus back to the previous box when a box is cleared', (tester) async {
+  testWidgets('moves focus back to the previous box when a box is cleared',
+      (tester) async {
     await pumpOtp(tester, (_) {});
     final fields = find.byType(TextField);
 
@@ -51,12 +53,15 @@ void main() {
     expect(firstField.focusNode?.hasFocus, isTrue);
   });
 
-  testWidgets('keeps only the last character when more than one is entered at once', (tester) async {
+  testWidgets(
+      'keeps only the last character when more than one is entered at once',
+      (tester) async {
     String? lastCode;
     await pumpOtp(tester, (code) => lastCode = code);
     final fields = find.byType(TextField);
 
-    await tester.enterText(fields.at(0), '99'); // e.g. a paste landing in one box
+    await tester.enterText(
+        fields.at(0), '99'); // e.g. a paste landing in one box
     await tester.pump();
 
     expect(lastCode, '9');

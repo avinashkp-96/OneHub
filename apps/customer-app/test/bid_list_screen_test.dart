@@ -104,6 +104,8 @@ void main() {
         fake.calls.where((c) => c == 'GET /requirements/req-1/bids').length, 2);
     expect(find.text('CONFIRMED'), findsOneWidget);
     expect(find.widgetWithText(OutlinedButton, 'Confirm'), findsNothing);
+    expect(find.text('Provider confirmed. They will be in touch.'),
+        findsOneWidget);
   });
 
   testWidgets('shows an error when confirming fails', (tester) async {

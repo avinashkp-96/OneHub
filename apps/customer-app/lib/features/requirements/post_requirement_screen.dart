@@ -87,7 +87,15 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
             'providerIds': _selectedProviderIds.toList(),
           },
           auth: true);
-      if (mounted) Navigator.of(context).pop(true);
+      if (mounted) {
+        final messenger = ScaffoldMessenger.of(context);
+        final bar = successSnackBar(
+            context, 'Request sent. Providers will reply with their prices.');
+        Navigator.of(context).pop(true);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(bar);
+      }
     } catch (e) {
       setState(() => _error = 'Could not send the request: $e');
     } finally {
