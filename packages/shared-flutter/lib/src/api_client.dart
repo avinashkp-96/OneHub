@@ -38,7 +38,8 @@ class ApiClient {
       if (t != null) headers['Authorization'] = 'Bearer $t';
     }
     final res = await method(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
-    final decoded = jsonDecode(res.body) as Map<String, dynamic>;
+    final raw = _decode(res.body);
+    final decoded = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
     if (res.statusCode >= 400) {
       throw ApiException(res.statusCode, decoded['message']?.toString() ?? 'request failed');
     }
@@ -48,13 +49,27 @@ class ApiClient {
     return decoded;
   }
 
+  // An empty body is a valid answer, not an error: Nest sends nothing when a
+  // handler returns null (e.g. "this job has no rating yet"), so it decodes to
+  // null. A body that is not JSON, such as a proxy's HTML error page, also
+  // decodes to null so the caller sees the HTTP status instead of a
+  // FormatException.
+  static dynamic _decode(String body) {
+    if (body.trim().isEmpty) return null;
+    try {
+      return jsonDecode(body);
+    } on FormatException {
+      return null;
+    }
+  }
+
   Future<dynamic> get(String path) async {
     final t = await token;
     final res = await _http.get(
       Uri.parse('$baseUrl$path'),
       headers: {if (t != null) 'Authorization': 'Bearer $t'},
     );
-    final decoded = jsonDecode(res.body);
+    final decoded = _decode(res.body);
     if (res.statusCode >= 400) {
       final message = decoded is Map ? decoded['message']?.toString() : 'request failed';
       throw ApiException(res.statusCode, message ?? 'request failed');

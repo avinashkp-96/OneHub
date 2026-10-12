@@ -68,4 +68,75 @@ void main() {
 
     expect(await api.token, isNull);
   });
+
+  group('response bodies', () {
+    ApiClient respondWith(int status, String body) => ApiClient(
+          baseUrl: 'https://example.test',
+          httpClient: MockClient((_) async => http.Response(body, status)),
+        );
+
+    test('a GET with an empty body answers null, not a FormatException',
+        () async {
+      // Nest sends nothing when a handler returns null, e.g. GET
+      // /ratings/requirement/:id for a job that has not been rated.
+      final api = respondWith(200, '');
+
+      expect(await api.get('/ratings/requirement/r1'), isNull);
+    });
+
+    test('a GET still decodes a JSON body', () async {
+      final api = respondWith(200, jsonEncode([1, 2]));
+
+      expect(await api.get('/anything'), [1, 2]);
+    });
+
+    test('a GET error with a JSON message surfaces it', () async {
+      final api = respondWith(403, jsonEncode({'message': 'not yours'}));
+
+      expect(
+        () => api.get('/anything'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 403)
+            .having((e) => e.message, 'message', 'not yours')),
+      );
+    });
+
+    test('a GET error with an HTML body is an ApiException with the status',
+        () async {
+      final api = respondWith(502, '<html>Bad gateway</html>');
+
+      expect(
+        () => api.get('/anything'),
+        throwsA(isA<ApiException>()
+            .having((e) => e.statusCode, 'statusCode', 502)
+            .having((e) => e.message, 'message', 'request failed')),
+      );
+    });
+
+    test('a POST with an empty success body returns an empty map', () async {
+      final api = respondWith(200, '');
+
+      expect(await api.post('/anything', {}), isEmpty);
+    });
+
+    test('a POST error with an empty body is an ApiException', () async {
+      final api = respondWith(500, '');
+
+      expect(
+        () => api.post('/anything', {}),
+        throwsA(
+            isA<ApiException>().having((e) => e.statusCode, 'statusCode', 500)),
+      );
+    });
+
+    test('a POST error with a JSON message surfaces it', () async {
+      final api = respondWith(409, jsonEncode({'message': 'already rated'}));
+
+      expect(
+        () => api.post('/ratings', {}),
+        throwsA(isA<ApiException>()
+            .having((e) => e.message, 'message', 'already rated')),
+      );
+    });
+  });
 }

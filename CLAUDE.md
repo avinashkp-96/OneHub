@@ -583,6 +583,17 @@ built, and the terms text is unreviewed draft wording, flagged on screen with
 answers and legal text first. The signup "Terms & Conditions" checkbox is not
 linked to the Terms page yet. Tests: shared 62, customer 105, provider 78.
 
+2026-10-12 (API client bodies): `ApiClient` no longer assumes every response
+is JSON. Nest sends an empty body when a handler returns `null`, which is
+what `GET /ratings/requirement/:id` does for a job that has not been rated;
+`jsonDecode('')` threw a FormatException and would have crashed the customer
+app when a completed job was tapped. An empty or non-JSON body now decodes to
+null on `get` and to an empty map on `post` and `patch`, and an error status
+with such a body (a proxy's HTML page, say) raises an `ApiException` carrying
+the status instead. This was found by reading the backend against the client,
+not by the app tests, because the test fakes always sent a JSON body; keep
+that in mind when writing fakes. Shared package tests: 69.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
