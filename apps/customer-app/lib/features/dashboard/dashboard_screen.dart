@@ -57,10 +57,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    void openCategories() => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const CategoryGridScreen()));
-    void openMyRequests() => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const MyRequestsScreen()));
+    // The requests list is loaded once, so anything done on a pushed screen
+    // (posting, confirming, rating) would leave this page stale. Reload when
+    // the user comes back.
+    Future<void> openThenRefresh(Widget screen) async {
+      await Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => screen));
+      if (mounted) _load();
+    }
+
+    void openCategories() => openThenRefresh(const CategoryGridScreen());
+    void openMyRequests() => openThenRefresh(const MyRequestsScreen());
     void openProfile() => Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
 
@@ -212,8 +219,7 @@ class _TopRowState extends State<_TopRow> {
                 // Starts on a dummy area — geolocation isn't wired up yet,
                 // but the reference screenshot calls for a real-looking
                 // value here rather than a generic "Set your location".
-                Text(_location,
-                    style: OneHubTextStyles.linkText(textPrimary)),
+                Text(_location, style: OneHubTextStyles.linkText(textPrimary)),
                 const SizedBox(width: 2),
                 Icon(OneHubIcons.chevronDown, size: 14, color: textMuted),
               ],

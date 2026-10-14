@@ -148,6 +148,38 @@ void main() {
     }
   });
 
+  testWidgets(
+      'a request made on another screen shows up when the user comes back',
+      (tester) async {
+    // Regression: the list was loaded once in initState, so posting a request
+    // (which happens on pushed screens) left Active requests empty until a
+    // pull to refresh, even though View all showed it.
+    var posted = false;
+    final fake = installFakeApi({
+      'GET /categories': (_) => [],
+      'GET /requirements/mine': (_) =>
+          posted ? [requirementJson('r1', 'Fan is noisy', 'SENT')] : [],
+    });
+    tester.view.physicalSize = const Size(800, 3200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+        MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()));
+    await tester.pumpAndSettle();
+    expect(find.text("You don't have any active requests."), findsOneWidget);
+
+    await tester.tap(find.text('See all').first);
+    await tester.pumpAndSettle();
+    posted = true; // the user posts a request somewhere down this flow
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fan is noisy'), findsOneWidget);
+    expect(find.text("You don't have any active requests."), findsNothing);
+    expect(fake.calls.where((c) => c == 'GET /requirements/mine').length, 2);
+  });
+
   testWidgets('See all and a service card open category browsing',
       (tester) async {
     await pumpScreen(tester, {});

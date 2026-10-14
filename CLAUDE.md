@@ -625,6 +625,16 @@ gained `put`, because that route accepts only PUT. The wallet card and the
 Earnings figures remain dummy data. Tests: provider 87 (coverage about 96%),
 shared 73, customer 105.
 
+2026-10-14 (dashboard refresh): a request posted from the customer app did not
+appear under Active requests on the home page, although View all listed it.
+The dashboard fetched `/requirements/mine` once in `initState`, and posting,
+confirming and rating all happen on pushed screens, so the home page stayed
+stale until a pull to refresh. The home page now reloads whenever the user
+returns from a screen it opened (categories, My requests). The Profile and
+notification bell pushes are left alone because nothing they do changes the
+list. A regression test posts a request on a pushed screen and checks the
+card appears on return. Customer tests: 106.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
