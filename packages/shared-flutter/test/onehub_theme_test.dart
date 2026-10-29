@@ -267,6 +267,39 @@ void main() {
   });
 
   testWidgets(
+      'PageGlow anchors its glows to the page top, behind the app bar, not under it',
+      (tester) async {
+    Future<Rect> glowArea(PreferredSizeWidget? appBar) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: OneHubTheme.dark(),
+          home: Scaffold(
+              appBar: appBar,
+              body: PageGlow(key: UniqueKey(), child: const Text('content'))),
+        ),
+      );
+      final topGlow = find.byWidgetPredicate((w) =>
+          w is DecoratedBox &&
+          w.decoration is BoxDecoration &&
+          ((w.decoration as BoxDecoration).gradient as RadialGradient?)
+                  ?.colors
+                  .first ==
+              OneHubColors.glowLight);
+      return tester.getRect(
+          find.ancestor(of: topGlow, matching: find.byType(Align)).first);
+    }
+
+    final withoutAppBar = await glowArea(null);
+    expect(withoutAppBar.top, 0);
+
+    final withAppBar = await glowArea(AppBar());
+    expect(withAppBar.top, 0);
+    expect(withAppBar.height, withoutAppBar.height);
+    expect(tester.getTopLeft(find.text('content')).dy,
+        greaterThanOrEqualTo(kToolbarHeight));
+  });
+
+  testWidgets(
       'PrimaryCta uses the exact brand gradient and white label, not a seed-derived color',
       (tester) async {
     await tester.pumpWidget(

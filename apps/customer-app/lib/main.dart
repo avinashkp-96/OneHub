@@ -15,6 +15,7 @@ class OneHubCustomerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'OneHub',
+      debugShowCheckedModeBanner: false,
       theme: OneHubTheme.light(),
       darkTheme: OneHubTheme.dark(),
       initialRoute: '/login',

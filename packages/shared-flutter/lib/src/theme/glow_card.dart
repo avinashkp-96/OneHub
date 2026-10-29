@@ -79,6 +79,11 @@ class GlowCard extends StatelessWidget {
 /// bottom-right. Wrap a screen's body in this wherever these page-level
 /// glows should show, applied consistently across every screen. Only
 /// renders in dark mode, matching the reference.
+///
+/// When the enclosing [Scaffold] has an app bar, the body starts below it,
+/// so the glows extend upward by the app bar's height and paint behind it
+/// (the app bar is transparent). That anchors the top-right glow to the
+/// page's real top edge instead of the line under the header.
 class PageGlow extends StatelessWidget {
   final Widget child;
   const PageGlow({super.key, required this.child});
@@ -88,7 +93,16 @@ class PageGlow extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     if (!dark) return child;
 
-    Widget glow(Alignment alignment, Color color) => Positioned.fill(
+    final scaffold = Scaffold.maybeOf(context);
+    final appBarHeight = scaffold != null && scaffold.hasAppBar
+        ? scaffold.appBarMaxHeight ?? 0.0
+        : 0.0;
+
+    Widget glow(Alignment alignment, Color color) => Positioned(
+          top: -appBarHeight,
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: Align(
             alignment: alignment,
             child: FractionallySizedBox(
@@ -109,6 +123,7 @@ class PageGlow extends StatelessWidget {
 
     return Stack(
       fit: StackFit.expand,
+      clipBehavior: Clip.none,
       children: [
         glow(Alignment.topRight, OneHubColors.glowLight),
         glow(Alignment.bottomRight, OneHubColors.glowBlue1),
