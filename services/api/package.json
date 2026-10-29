@@ -11,7 +11,11 @@
     "test": "jest",
     "test:cov": "jest --coverage",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed"
+  },
+  "prisma": {
+    "seed": "ts-node src/dev/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",
@@ -61,7 +65,8 @@
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s",
-      "!main.ts"
+      "!main.ts",
+      "!dev/seed.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageReporters": [

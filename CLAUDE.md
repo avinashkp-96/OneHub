@@ -693,6 +693,24 @@ web previews on the dev machine and on a phone over the same Wi-Fi.
 `CORS_ORIGINS` is documented in `.env.example`; set it before any deployed
 web client. Tests: API 173 (100% lines).
 
+2026-10-29 (dev database and seed): the repo had a Prisma schema but no
+migrations, so a database could only be built with `db push`. It now has the
+first migration (`prisma/migrations/20261029000000_init`, generated from the
+schema with `migrate diff`); `npx prisma migrate deploy` builds every table on
+an empty database. Demo data is a seed: `npm run db:seed` (wired as Prisma's
+seed command) runs `src/dev/seed.ts`, a thin runner kept out of coverage like
+`main.ts`, which calls the unit-tested `seedDemoData` in
+`src/dev/demo-data.ts`. It adds two categories with four sub-services each,
+the demo customer and two ACTIVE demo providers (skipping verification), and
+one request sent to the electrician; it is idempotent, resets only the demo
+accounts' passwords on re-run, and refuses `NODE_ENV=production`. The seed
+lives under `src/` on purpose: the API has one tsconfig with no include list,
+so a `.ts` file outside `src/` would move the build output to `dist/src/` and
+break `npm start`. README "Getting started" now covers the database, `.env`,
+migrations, seeding, demo logins and pointing the apps at a local API.
+Verified on a fresh database: migrate, seed twice, no duplicates, all three
+demo logins match. Tests: API 180 (100% lines).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

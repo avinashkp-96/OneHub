@@ -23,28 +23,73 @@ guide with exact hex/rgba/px tokens — the authoritative design source,
 superseding an earlier CSS-extraction reading of the same Figma file where
 they differ) — see the Design section in `CLAUDE.md` for the full retheme
 history and what is/isn't rebuilt to match it.
-The backend and admin-web are still source-only: this machine has no Node.js
-or Postgres, so neither has ever been installed, built, or run. See
-`CLAUDE.md` for the full list of gaps.
+The backend has been run end to end against a local Postgres since
+2026-10-29, with both apps logging in and working against it. admin-web is
+still source-only. See `CLAUDE.md` for the full list of gaps.
 
 ## Getting started
 
-```bash
-# Backend
-cd services/api
-cp .env.example .env   # point DATABASE_URL at a real Postgres instance
-npm install
-npm run prisma:migrate
-npm run start:dev
+### 1. Database
 
+Any PostgreSQL 16 works. With Docker:
+
+```bash
+docker run -d --name onehub-db -p 5432:5432 -e POSTGRES_USER=onehub -e POSTGRES_PASSWORD=onehub -e POSTGRES_DB=onehub postgres:16
+```
+
+Or install PostgreSQL and create a database and user that match
+`DATABASE_URL` in `.env`.
+
+### 2. API
+
+```bash
+cd services/api
+cp .env.example .env   # set DATABASE_URL and a real JWT_SECRET
+npm install
+npx prisma migrate deploy   # creates the tables from prisma/migrations
+npm run db:seed             # demo data, see below
+npm run start:dev           # http://localhost:3000/api/v1
+```
+
+Use `npm run prisma:migrate` instead of `migrate deploy` when you change
+`schema.prisma`; it creates a new migration for the change.
+
+`.env` settings: `DATABASE_URL`, `JWT_SECRET` (the API refuses the
+`change-me` placeholder in production), `JWT_EXPIRES_IN`, `OTP_TTL_SECONDS`,
+`CONTACT_UNLOCK_PRICE_INR`, and `CORS_ORIGINS`: exact browser origins allowed
+to call the API, comma-separated. Outside production, localhost and
+private-network origins are allowed anyway; in production only this list is.
+
+### 3. Demo data
+
+`npm run db:seed` adds two categories (Electrician, Plumber) with four
+services each, one customer, two providers that skip verification, and one
+open request sent to the electrician. It is safe to re-run. The logins are
+customer `9000000001` and providers `9000000002` (electrician) and
+`9000000003` (plumber); all use `DEMO_PASSWORD` from
+`services/api/src/dev/demo-data.ts`. It refuses to run with
+`NODE_ENV=production`. Never seed a real database.
+
+### 4. Apps
+
+The Flutter apps read the API address from `API_BASE_URL` at build time. The
+default, `http://10.0.2.2:3000/api/v1`, is the Android emulator's address for
+the host machine. For the web build on the same machine:
+
+```bash
+cd apps/customer-app && flutter pub get && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+cd apps/provider-app && flutter pub get && flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+```
+
+On web, login needs a secure page (`localhost` or `https`), because the token
+is stored with the browser's crypto API. A phone on the same Wi-Fi therefore
+needs the apps served over https, not plain `http://<pc-ip>`.
+
+```bash
 # Admin web
 cd apps/admin-web
 npm install
 npm run dev
-
-# Mobile apps
-cd apps/customer-app && flutter pub get && flutter run
-cd apps/provider-app && flutter pub get && flutter run
 ```
 
 ## What's implemented vs. stubbed
