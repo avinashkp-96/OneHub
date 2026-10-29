@@ -101,10 +101,10 @@ describe('UsersService and controller', () => {
 
     await service.profile('u1');
 
-    expect(prisma.user.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: { id: 'u1' },
-      include: { provider: { include: { subServices: true } }, addresses: true },
-    });
+    const args = prisma.user.findUniqueOrThrow.mock.calls[0][0];
+    expect(args.where).toEqual({ id: 'u1' });
+    expect(args.select.provider.select.subServices).toBe(true);
+    expect(args.select.addresses).toBe(true);
   });
 
   it('updates only the given profile fields', async () => {
@@ -113,8 +113,30 @@ describe('UsersService and controller', () => {
 
     await service.updateProfile('u1', { fullName: 'New Name' });
 
-    expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: 'u1' }, data: { fullName: 'New Name' } });
+    const args = prisma.user.update.mock.calls[0][0];
+    expect(args.where).toEqual({ id: 'u1' });
+    expect(args.data).toEqual({ fullName: 'New Name' });
   });
+
+  it.each(['profile', 'updateProfile'] as const)(
+    '%s never returns the password hash, ID proof or bank details',
+    async (method) => {
+      const prisma = {
+        user: { findUniqueOrThrow: jest.fn().mockResolvedValue({}), update: jest.fn().mockResolvedValue({}) },
+      };
+      const service = new UsersService(asPrisma(prisma));
+
+      await (method === 'profile' ? service.profile('u1') : service.updateProfile('u1', { fullName: 'A' }));
+
+      const call = method === 'profile' ? prisma.user.findUniqueOrThrow : prisma.user.update;
+      const { select, include } = call.mock.calls[0][0];
+      expect(include).toBeUndefined();
+      expect(select).toBeDefined();
+      expect(select).not.toHaveProperty('passwordHash');
+      expect(select.provider.select).not.toHaveProperty('idProofUrl');
+      expect(select.provider.select).not.toHaveProperty('bankOrUpiDetails');
+    },
+  );
 
   it('controller uses the signed-in user id', async () => {
     const users = {

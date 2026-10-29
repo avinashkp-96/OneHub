@@ -24,7 +24,10 @@ PostgreSQL via Prisma. Schema at `services/api/prisma/schema.prisma`: User, Prov
 ## **Auth**
 
 JWT (access token only, no refresh token yet), mobile OTP for signup and password reset. Role stored on the JWT payload (CUSTOMER / PROVIDER / ADMIN) and checked with a `RolesGuard`.
-Role checks alone are not enough: every route that acts on a record alsochecks the caller owns it (2026-10-12 fix). A provider may only unlock, refineor complete their own bids and jobs; a customer may only confirm bids on,list bids for and rate their own requests; notifications and subscriptionsare scoped to the signed-in user. `PATCH /users/me` takes a whitelisted`UpdateProfileDto` (name, email, photo), so `role` and `passwordHash` cannotbe set. Bid lists and the public provider search select provider fieldsexplicitly and never return the ID proof URL or bank/UPI details. The APIrefuses to start without `JWT_SECRET`, and in production with the `change-me`placeholder. New routes must keep this pattern, with a test that a seconduser is refused.
+Role checks alone are not enough: every route that acts on a record alsochecks the caller owns it (2026-10-12 fix). A provider may only unlock, refineor complete their own bids and jobs; a customer may only confirm bids on,list bids for and rate their own requests; notifications and subscriptionsare scoped to the signed-in user. `PATCH /users/me` takes a whitelisted`UpdateProfileDto` (name, email, photo), so `role` and `passwordHash` cannotbe set. Bid lists and the public provider search select provider fieldsexplicitly and never return the ID proof URL or bank/UPI details. GET and
+PATCH `/users/me` also select fields explicitly (2026-10-29 fix): both used to
+return the whole user row, password hash included, and now leave out the
+hash, ID proof and bank/UPI details. The APIrefuses to start without `JWT_SECRET`, and in production with the `change-me`placeholder. New routes must keep this pattern, with a test that a seconduser is refused.
 
 ## **Integrations**
 
