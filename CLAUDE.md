@@ -760,6 +760,28 @@ chosen), REJECTED, NOT CHOSEN (someone else was confirmed), BID ₹min–₹max
 (latest range, refined if updated), ACCEPTED, or PENDING. Tests: API 220
 (100% lines), shared 83, customer 116.
 
+2026-10-29 (search): customer `SearchScreen` (docx 4.2), opened from the
+dashboard's search bar (which used to open the category grid). New public
+module `src/search`: `GET /search?q=&categoryId=&minRating=&maxPrice=&sort=`
+matches every typed word, case-insensitively, against provider, service and
+category names and returns `{ services, providers }`; inactive categories and
+non-ACTIVE providers never appear, and provider fields are selected
+explicitly. A provider's `startingPrice` is the lowest suggested min price of
+their matching services (providers set no prices up front); a name match keeps
+all their services. Sort is rating (ties by rating count) or price (unpriced
+last). `GET /search/suggest?q=` returns up to eight category, then service,
+names that start a word with what was typed (two letters minimum). Filtering is
+in memory over active providers, fine at MVP size. The screen: debounced
+suggestions, results as Services and Providers cards (tapping either opens Post
+a Requirement for that service; a provider opens their first matching one),
+a filter sheet (category, minimum rating, starting price, sort) with active
+filters shown as chips, recent searches (in memory for the session, five
+newest), and empty/error states. Not built: nearest-first, radius and
+"available now", because provider location and online status are not stored;
+the sheet says so. The clear button is `OneHubIcons.plus` turned 45 degrees,
+since the vendored Iconly set has no close glyph. Tests: API 238 (100% lines),
+customer 127.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

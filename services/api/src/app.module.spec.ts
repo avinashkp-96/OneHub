@@ -13,7 +13,9 @@ describe('AppModule wiring', () => {
   const prisma = {
     category: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Electrician' }]) },
     user: { update: jest.fn().mockResolvedValue({}) },
+    subService: { findMany: jest.fn().mockResolvedValue([]) },
     provider: {
+      findMany: jest.fn().mockResolvedValue([]),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }),
       update: jest.fn().mockResolvedValue({ id: 'p-mine', coverageRadiusKm: 5, subServices: [] }),
     },
@@ -64,6 +66,23 @@ describe('AppModule wiring', () => {
       .expect(200);
 
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('serves search publicly and turns query numbers into numbers', async () => {
+    prisma.subService.findMany.mockResolvedValue([]);
+    prisma.provider.findMany.mockResolvedValue([]);
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/search?q=fan&minRating=4&maxPrice=500&sort=price')
+      .expect(200);
+
+    expect(res.body).toEqual({ services: [], providers: [] });
+    expect(prisma.provider.findMany.mock.calls[0][0].where.averageRating).toEqual({ gte: 4 });
+  });
+
+  it('rejects an out-of-range search filter', async () => {
+    await request(app.getHttpServer()).get('/api/v1/search?minRating=9').expect(400);
+    await request(app.getHttpServer()).get('/api/v1/search?sort=nearest').expect(400);
   });
 
   it('refuses a protected route without a token', async () => {

@@ -5,6 +5,7 @@ import 'package:onehub_customer/features/categories/category_grid_screen.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_customer/features/home/home_shell.dart';
 import 'package:onehub_customer/features/requirements/my_requests_screen.dart';
+import 'package:onehub_customer/features/search/search_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 import 'support/fake_api.dart';
@@ -127,13 +128,20 @@ void main() {
     expect(find.text("You don't have any active requests."), findsOneWidget);
   });
 
-  testWidgets(
-      'the search bar, hero button and nearby prompt all open category browsing',
+  testWidgets('the search bar opens Search', (tester) async {
+    await pumpScreen(tester, {});
+
+    await tester.tap(find.text('Search electrician, plumber...'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SearchScreen), findsOneWidget);
+  });
+
+  testWidgets('the hero button and nearby prompt open category browsing',
       (tester) async {
     await pumpScreen(tester, {});
 
     for (final tap in [
-      find.text('Search electrician, plumber...'),
       find.text('Post requirement'),
       find.text('Browse a category'),
     ]) {

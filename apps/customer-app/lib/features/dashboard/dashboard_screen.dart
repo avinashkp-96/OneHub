@@ -4,6 +4,7 @@ import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
 import '../home/home_shell.dart';
 import '../requirements/my_requests_screen.dart';
+import '../search/search_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Structure follows an
 // explicit HTML/CSS reference the user supplied ("OneHub home screen.html"),
@@ -91,7 +92,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 20),
                 _Headline(),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                _SearchBar(onTap: openCategories),
+                _SearchBar(
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const SearchScreen()))),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 _HeroCard(onTap: openCategories),
                 const SizedBox(height: 26),
