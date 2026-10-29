@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceRangeDto } from './dto/submit-bid.dto';
 
@@ -23,7 +24,10 @@ export interface BidViewer {
 
 @Injectable()
 export class BidsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // docx 5.4 "Submit Bid" — only a provider the request was sent to may bid.
   async submitInitialBid(requirementId: string, providerId: string, range: PriceRangeDto) {
@@ -41,6 +45,7 @@ export class BidsService {
       },
     });
     await this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'BID_RECEIVED' } });
+    await this.notifications.bidSubmitted(bid.id);
     return bid;
   }
 
@@ -57,7 +62,9 @@ export class BidsService {
         status: 'SUCCESS',
       },
     });
-    return this.prisma.bid.update({ where: { id: bidId }, data: { contactUnlocked: true } });
+    const unlocked = await this.prisma.bid.update({ where: { id: bidId }, data: { contactUnlocked: true } });
+    await this.notifications.contactUnlocked(bidId);
+    return unlocked;
   }
 
   // docx 5.4 "Update Bid" (refined range)
@@ -66,10 +73,12 @@ export class BidsService {
     if (!bid.contactUnlocked) {
       throw new BadRequestException('unlock contact with the customer before refining the bid');
     }
-    return this.prisma.bid.update({
+    const refined = await this.prisma.bid.update({
       where: { id: bidId },
       data: { refinedMinPrice: range.minPrice, refinedMaxPrice: range.maxPrice },
     });
+    await this.notifications.bidRefined(bidId);
+    return refined;
   }
 
   // docx 4.4 "Confirm Provider" — closes bidding for the requirement. Only the
@@ -92,6 +101,7 @@ export class BidsService {
         data: { status: 'CONFIRMED', confirmedBidId: bidId },
       }),
     ]);
+    await this.notifications.providerConfirmed(bidId);
     return { confirmed: true, bidId };
   }
 

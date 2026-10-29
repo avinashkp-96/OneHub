@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { RequirementsController } from './requirements.controller';
 import { RequirementsService } from './requirements.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 function buildService(
   link: object | null = { requirementId: 'r1', providerId: 'p1' },
@@ -21,8 +22,52 @@ function buildService(
       update: jest.fn().mockResolvedValue({}),
     },
   };
-  return { service: new RequirementsService(prisma as unknown as PrismaService), prisma };
+  const notifications = {
+    requestSent: jest.fn().mockResolvedValue(undefined),
+    requestAccepted: jest.fn().mockResolvedValue(undefined),
+    jobCompleted: jest.fn().mockResolvedValue(undefined),
+  };
+  return {
+    service: new RequirementsService(
+      prisma as unknown as PrismaService,
+      notifications as unknown as NotificationsService,
+    ),
+    prisma,
+    notifications,
+  };
 }
+
+describe('RequirementsService notifications', () => {
+  const dto = { subServiceId: 's1', description: 'Fix fan', providerIds: ['p1', 'p2'] };
+
+  it('tells the targeted providers about a new request', async () => {
+    const { service, notifications } = buildService();
+    await service.postRequirement('cust-1', dto);
+    expect(notifications.requestSent).toHaveBeenCalledWith('r1');
+  });
+
+  it('tells the customer when a provider accepts, but not when one rejects', async () => {
+    const { service, notifications } = buildService();
+    await service.respond('r1', 'p1', true);
+    expect(notifications.requestAccepted).toHaveBeenCalledWith('r1', 'p1');
+
+    notifications.requestAccepted.mockClear();
+    await service.respond('r1', 'p1', false);
+    expect(notifications.requestAccepted).not.toHaveBeenCalled();
+  });
+
+  it('tells the customer when the job is completed', async () => {
+    const { service, notifications } = buildService();
+    await service.markCompleted('r1', 'p1');
+    expect(notifications.jobCompleted).toHaveBeenCalledWith('r1');
+  });
+
+  it('sends nothing when completing is refused', async () => {
+    const { service, notifications } = buildService(undefined, { status: 'CONFIRMED', confirmedBidId: 'b1' }, { id: 'b1', providerId: 'someone-else' });
+    await expect(service.markCompleted('r1', 'p1')).rejects.toBeInstanceOf(ForbiddenException);
+    expect(notifications.jobCompleted).not.toHaveBeenCalled();
+  });
+});
 
 describe('RequirementsService.postRequirement', () => {
   it('creates the request as SENT and targets each chosen provider', async () => {

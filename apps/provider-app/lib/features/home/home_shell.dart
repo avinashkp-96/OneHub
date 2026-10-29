@@ -51,7 +51,7 @@ class _HomeShellState extends State<HomeShell> {
       HomeTab.requests => IncomingRequestsScreen(client: client, asTab: true),
       HomeTab.jobs => ActiveJobsScreen(client: client, asTab: true),
       HomeTab.profile => ProfileScreen(client: client, asTab: true),
-      _ => DashboardScreen(onOpenTab: _open),
+      _ => DashboardScreen(onOpenTab: _open, client: client),
     };
 
     return PopScope(

@@ -3,7 +3,6 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
 import '../home/home_shell.dart';
-import '../notifications/dummy_notifications.dart';
 import '../requirements/my_requests_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Structure follows an
@@ -220,44 +219,7 @@ class _TopRowState extends State<_TopRow> {
           ),
         ),
         const Spacer(),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cardFill,
-                  border: Border.all(color: cardBorder)),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon:
-                    Icon(OneHubIcons.notification, size: 18, color: textMuted),
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(
-                        items: dummyCustomerNotifications))),
-              ),
-            ),
-            Positioned(
-              top: 2,
-              right: 4,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.statusDanger,
-                  border: Border.all(
-                      color: dark
-                          ? OneHubColors.surfaceDark
-                          : OneHubColors.surfaceLight,
-                      width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
+        NotificationBell(api: api),
       ],
     );
   }

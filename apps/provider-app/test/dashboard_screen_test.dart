@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:onehub_provider/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_provider/features/home/home_shell.dart';
 import 'package:onehub_provider/features/requirements/active_jobs_screen.dart';
@@ -118,15 +122,43 @@ void main() {
     expect(find.text('● ONLINE'), findsOneWidget);
   });
 
-  testWidgets('the notification bell opens the notifications list',
+  testWidgets(
+      'the bell shows the unread dot and opens the real notifications list',
       (tester) async {
-    await pumpScreen(tester);
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => null,
+    );
+    final client = ApiClient(
+      baseUrl: 'https://example.test',
+      httpClient: MockClient((request) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'n1',
+              'event': 'NEW_REQUEST',
+              'message': 'New job request: Switchboard Repair',
+              'createdAt': DateTime.now().toUtc().toIso8601String(),
+              'readAt': null,
+            }
+          ]),
+          200)),
+    );
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(), home: DashboardScreen(client: client)));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('bell-unread-dot')), findsOneWidget);
 
     await tester.tap(find.byIcon(OneHubIcons.notification));
     await tester.pumpAndSettle();
 
     expect(find.byType(NotificationsScreen), findsOneWidget);
-    expect(find.text('New request nearby'), findsOneWidget);
-    expect(find.text('2 unread'), findsOneWidget);
+    expect(find.text('New job request'), findsOneWidget);
+    expect(find.text('New job request: Switchboard Repair'), findsOneWidget);
+    expect(find.text('1 unread'), findsOneWidget);
   });
 }

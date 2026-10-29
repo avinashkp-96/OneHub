@@ -13,6 +13,11 @@ export class NotificationsController {
     return this.notifications.listForUser(req.user.sub);
   }
 
+  @Patch('read-all')
+  markAllRead(@Req() req: { user: JwtPayload }) {
+    return this.notifications.markAllRead(req.user.sub);
+  }
+
   @Patch(':id/read')
   markRead(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
     return this.notifications.markRead(id, req.user.sub);

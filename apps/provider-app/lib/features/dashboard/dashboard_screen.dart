@@ -3,7 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../certification/certification_screen.dart';
 import '../earnings/earnings_screen.dart';
 import '../home/home_shell.dart';
-import '../notifications/dummy_notifications.dart';
+import '../../core/api.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen). Restyled to match the
@@ -25,7 +25,10 @@ const _dummyActiveJobs = 2;
 // tabs. Without it (e.g. in a test), they push the screen instead.
 class DashboardScreen extends StatelessWidget {
   final ValueChanged<int>? onOpenTab;
-  const DashboardScreen({super.key, this.onOpenTab});
+
+  /// Optional, like the other provider screens, so tests can use a fake API.
+  final ApiClient? client;
+  const DashboardScreen({super.key, this.onOpenTab, this.client});
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +54,7 @@ class DashboardScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(
                 OneHubTheme.pageMargin, 20, OneHubTheme.pageMargin, 100),
             children: [
-              const _TopRow(),
+              _TopRow(client: client),
               const SizedBox(height: 20),
               Text('Hello, $_dummyProviderName',
                   style: OneHubTextStyles.pageHeading(textPrimary)
@@ -96,7 +99,8 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class _TopRow extends StatefulWidget {
-  const _TopRow();
+  final ApiClient? client;
+  const _TopRow({this.client});
 
   @override
   State<_TopRow> createState() => _TopRowState();
@@ -112,10 +116,6 @@ class _TopRowState extends State<_TopRow> {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final cardFill =
-        dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
-    final cardBorder =
-        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return Row(
       children: [
@@ -127,44 +127,7 @@ class _TopRowState extends State<_TopRow> {
               pill: true),
         ),
         const Spacer(),
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: cardFill,
-                  border: Border.all(color: cardBorder)),
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                icon:
-                    Icon(OneHubIcons.notification, size: 18, color: textMuted),
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(
-                        items: dummyProviderNotifications))),
-              ),
-            ),
-            Positioned(
-              top: 2,
-              right: 4,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: context.statusDanger,
-                  border: Border.all(
-                      color: dark
-                          ? OneHubColors.surfaceDark
-                          : OneHubColors.surfaceLight,
-                      width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
+        NotificationBell(api: widget.client ?? api),
       ],
     );
   }

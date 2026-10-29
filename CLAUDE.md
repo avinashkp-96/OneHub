@@ -711,6 +711,29 @@ migrations, seeding, demo logins and pointing the apps at a local API.
 Verified on a fresh database: migrate, seed twice, no duplicates, all three
 demo logins match. Tests: API 180 (100% lines).
 
+2026-10-29 (real notifications): the Notification Matrix (docx section 6) is
+now live. `NotificationsService` has one method per event, called by the
+service where it happens: new request (each targeted provider), request
+accepted (customer; rejections are not sent, per docx 5.3), bid received and
+bid updated (customer), contact unlocked (the provider who paid), selected /
+not selected (the winning provider and every other bidder), job completed
+(customer) and new rating plus certified badge when that rating earns it
+(provider). Each method looks up recipients and names itself, so callers pass
+only ids. Records are stored as IN_APP; push/SMS delivery is still open (see
+Integrations), and the "subscription expiring/renewed" row has no event until a
+renewal job exists. Sending is best-effort: a failure is logged and never fails
+the action that triggered it. New route `PATCH /notifications/read-all`. In the
+apps, the shared `NotificationsScreen` now loads `GET /notifications`, derives
+title and icon from the event, shows relative times, and saves read state
+(tap one, or Mark all as read); a new shared `NotificationBell` replaces both
+dashboards' hand-built bell and shows the red dot only while something is
+unread, rechecking on return. The dummy notification lists are deleted. The
+provider `DashboardScreen` now takes an optional `client` like the other
+provider screens. Gotcha found on the way: a WIN1252 database cannot store `₹`
+or `★`, so those notifications were dropped (logged, not thrown); the dev
+database must be UTF-8 (README). Verified end to end through every event.
+Tests: API 207 (100% lines), shared 80, customer 113, provider 104.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

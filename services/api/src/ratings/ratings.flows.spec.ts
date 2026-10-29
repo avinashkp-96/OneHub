@@ -2,9 +2,10 @@ import { BadRequestException, ConflictException, ForbiddenException } from '@nes
 import { RatingsController } from './ratings.controller';
 import { RatingsService } from './ratings.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface Setup {
-  provider?: { ratingCount: number; averageRating: number };
+  provider?: { ratingCount: number; averageRating: number; certified?: boolean };
   completed?: number;
   requirement?: object | null;
   bidProviderId?: string;
@@ -34,8 +35,44 @@ function build(o: Setup = {}) {
       findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'b1', providerId: o.bidProviderId ?? 'p1' }),
     },
   };
-  return { service: new RatingsService(prisma as unknown as PrismaService), prisma };
+  const notifications = { ratingReceived: jest.fn().mockResolvedValue(undefined) };
+  return {
+    service: new RatingsService(prisma as unknown as PrismaService, notifications as unknown as NotificationsService),
+    prisma,
+    notifications,
+  };
 }
+
+describe('RatingsService notifications', () => {
+  const rate = { requirementId: 'r1', providerId: 'p1', stars: 4, feedback: 'Good' };
+
+  it('tells the provider about the new rating', async () => {
+    const { service, notifications } = build();
+    await service.submitRating('cust-1', rate);
+    expect(notifications.ratingReceived).toHaveBeenCalledWith('p1', 4, false);
+  });
+
+  it('also flags the certified badge when this rating earns it', async () => {
+    const { service, notifications } = build({ provider: { ratingCount: 9, averageRating: 5 }, completed: 10 });
+    await service.submitRating('cust-1', { ...rate, stars: 5 });
+    expect(notifications.ratingReceived).toHaveBeenCalledWith('p1', 5, true);
+  });
+
+  it('does not flag the badge again for a provider already certified', async () => {
+    const { service, notifications } = build({
+      provider: { ratingCount: 9, averageRating: 5, certified: true },
+      completed: 10,
+    });
+    await service.submitRating('cust-1', { ...rate, stars: 5 });
+    expect(notifications.ratingReceived).toHaveBeenCalledWith('p1', 5, false);
+  });
+
+  it('sends nothing when the rating is refused', async () => {
+    const { service, notifications } = build({ alreadyRated: true });
+    await expect(service.submitRating('cust-1', rate)).rejects.toBeInstanceOf(ConflictException);
+    expect(notifications.ratingReceived).not.toHaveBeenCalled();
+  });
+});
 
 const dto = { requirementId: 'r1', providerId: 'p1', stars: 5, feedback: 'Great' };
 

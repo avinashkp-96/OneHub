@@ -1,11 +1,15 @@
 import { PrismaService } from '../prisma/prisma.service';
 import { RatingsService } from './ratings.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+// These reads never notify anyone.
+const unusedNotifications = {} as NotificationsService;
 
 describe('RatingsService.forRequirement', () => {
   it('looks the rating up by its unique requirementId', async () => {
     const findUnique = jest.fn().mockResolvedValue({ id: 'rating-1', stars: 5 });
     const prisma = { ratingFeedback: { findUnique } } as unknown as PrismaService;
-    const service = new RatingsService(prisma);
+    const service = new RatingsService(prisma, unusedNotifications);
 
     const result = await service.forRequirement('req-1');
 
@@ -16,7 +20,7 @@ describe('RatingsService.forRequirement', () => {
   it('returns null when the job has not been rated yet', async () => {
     const findUnique = jest.fn().mockResolvedValue(null);
     const prisma = { ratingFeedback: { findUnique } } as unknown as PrismaService;
-    const service = new RatingsService(prisma);
+    const service = new RatingsService(prisma, unusedNotifications);
 
     expect(await service.forRequirement('req-2')).toBeNull();
   });

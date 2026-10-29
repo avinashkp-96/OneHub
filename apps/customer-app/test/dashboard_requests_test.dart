@@ -252,16 +252,35 @@ void main() {
     expect(find.text('Edappally, Kochi'), findsOneWidget);
   });
 
-  testWidgets('the notification bell opens the notifications list',
+  testWidgets(
+      'the bell shows the unread dot and opens the real notifications list',
       (tester) async {
-    await pumpScreen(tester, {});
+    await pumpScreen(tester, {
+      'GET /notifications': (_) => [
+            {
+              'id': 'n1',
+              'event': 'REQUEST_ACCEPTED',
+              'message': 'Rajesh Electricals accepted your request',
+              'createdAt': DateTime.now().toUtc().toIso8601String(),
+              'readAt': null,
+            }
+          ],
+    });
+    expect(find.byKey(const Key('bell-unread-dot')), findsOneWidget);
 
     await tester.tap(find.byIcon(OneHubIcons.notification));
     await tester.pumpAndSettle();
 
     expect(find.byType(NotificationsScreen), findsOneWidget);
-    expect(find.text('New bid on your request'), findsOneWidget);
-    expect(find.text('2 unread'), findsOneWidget);
+    expect(find.text('Request accepted'), findsOneWidget);
+    expect(find.text('Rajesh Electricals accepted your request'),
+        findsOneWidget);
+    expect(find.text('1 unread'), findsOneWidget);
+  });
+
+  testWidgets('the bell has no dot when nothing is unread', (tester) async {
+    await pumpScreen(tester, {'GET /notifications': (_) => []});
+    expect(find.byKey(const Key('bell-unread-dot')), findsNothing);
   });
 
   testWidgets('pull to refresh reloads the requests', (tester) async {

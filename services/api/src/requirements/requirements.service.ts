@@ -1,14 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostRequirementDto } from './dto/post-requirement.dto';
 
 @Injectable()
 export class RequirementsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // docx 4.3 — "Send Request" CTA
-  postRequirement(customerId: string, dto: PostRequirementDto) {
-    return this.prisma.requirement.create({
+  async postRequirement(customerId: string, dto: PostRequirementDto) {
+    const requirement = await this.prisma.requirement.create({
       data: {
         customerId,
         subServiceId: dto.subServiceId,
@@ -23,6 +27,8 @@ export class RequirementsService {
       },
       include: { targetedProviders: true },
     });
+    await this.notifications.requestSent(requirement.id);
+    return requirement;
   }
 
   // docx 4.4 "My Requests — Status View"
@@ -61,6 +67,7 @@ export class RequirementsService {
 
     if (accept) {
       await this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'ACCEPTED' } });
+      await this.notifications.requestAccepted(requirementId, providerId);
     }
     return { requirementId, providerId, status: accept ? 'ACCEPTED' : 'REJECTED' };
   }
@@ -82,6 +89,11 @@ export class RequirementsService {
     if (requirement.status !== 'CONFIRMED') {
       throw new BadRequestException('this job is not awaiting completion');
     }
-    return this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'COMPLETED' } });
+    const completed = await this.prisma.requirement.update({
+      where: { id: requirementId },
+      data: { status: 'COMPLETED' },
+    });
+    await this.notifications.jobCompleted(requirementId);
+    return completed;
   }
 }

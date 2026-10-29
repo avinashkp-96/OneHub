@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SubmitRatingDto } from './dto/submit-rating.dto';
 
@@ -9,7 +10,10 @@ const CERTIFICATION_MIN_RATING = 4.5;
 
 @Injectable()
 export class RatingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // docx 4.6 "Submit Rating" -> updates the provider's average (docx 5.9) and
   // re-checks certification (docx 5.8).
@@ -51,14 +55,12 @@ export class RatingsService {
       where: { confirmedBidId: { not: null }, status: 'COMPLETED', subService: { providers: { some: { providerId: dto.providerId } } } },
     });
 
+    const certified = completedCount >= CERTIFICATION_MIN_SERVICES && newAverage >= CERTIFICATION_MIN_RATING;
     await this.prisma.provider.update({
       where: { id: dto.providerId },
-      data: {
-        averageRating: newAverage,
-        ratingCount: newCount,
-        certified: completedCount >= CERTIFICATION_MIN_SERVICES && newAverage >= CERTIFICATION_MIN_RATING,
-      },
+      data: { averageRating: newAverage, ratingCount: newCount, certified },
     });
+    await this.notifications.ratingReceived(dto.providerId, dto.stars, certified && !provider.certified);
 
     return rating;
   }

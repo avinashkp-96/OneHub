@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { BidsController } from './bids.controller';
 import { BidsService, PUBLIC_PROVIDER_FIELDS } from './bids.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 interface Setup {
   bid?: object;
@@ -36,8 +37,14 @@ function buildService(o: Setup = {}) {
     payment: { create: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn().mockResolvedValue([]),
   };
-  const service = new BidsService(prisma as unknown as PrismaService);
-  return { service, prisma };
+  const notifications = {
+    bidSubmitted: jest.fn().mockResolvedValue(undefined),
+    contactUnlocked: jest.fn().mockResolvedValue(undefined),
+    bidRefined: jest.fn().mockResolvedValue(undefined),
+    providerConfirmed: jest.fn().mockResolvedValue(undefined),
+  };
+  const service = new BidsService(prisma as unknown as PrismaService, notifications as unknown as NotificationsService);
+  return { service, prisma, notifications };
 }
 
 describe('BidsService.submitInitialBid', () => {
@@ -168,6 +175,53 @@ describe('BidsService.confirmBid', () => {
 
     await expect(service.confirmBid('b1', 'cust-1')).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe('BidsService notifications', () => {
+  const unlockedBid = {
+    id: 'b1',
+    providerId: 'p1',
+    requirementId: 'r1',
+    contactUnlocked: true,
+    requirement: { customerId: 'cust-1', status: 'BID_RECEIVED' },
+  };
+
+  it('tells the customer about a new bid', async () => {
+    const { service, notifications } = buildService();
+    await service.submitInitialBid('r1', 'p1', { minPrice: 300, maxPrice: 450 });
+    expect(notifications.bidSubmitted).toHaveBeenCalledWith('b1');
+  });
+
+  it('confirms the unlock payment to the provider', async () => {
+    const { service, notifications } = buildService();
+    await service.unlockContact('b1', 'p1');
+    expect(notifications.contactUnlocked).toHaveBeenCalledWith('b1');
+  });
+
+  it('tells the customer about a refined bid', async () => {
+    const { service, notifications } = buildService({ bid: unlockedBid });
+    await service.updateRefinedBid('b1', 'p1', { minPrice: 350, maxPrice: 400 });
+    expect(notifications.bidRefined).toHaveBeenCalledWith('b1');
+  });
+
+  it('tells the providers who was selected', async () => {
+    const { service, notifications } = buildService();
+    await service.confirmBid('b1', 'cust-1');
+    expect(notifications.providerConfirmed).toHaveBeenCalledWith('b1');
+  });
+
+  it('sends nothing when the action is refused', async () => {
+    const { service, notifications } = buildService({ link: null });
+    await expect(service.submitInitialBid('r1', 'p1', { minPrice: 1, maxPrice: 2 })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(service.unlockContact('b1', 'intruder')).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.updateRefinedBid('b1', 'p1', { minPrice: 1, maxPrice: 2 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(service.confirmBid('b1', 'someone-else')).rejects.toBeInstanceOf(ForbiddenException);
+    for (const fn of Object.values(notifications)) expect(fn).not.toHaveBeenCalled();
   });
 });
 

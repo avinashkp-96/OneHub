@@ -38,7 +38,10 @@ docker run -d --name onehub-db -p 5432:5432 -e POSTGRES_USER=onehub -e POSTGRES_
 ```
 
 Or install PostgreSQL and create a database and user that match
-`DATABASE_URL` in `.env`.
+`DATABASE_URL` in `.env`. The database must use UTF-8 (Docker's image does by
+default). A Windows install can default to WIN1252, which cannot store `₹` or
+`★`, and notifications that contain them are then silently dropped. Create it
+with `CREATE DATABASE onehub ENCODING 'UTF8' TEMPLATE template0;` to be sure.
 
 ### 2. API
 
