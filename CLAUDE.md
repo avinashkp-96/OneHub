@@ -746,6 +746,20 @@ the most common one) and bordered review cards with stars, name, relative time
 and feedback ("No written feedback." when empty), plus empty and error states.
 Tests: API 218 (100% lines), provider 110.
 
+2026-10-29 (per-provider status): a customer's request detail now has a
+"Providers" section listing each provider it was sent to and their own answer
+(docx 4.4). `GET /requirements/mine` adds `providerName` to each
+`targetedProviders` entry; `RequirementProvider` has no relation to `Provider`
+in the schema, so the names come from one extra lookup across all the
+customer's requests (business name, else the person's name). The shared
+`Requirement` model parses `targetedProviders` (entries without a name, as on
+the provider side, are skipped), and `RequestDetailScreen` gained an optional
+titled list of `DetailBadgeRow`s. The badge per provider
+(`providerStatusBadge` in `my_requests_screen.dart`): CONFIRMED (their bid was
+chosen), REJECTED, NOT CHOSEN (someone else was confirmed), BID ₹min–₹max
+(latest range, refined if updated), ACCEPTED, or PENDING. Tests: API 220
+(100% lines), shared 83, customer 116.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

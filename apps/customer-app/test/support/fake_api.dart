@@ -68,6 +68,7 @@ Map<String, dynamic> requirementJson(
   String status, {
   List<Map<String, dynamic>> bids = const [],
   List<String> photos = const [],
+  List<Map<String, dynamic>> providers = const [],
 }) =>
     {
       'id': id,
@@ -76,6 +77,15 @@ Map<String, dynamic> requirementJson(
       'photoUrls': photos,
       'status': status,
       'bids': bids,
+      'targetedProviders': providers,
+    };
+
+// One provider a request was sent to, as GET /requirements/mine returns it.
+// Its id matches bidJson's 'prov-<bid id>' so a bid can be paired with it.
+Map<String, dynamic> targetJson(String bidId, String name, String status) => {
+      'providerId': 'prov-$bidId',
+      'providerName': name,
+      'status': status,
     };
 
 Map<String, dynamic> bidJson(

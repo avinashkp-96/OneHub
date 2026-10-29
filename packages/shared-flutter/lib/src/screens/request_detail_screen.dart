@@ -20,19 +20,30 @@ class DetailFact {
   const DetailFact(this.label, this.value);
 }
 
+/// A name with a coloured status badge, e.g. one provider and their answer.
+class DetailBadgeRow {
+  final String label;
+  final String badge;
+  final Color color;
+  const DetailBadgeRow(this.label, this.badge, this.color);
+}
+
 /// Detail view for a request or job, identical for the customer and provider
 /// apps, so it lives here and each app passes what it wants shown: the
-/// request text, a status badge, a progress timeline, extra facts and an
-/// optional [action] (a full-width button the app supplies). Same shell as
-/// the other screens (PageGlow, page title in the AppBar). The one
-/// GlowCard holds the description and status; the timeline and facts are
-/// plain bordered cards.
+/// request text, a status badge, a progress timeline, an optional titled list
+/// of [badgeRows] (the customer app lists each provider and their answer),
+/// extra facts and an optional [action] (a full-width button the app
+/// supplies). Same shell as the other screens (PageGlow, page title in the
+/// AppBar). The one GlowCard holds the description and status; the timeline,
+/// badge rows and facts are plain bordered cards.
 class RequestDetailScreen extends StatelessWidget {
   final String heading;
   final String description;
   final String statusLabel;
   final Color statusColor;
   final List<TimelineStep> steps;
+  final String badgeRowsTitle;
+  final List<DetailBadgeRow> badgeRows;
   final List<DetailFact> facts;
   final Widget? action;
   const RequestDetailScreen({
@@ -42,6 +53,8 @@ class RequestDetailScreen extends StatelessWidget {
     required this.statusLabel,
     required this.statusColor,
     required this.steps,
+    this.badgeRowsTitle = '',
+    this.badgeRows = const [],
     this.facts = const [],
     this.action,
   });
@@ -103,6 +116,44 @@ class RequestDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (badgeRows.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                Text(badgeRowsTitle,
+                    style: OneHubTextStyles.pageHeading(textPrimary)
+                        .copyWith(fontSize: 18)),
+                const SizedBox(height: 12),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < badgeRows.length; i++) ...[
+                          if (i > 0) Divider(height: 1, color: divider),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(badgeRows[i].label,
+                                      style: OneHubTextStyles.bodyText(
+                                              textPrimary)
+                                          .copyWith(
+                                              fontWeight: FontWeight.w600)),
+                                ),
+                                TintedBadge(
+                                    label: badgeRows[i].badge,
+                                    color: badgeRows[i].color),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
               if (facts.isNotEmpty) ...[
                 const SizedBox(height: 26),
                 Text('Details',

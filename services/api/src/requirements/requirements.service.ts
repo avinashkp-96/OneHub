@@ -32,12 +32,34 @@ export class RequirementsService {
   }
 
   // docx 4.4 "My Requests — Status View"
-  listForCustomer(customerId: string) {
-    return this.prisma.requirement.findMany({
+  // Each targeted provider also carries `providerName` (business name, else
+  // the person's name) so the customer can see who has accepted, rejected or
+  // not answered yet (docx 4.4 per-provider status). RequirementProvider has
+  // no relation to Provider in the schema, so the names come from one extra
+  // lookup for all providers on all the customer's requests.
+  async listForCustomer(customerId: string) {
+    const requirements = await this.prisma.requirement.findMany({
       where: { customerId },
       include: { targetedProviders: true, bids: true },
       orderBy: { createdAt: 'desc' },
     });
+
+    const providerIds = [...new Set(requirements.flatMap((r) => r.targetedProviders.map((t) => t.providerId)))];
+    const providers = providerIds.length
+      ? await this.prisma.provider.findMany({
+          where: { id: { in: providerIds } },
+          select: { id: true, businessName: true, user: { select: { fullName: true } } },
+        })
+      : [];
+    const names = new Map(providers.map((p) => [p.id, p.businessName ?? p.user.fullName]));
+
+    return requirements.map((r) => ({
+      ...r,
+      targetedProviders: r.targetedProviders.map((t) => ({
+        ...t,
+        providerName: names.get(t.providerId) ?? 'Provider',
+      })),
+    }));
   }
 
   // docx 5.3 "Incoming Requests" and 5.6 "Awaiting Selection / Selected /

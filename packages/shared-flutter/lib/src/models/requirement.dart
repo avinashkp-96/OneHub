@@ -26,6 +26,9 @@ class Requirement {
   // from "a different provider on this request was confirmed" (docx 5.6).
   // On /requirements/mine (customer side) this holds every bid received.
   final List<Bid> bids;
+  // Customer side only: each provider the request was sent to and how they
+  // answered (docx 4.4). Empty on the provider side.
+  final List<TargetedProvider> targetedProviders;
 
   const Requirement({
     required this.id,
@@ -34,6 +37,7 @@ class Requirement {
     required this.photoUrls,
     required this.status,
     this.bids = const [],
+    this.targetedProviders = const [],
   });
 
   factory Requirement.fromJson(Map<String, dynamic> json) => Requirement(
@@ -43,6 +47,32 @@ class Requirement {
         photoUrls: (json['photoUrls'] as List?)?.cast<String>() ?? const [],
         status: requestStatusFromJson(json['status'] as String),
         bids: (json['bids'] as List?)?.map((b) => Bid.fromJson(b as Map<String, dynamic>)).toList() ?? const [],
+        targetedProviders: (json['targetedProviders'] as List?)
+                ?.map((t) => t as Map<String, dynamic>)
+                .where((t) => t['providerName'] != null)
+                .map(TargetedProvider.fromJson)
+                .toList() ??
+            const [],
+      );
+}
+
+/// One provider a request was sent to, with their own answer: still pending
+/// (sent), accepted or rejected.
+class TargetedProvider {
+  final String providerId;
+  final String providerName;
+  final RequestStatus status;
+
+  const TargetedProvider({
+    required this.providerId,
+    required this.providerName,
+    required this.status,
+  });
+
+  factory TargetedProvider.fromJson(Map<String, dynamic> json) => TargetedProvider(
+        providerId: json['providerId'] as String,
+        providerName: json['providerName'] as String,
+        status: requestStatusFromJson(json['status'] as String),
       );
 }
 

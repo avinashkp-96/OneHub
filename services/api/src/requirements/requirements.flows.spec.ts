@@ -116,6 +116,50 @@ describe('RequirementsService.listForCustomer', () => {
       orderBy: { createdAt: 'desc' },
     });
   });
+
+  it("names each targeted provider so the customer can see who answered (docx 4.4)", async () => {
+    const { service, prisma } = buildService();
+    prisma.requirement.findMany.mockResolvedValue([
+      {
+        id: 'r1',
+        bids: [],
+        targetedProviders: [
+          { requirementId: 'r1', providerId: 'p1', status: 'ACCEPTED' },
+          { requirementId: 'r1', providerId: 'p2', status: 'REJECTED' },
+        ],
+      },
+      { id: 'r2', bids: [], targetedProviders: [{ requirementId: 'r2', providerId: 'p1', status: 'SENT' }] },
+      { id: 'r3', bids: [], targetedProviders: [{ requirementId: 'r3', providerId: 'gone', status: 'SENT' }] },
+    ]);
+    (prisma as unknown as { provider: object }).provider = {
+      findMany: jest.fn().mockResolvedValue([
+        { id: 'p1', businessName: 'Rajesh Electricals', user: { fullName: 'Rajesh K' } },
+        { id: 'p2', businessName: null, user: { fullName: 'Anil Thomas' } },
+      ]),
+    };
+
+    const result = await service.listForCustomer('cust-1');
+
+    const lookup = (prisma as unknown as { provider: { findMany: jest.Mock } }).provider.findMany;
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup.mock.calls[0][0].where).toEqual({ id: { in: ['p1', 'p2', 'gone'] } });
+    expect(lookup.mock.calls[0][0].select).not.toHaveProperty('idProofUrl');
+    expect(result[0].targetedProviders).toEqual([
+      { requirementId: 'r1', providerId: 'p1', status: 'ACCEPTED', providerName: 'Rajesh Electricals' },
+      { requirementId: 'r1', providerId: 'p2', status: 'REJECTED', providerName: 'Anil Thomas' },
+    ]);
+    expect(result[1].targetedProviders[0].providerName).toBe('Rajesh Electricals');
+    expect(result[2].targetedProviders[0].providerName).toBe('Provider');
+  });
+
+  it('skips the provider lookup when there are no requests', async () => {
+    const { service, prisma } = buildService();
+    const lookup = jest.fn();
+    (prisma as unknown as { provider: object }).provider = { findMany: lookup };
+
+    expect(await service.listForCustomer('cust-1')).toEqual([]);
+    expect(lookup).not.toHaveBeenCalled();
+  });
 });
 
 describe('RequirementsService.respond', () => {

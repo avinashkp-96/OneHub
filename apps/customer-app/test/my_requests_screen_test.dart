@@ -200,6 +200,83 @@ void main() {
     expect(find.text('2'), findsOneWidget);
   });
 
+  testWidgets("the detail lists each provider's own answer (docx 4.4)",
+      (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan job', 'BID_RECEIVED', bids: [
+              bidJson('b1', min: 300, max: 450),
+              bidJson('b2', min: 500, max: 900, refinedMin: 550, refinedMax: 700),
+            ], providers: [
+              targetJson('b1', 'Rajesh Electricals', 'ACCEPTED'),
+              targetJson('b2', 'Volt Masters', 'ACCEPTED'),
+              targetJson('b3', 'Spark Solutions', 'ACCEPTED'),
+              targetJson('b4', 'Anil Thomas', 'REJECTED'),
+              targetJson('b5', 'Kochi Plumbing Co', 'SENT'),
+            ]),
+          ],
+    });
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fan job'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Providers'), findsOneWidget);
+    String badgeFor(String name) => tester
+        .widget<TintedBadge>(find.descendant(
+            of: find.ancestor(of: find.text(name), matching: find.byType(Row)),
+            matching: find.byType(TintedBadge)))
+        .label;
+    expect(badgeFor('Rajesh Electricals'), 'BID ₹300–₹450');
+    expect(badgeFor('Volt Masters'), 'BID ₹550–₹700',
+        reason: 'a refined bid shows its latest range');
+    expect(badgeFor('Spark Solutions'), 'ACCEPTED');
+    expect(badgeFor('Anil Thomas'), 'REJECTED');
+    expect(badgeFor('Kochi Plumbing Co'), 'PENDING');
+  });
+
+  testWidgets('once a provider is confirmed the others show as not chosen',
+      (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan job', 'CONFIRMED', bids: [
+              bidJson('b1', confirmed: true),
+              bidJson('b2'),
+            ], providers: [
+              targetJson('b1', 'Rajesh Electricals', 'ACCEPTED'),
+              targetJson('b2', 'Volt Masters', 'ACCEPTED'),
+              targetJson('b3', 'Anil Thomas', 'REJECTED'),
+            ]),
+          ],
+    });
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fan job'));
+    await tester.pumpAndSettle();
+
+    final labels = tester
+        .widgetList<TintedBadge>(find.byType(TintedBadge))
+        .map((b) => b.label)
+        .toList();
+    expect(labels, containsAll(['CONFIRMED', 'NOT CHOSEN', 'REJECTED']));
+  });
+
+  testWidgets('a request without provider details shows no Providers section',
+      (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => [requirementJson('r1', 'Fan job', 'SENT')],
+    });
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Fan job'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Providers'), findsNothing);
+  });
+
   testWidgets('a request that ended early shows Sent then how it ended',
       (tester) async {
     installFakeApi({

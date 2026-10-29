@@ -41,6 +41,39 @@ Color requestStatusColor(BuildContext context, RequestStatus status) =>
       _ => OneHubColors.primary,
     };
 
+// docx 4.4: one provider's answer on a request, combining their own status
+// (pending, accepted, rejected) with how their bid fared. Uses the refined
+// range once a provider has updated their bid.
+(String, Color) providerStatusBadge(
+    BuildContext context, Requirement r, TargetedProvider t) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final muted = dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+  Bid? bid;
+  for (final b in r.bids) {
+    if (b.providerId == t.providerId) bid = b;
+  }
+  final decided = r.status == RequestStatus.confirmed ||
+      r.status == RequestStatus.completed;
+
+  if (bid != null && bid.confirmed) return ('CONFIRMED', context.statusSuccess);
+  if (t.status == RequestStatus.rejected) {
+    return ('REJECTED', context.statusDanger);
+  }
+  if (decided) return ('NOT CHOSEN', muted);
+  if (bid != null) {
+    final min = bid.refinedMinPrice ?? bid.initialMinPrice;
+    final max = bid.refinedMaxPrice ?? bid.initialMaxPrice;
+    return (
+      'BID ₹${min.toStringAsFixed(0)}–₹${max.toStringAsFixed(0)}',
+      context.statusWarning
+    );
+  }
+  if (t.status == RequestStatus.accepted) {
+    return ('ACCEPTED', OneHubColors.primary);
+  }
+  return ('PENDING', muted);
+}
+
 // The happy path is Sent → Accepted → Bids received → Confirmed → Completed.
 // A request that ended any other way (rejected, cancelled, expired) shows
 // Sent followed by how it ended, since the rest never happened.
@@ -171,6 +204,14 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
         statusLabel: requestStatusLabel(r),
         statusColor: requestStatusColor(context, r.status),
         steps: requestTimeline(r.status),
+        badgeRowsTitle: 'Providers',
+        badgeRows: [
+          for (final t in r.targetedProviders)
+            () {
+              final (badge, color) = providerStatusBadge(context, r, t);
+              return DetailBadgeRow(t.providerName, badge, color);
+            }(),
+        ],
         facts: [
           DetailFact('Bids', '${r.bids.length}'),
           DetailFact('Photos', '${r.photoUrls.length}'),
