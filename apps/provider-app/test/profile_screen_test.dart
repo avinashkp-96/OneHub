@@ -13,6 +13,18 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late List<String> storageCalls;
+  late Object business;
+
+  setUp(() => business = {
+        'id': 'p1',
+        'yearsExperience': 8,
+        'coverageRadiusKm': 10,
+        'category': {'id': 'c1', 'name': 'Electrician'},
+        'subServices': [
+          {'id': 's1', 'name': 'Fan Installation'},
+          {'id': 's2', 'name': 'Light Fitting'},
+        ],
+      });
 
   // Opens Profile on top of a stand-in home screen so that logging out has a
   // stack to clear, and records what the secure-storage plugin is asked to do.
@@ -28,8 +40,12 @@ void main() {
     );
     final client = ApiClient(
       baseUrl: 'https://example.test',
-      httpClient:
-          MockClient((request) async => http.Response(jsonEncode([]), 200)),
+      httpClient: MockClient((request) async {
+        if (request.url.path == '/providers/me') {
+          return http.Response(jsonEncode(business), 200);
+        }
+        return http.Response(jsonEncode([]), 200);
+      }),
     );
     tester.view.physicalSize = const Size(800, 2600);
     tester.view.devicePixelRatio = 1.0;
@@ -73,15 +89,38 @@ void main() {
         reason: 'the avatar shows the initial');
   });
 
-  testWidgets('lists the business details', (tester) async {
+  testWidgets('lists the business details from the API', (tester) async {
     await pumpScreen(tester);
 
     expect(find.text('SERVICE CATEGORY'), findsOneWidget);
     expect(find.text('Electrician'), findsOneWidget);
+    expect(find.text('SERVICES'), findsOneWidget);
+    expect(find.text('2 services'), findsOneWidget);
     expect(find.text('COVERAGE'), findsOneWidget);
-    expect(find.text('5 km radius'), findsOneWidget);
+    expect(find.text('10 km radius'), findsOneWidget);
     expect(find.text('EXPERIENCE'), findsOneWidget);
     expect(find.text('8 years'), findsOneWidget);
+  });
+
+  testWidgets('shows "Not set" for a provider with no services or experience',
+      (tester) async {
+    business = {'id': 'p1', 'coverageRadiusKm': 7.5, 'subServices': []};
+    await pumpScreen(tester);
+
+    expect(find.text('Not set'), findsNWidgets(2));
+    expect(find.text('0 services'), findsOneWidget);
+    expect(find.text('7.5 km radius'), findsOneWidget);
+  });
+
+  testWidgets('says so when the business details cannot load, and Edit is off',
+      (tester) async {
+    business = ['not', 'a', 'map'];
+    await pumpScreen(tester);
+
+    expect(find.text('Could not load your business details.'), findsOneWidget);
+    final edit = tester.widget<TextButton>(
+        find.ancestor(of: find.text('Edit'), matching: find.byType(TextButton)));
+    expect(edit.onPressed, isNull);
   });
 
   testWidgets('Active jobs opens the jobs screen', (tester) async {

@@ -4,9 +4,10 @@ import { NotificationsController } from './notifications/notifications.controlle
 import { NotificationsService } from './notifications/notifications.service';
 import { ProvidersController } from './providers/providers.controller';
 import { ProvidersService } from './providers/providers.service';
+import { ProviderMeController } from './providers/provider-me.controller';
 import { SubscriptionsController } from './subscriptions/subscriptions.controller';
 import { SubscriptionsService } from './subscriptions/subscriptions.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { PrismaService } from './prisma/prisma.service';
@@ -145,6 +146,128 @@ expect(prisma.provider.findMany).toHaveBeenCalledWith(      expect.objectContain
 
     expect(await controller.search('s1')).toBe('found');
     expect(providers.findForSubService).toHaveBeenCalledWith('s1');
+  });
+});
+
+describe('Provider business details (providers/me)', () => {
+  const row = {
+    id: 'p1',
+    businessName: 'Rajesh Electricals',
+    yearsExperience: 8,
+    coverageRadiusKm: 10,
+    subServices: [
+      { subService: { id: 's1', name: 'Fan Installation', category: { id: 'c1', name: 'Electrician' } } },
+      { subService: { id: 's2', name: 'Light Fitting', category: { id: 'c1', name: 'Electrician' } } },
+    ],
+  };
+
+  function build(subServices: { id: string; categoryId: string }[] = []) {
+    const prisma = {
+      provider: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue(row),
+        update: jest.fn().mockResolvedValue(row),
+      },
+      subService: { findMany: jest.fn().mockResolvedValue(subServices) },
+    };
+    return { service: new ProvidersService(asPrisma(prisma)), prisma };
+  }
+
+  it("reads the caller's own provider row and flattens category and services", async () => {
+    const { service, prisma } = build();
+
+    const result = await service.getMine('u1');
+
+    expect(prisma.provider.findUniqueOrThrow.mock.calls[0][0].where).toEqual({ userId: 'u1' });
+    expect(result).toEqual({
+      id: 'p1',
+      businessName: 'Rajesh Electricals',
+      yearsExperience: 8,
+      coverageRadiusKm: 10,
+      category: { id: 'c1', name: 'Electrician' },
+      subServices: [
+        { id: 's1', name: 'Fan Installation' },
+        { id: 's2', name: 'Light Fitting' },
+      ],
+    });
+  });
+
+  it('reports no category when the provider offers no services', async () => {
+    const { service, prisma } = build();
+    prisma.provider.findUniqueOrThrow.mockResolvedValue({ ...row, subServices: [] });
+
+    expect((await service.getMine('u1')).category).toBeNull();
+  });
+
+  it('never selects the ID proof or bank details, even for the owner', async () => {
+    const { service, prisma } = build();
+
+    await service.getMine('u1');
+
+    const { select } = prisma.provider.findUniqueOrThrow.mock.calls[0][0];
+    expect(select).not.toHaveProperty('idProofUrl');
+    expect(select).not.toHaveProperty('bankOrUpiDetails');
+  });
+
+  it('updates only the fields given, on the caller\'s own row', async () => {
+    const { service, prisma } = build();
+
+    await service.updateMine('u1', { yearsExperience: 9 });
+
+    const args = prisma.provider.update.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: 'u1' });
+    expect(args.data).toEqual({ yearsExperience: 9, coverageRadiusKm: undefined, subServices: undefined });
+    expect(prisma.subService.findMany).not.toHaveBeenCalled();
+  });
+
+  it('replaces the service list in one write, dropping duplicate ids', async () => {
+    const { service, prisma } = build([
+      { id: 's1', categoryId: 'c1' },
+      { id: 's2', categoryId: 'c1' },
+    ]);
+
+    await service.updateMine('u1', { subServiceIds: ['s1', 's2', 's1'], coverageRadiusKm: 15 });
+
+    expect(prisma.subService.findMany.mock.calls[0][0].where).toEqual({ id: { in: ['s1', 's2'] } });
+    expect(prisma.provider.update.mock.calls[0][0].data).toEqual({
+      yearsExperience: undefined,
+      coverageRadiusKm: 15,
+      subServices: { deleteMany: {}, create: [{ subServiceId: 's1' }, { subServiceId: 's2' }] },
+    });
+  });
+
+  it('refuses an unknown sub-service', async () => {
+    const { service, prisma } = build([{ id: 's1', categoryId: 'c1' }]);
+
+    await expect(service.updateMine('u1', { subServiceIds: ['s1', 'nope'] })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.provider.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses services from more than one category', async () => {
+    const { service, prisma } = build([
+      { id: 's1', categoryId: 'c1' },
+      { id: 's5', categoryId: 'c2' },
+    ]);
+
+    await expect(service.updateMine('u1', { subServiceIds: ['s1', 's5'] })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.provider.update).not.toHaveBeenCalled();
+  });
+
+  it('controller always uses the signed-in user id', async () => {
+    const providers = {
+      getMine: jest.fn().mockResolvedValue('mine'),
+      updateMine: jest.fn().mockResolvedValue('updated'),
+    };
+    const controller = new ProviderMeController(providers as unknown as ProvidersService);
+    const req = { user: { sub: 'u1', role: 'PROVIDER' as const } };
+
+    expect(await controller.mine(req)).toBe('mine');
+    expect(await controller.update(req, { yearsExperience: 3 })).toBe('updated');
+    expect(providers.getMine).toHaveBeenCalledWith('u1');
+    expect(providers.updateMine).toHaveBeenCalledWith('u1', { yearsExperience: 3 });
   });
 });
 

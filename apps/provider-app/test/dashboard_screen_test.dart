@@ -123,7 +123,10 @@ void main() {
     await tester.tap(find.descendant(
         of: find.byType(CurvedNavBar),
         matching: find.byIcon(OneHubIcons.profile)));
-    await tester.pumpAndSettle();
+    // Profile's Business card loads over the network, so its spinner never
+    // settles here; pump past the route transition instead.
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(ProfileScreen), findsOneWidget);
   });

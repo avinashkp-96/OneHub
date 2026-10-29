@@ -1,35 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
-// Provider availability and service area, reached from the Profile screen.
+// Provider working hours and days, reached from the Profile screen.
 // Same shell as the other provider screens (PageGlow, back-only AppBar plus
 // in-body heading, one GlowCard, bordered cards) — no new reference, applied
 // on request.
 //
 // There is no availability endpoint yet, so "Save changes" only updates the
-// in-memory [providerAvailability] below, which the Profile screen reads for
-// its coverage row. It resets when the app restarts and tells the backend
-// nothing. Replace the notifier with a fetch and save when the API exists.
+// in-memory [providerAvailability] below. It resets when the app restarts and
+// tells the backend nothing. Replace the notifier with a fetch and save when
+// the API exists. The service area (coverage radius) moved to Business
+// details, which saves it to the API.
 
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const coverageOptionsKm = [2, 5, 10, 15, 25];
 
 class Availability {
-  final int radiusKm;
   final Set<int> days; // indexes into [weekdayLabels]
   final TimeOfDay start;
   final TimeOfDay end;
   const Availability({
-    required this.radiusKm,
     required this.days,
     required this.start,
     required this.end,
   });
 
-  Availability copyWith(
-          {int? radiusKm, Set<int>? days, TimeOfDay? start, TimeOfDay? end}) =>
+  Availability copyWith({Set<int>? days, TimeOfDay? start, TimeOfDay? end}) =>
       Availability(
-        radiusKm: radiusKm ?? this.radiusKm,
         days: days ?? this.days,
         start: start ?? this.start,
         end: end ?? this.end,
@@ -37,7 +33,6 @@ class Availability {
 }
 
 final providerAvailability = ValueNotifier<Availability>(const Availability(
-  radiusKm: 5,
   days: {0, 1, 2, 3, 4, 5},
   start: TimeOfDay(hour: 9, minute: 0),
   end: TimeOfDay(hour: 18, minute: 0),
@@ -122,7 +117,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   style: OneHubTextStyles.pageHeading(textPrimary)
                       .copyWith(fontSize: 26)),
               const SizedBox(height: 8),
-              Text('When and how far you take jobs.',
+              Text('When you take jobs.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),
               GlowCard(
@@ -163,23 +158,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                       label: weekdayLabels[i],
                       selected: _draft.days.contains(i),
                       onTap: () => _toggleDay(i),
-                    ),
-                ],
-              ),
-              section('Service area'),
-              Text('Jobs within this distance of you.',
-                  style: OneHubTextStyles.bodyText(textSecondary)),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final km in coverageOptionsKm)
-                    _Choice(
-                      label: '$km km',
-                      selected: _draft.radiusKm == km,
-                      onTap: () => setState(
-                          () => _draft = _draft.copyWith(radiusKm: km)),
                     ),
                 ],
               ),

@@ -12,7 +12,10 @@ describe('AppModule wiring', () => {
   const prisma = {
     category: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Electrician' }]) },
     user: { update: jest.fn().mockResolvedValue({}) },
-    provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }) },
+    provider: {
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }),
+      update: jest.fn().mockResolvedValue({ id: 'p-mine', coverageRadiusKm: 5, subServices: [] }),
+    },
     bid: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'b1', providerId: 'p-other' }) },
     payment: { create: jest.fn() },
     onModuleInit: jest.fn(),
@@ -76,6 +79,50 @@ describe('AppModule wiring', () => {
       .expect(403);
 
     expect(prisma.payment.create).not.toHaveBeenCalled();
+  });
+
+  it("updates only the caller's own business details and strips protected fields", async () => {
+    const token = app.get(JwtService).sign({ sub: 'u2', role: 'PROVIDER' });
+
+    await request(app.getHttpServer())
+      .patch('/api/v1/providers/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ yearsExperience: 4, userId: 'u-other', status: 'ACTIVE', certified: true })
+      .expect(200);
+
+    const args = prisma.provider.update.mock.calls[0][0];
+    expect(args.where).toEqual({ userId: 'u2' });
+    expect(args.data.yearsExperience).toBe(4);
+    expect(args.data).not.toHaveProperty('status');
+    expect(args.data).not.toHaveProperty('certified');
+  });
+
+  it('refuses a customer reading or editing provider business details', async () => {
+    const token = app.get(JwtService).sign({ sub: 'u1', role: 'CUSTOMER' });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/providers/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+    await request(app.getHttpServer())
+      .patch('/api/v1/providers/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ yearsExperience: 4 })
+      .expect(403);
+  });
+
+  it('validates business detail values', async () => {
+    const token = app.get(JwtService).sign({ sub: 'u2', role: 'PROVIDER' });
+
+    const res = await request(app.getHttpServer())
+      .patch('/api/v1/providers/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ yearsExperience: -1, coverageRadiusKm: 0, subServiceIds: [] })
+      .expect(400);
+    const body = JSON.stringify(res.body);
+    expect(body).toContain('yearsExperience');
+    expect(body).toContain('coverageRadiusKm');
+    expect(body).toContain('subServiceIds');
   });
 
   it('rejects a customer token on a provider-only route', async () => {

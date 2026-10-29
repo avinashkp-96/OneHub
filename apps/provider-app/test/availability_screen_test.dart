@@ -1,12 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:onehub_provider/features/availability/availability_screen.dart';
 import 'package:onehub_provider/features/profile/profile_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 void main() {
   const initial = Availability(
-    radiusKm: 5,
     days: {0, 1, 2, 3, 4, 5},
     start: TimeOfDay(hour: 9, minute: 0),
     end: TimeOfDay(hour: 18, minute: 0),
@@ -41,7 +44,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows the current hours, days and service area', (tester) async {
+  testWidgets('shows the current hours and days', (tester) async {
     await pumpScreen(tester);
 
     expect(find.byType(PageGlow), findsOneWidget);
@@ -52,9 +55,8 @@ void main() {
     for (final d in weekdayLabels) {
       expect(find.text(d), findsOneWidget);
     }
-    for (final km in coverageOptionsKm) {
-      expect(find.text('$km km'), findsOneWidget);
-    }
+    expect(find.text('Service area'), findsNothing,
+        reason: 'coverage is edited in Business details now');
   });
 
   testWidgets('saving updates the shared availability and shows a message',
@@ -63,12 +65,10 @@ void main() {
 
     await tester.tap(find.text('Sun')); // add Sunday
     await tester.tap(find.text('Mon')); // remove Monday
-    await tester.tap(find.text('15 km'));
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
     final a = providerAvailability.value;
-    expect(a.radiusKm, 15);
     expect(a.days, {1, 2, 3, 4, 5, 6});
     expect(find.byType(AvailabilityScreen), findsNothing);
     expect(find.text('Availability saved.'), findsOneWidget);
@@ -126,20 +126,26 @@ void main() {
     expect(find.text('9:00 AM'), findsOneWidget);
   });
 
-  testWidgets('the profile links here and reflects the saved radius',
-      (tester) async {
+  testWidgets('the profile links here', (tester) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => null,
+    );
+    final client = ApiClient(
+      baseUrl: 'https://example.test',
+      httpClient: MockClient((request) async => http.Response(
+          jsonEncode({'id': 'p1', 'coverageRadiusKm': 5, 'subServices': []}),
+          200)),
+    );
     tallView(tester);
-    await tester.pumpWidget(
-        MaterialApp(theme: OneHubTheme.dark(), home: const ProfileScreen()));
-    expect(find.text('5 km radius'), findsOneWidget);
+    await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(), home: ProfileScreen(client: client)));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Availability'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('10 km'));
-    await tester.tap(find.text('Save changes'));
-    await tester.pumpAndSettle();
 
-    expect(find.byType(AvailabilityScreen), findsNothing);
-    expect(find.text('10 km radius'), findsOneWidget);
+    expect(find.byType(AvailabilityScreen), findsOneWidget);
   });
 }

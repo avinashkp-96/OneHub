@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../availability/availability_screen.dart';
+import '../business/business_details.dart';
+import '../business/business_details_screen.dart';
 import '../plans/plans_screen.dart';
 import '../help/help_content.dart';
 import 'profile_state.dart';
@@ -12,13 +14,12 @@ import '../requirements/active_jobs_screen.dart';
 // heading, one GlowCard, bordered tiles) — no new reference, applied on
 // request — plus a card of business details.
 //
-// Every detail shown is explicit dummy data: there is no profile endpoint to
-// read them from yet (see profile_state.dart; Edit profile changes the account
-// details in memory only).
+// The account card is explicit dummy data: there is no account endpoint to
+// read it from yet (see profile_state.dart; Edit profile changes it in memory
+// only). The Business card is real: it loads GET /providers/me and its Edit
+// button opens Business details, which saves to the API.
 // "Active jobs" and "Log out" are real; logging out clears the stored token
 // and returns to the login screen with no way back.
-const _dummyCategory = 'Electrician';
-const _dummyExperience = '8 years';
 
 /// Takes an optional [client], like the other provider screens, so tests can
 /// use a fake API.
@@ -66,8 +67,6 @@ class ProfileScreen extends StatelessWidget {
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final iconBorder =
-        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
 
     return Scaffold(
       appBar: AppBar(
@@ -163,38 +162,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 26),
-              Text('Business',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 18)),
-              const SizedBox(height: 12),
-              Card(
-                margin: EdgeInsets.zero,
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Column(
-                    children: [
-                      const _DetailRow(
-                          icon: OneHubIcons.category,
-                          label: 'SERVICE CATEGORY',
-                          value: _dummyCategory),
-                      Divider(height: 1, color: iconBorder),
-                      ValueListenableBuilder<Availability>(
-                        valueListenable: providerAvailability,
-                        builder: (_, a, __) => _DetailRow(
-                            icon: OneHubIcons.location,
-                            label: 'COVERAGE',
-                            value: '${a.radiusKm} km radius'),
-                      ),
-                      Divider(height: 1, color: iconBorder),
-                      const _DetailRow(
-                          icon: OneHubIcons.calendar,
-                          label: 'EXPERIENCE',
-                          value: _dummyExperience),
-                    ],
-                  ),
-                ),
-              ),
+              _BusinessCard(client: client),
               const SizedBox(height: 26),
               Text('Account',
                   style: OneHubTextStyles.pageHeading(textPrimary)
@@ -265,7 +233,7 @@ class ProfileScreen extends StatelessWidget {
               OneHubLinkTile(
                 icon: OneHubIcons.calendar,
                 title: 'Availability',
-                subtitle: 'Hours, days and service area',
+                subtitle: 'Working hours and days',
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const AvailabilityScreen())),
               ),
@@ -293,6 +261,132 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The Business section: heading with an Edit button, then category,
+/// services, coverage and experience from GET /providers/me. Reloads after
+/// Business details saves.
+class _BusinessCard extends StatefulWidget {
+  final ApiClient? client;
+  const _BusinessCard({this.client});
+
+  @override
+  State<_BusinessCard> createState() => _BusinessCardState();
+}
+
+class _BusinessCardState extends State<_BusinessCard> {
+  BusinessDetails? _details;
+  String? _error;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final json =
+          await (widget.client ?? api).get('/providers/me') as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() {
+        _details = BusinessDetails.fromJson(json);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not load your business details.';
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _edit() async {
+    final saved = await Navigator.of(context).push<bool>(MaterialPageRoute(
+        builder: (_) => BusinessDetailsScreen(client: widget.client)));
+    if (saved == true && mounted) _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final divider =
+        dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
+    final d = _details;
+
+    final Widget body;
+    if (_loading) {
+      body = const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else if (d == null) {
+      body = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Text(_error ?? '', style: TextStyle(color: context.statusDanger)),
+      );
+    } else {
+      body = Column(
+        children: [
+          _DetailRow(
+              icon: OneHubIcons.category,
+              label: 'SERVICE CATEGORY',
+              value: d.categoryName ?? 'Not set'),
+          Divider(height: 1, color: divider),
+          _DetailRow(
+              icon: OneHubIcons.work,
+              label: 'SERVICES',
+              value: d.servicesLabel),
+          Divider(height: 1, color: divider),
+          _DetailRow(
+              icon: OneHubIcons.location,
+              label: 'COVERAGE',
+              value: d.coverageLabel),
+          Divider(height: 1, color: divider),
+          _DetailRow(
+              icon: OneHubIcons.calendar,
+              label: 'EXPERIENCE',
+              value: d.experienceLabel),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Business',
+                  style: OneHubTextStyles.pageHeading(textPrimary)
+                      .copyWith(fontSize: 18)),
+            ),
+            TextButton.icon(
+              onPressed: _loading || d == null ? null : _edit,
+              icon: const Icon(OneHubIcons.edit, size: 16),
+              label: const Text('Edit'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Card(
+          margin: EdgeInsets.zero,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: body,
+          ),
+        ),
+      ],
     );
   }
 }

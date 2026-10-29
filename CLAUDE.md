@@ -635,6 +635,24 @@ notification bell pushes are left alone because nothing they do changes the
 list. A regression test posts a request on a pushed screen and checks the
 card appears on return. Customer tests: 106.
 
+2026-10-29 (business details): providers can now edit their services,
+experience and coverage radius after signup (docx 5.2). New API routes
+`GET` and `PATCH /providers/me`, provider role only, always acting on the
+provider on the token (no id in the path). PATCH takes `yearsExperience`
+(0 to 60, null clears it), `coverageRadiusKm` (1 to 100) and `subServiceIds`
+(replaces the whole set in one nested write; every id must exist and all must
+belong to one category). Responses select fields explicitly, so the ID proof
+and bank/UPI details never come back, even to the owner. In the provider app
+the Profile Business card now loads real data (category, service count,
+coverage, experience) instead of dummy constants, and its Edit button opens
+`BusinessDetailsScreen`: experience and coverage fields in one `GlowCard`,
+then the same category and service tiles as signup step 2 (moved to
+`core/widgets/service_tile.dart` and shared by both). Switching category clears
+the services; switching back restores the saved ones. Coverage was also on the
+Availability screen as an in-memory value; that copy is removed so there is one
+editor, and it saves to the API. Tests: API 148 (100% lines), provider 100
+(about 96%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
