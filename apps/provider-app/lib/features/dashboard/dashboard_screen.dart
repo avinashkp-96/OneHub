@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../certification/certification_screen.dart';
 import '../earnings/earnings_screen.dart';
+import '../home/home_shell.dart';
 import '../notifications/dummy_notifications.dart';
-import '../profile/profile_screen.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen). Restyled to match the
@@ -19,17 +19,24 @@ const _dummyProviderName = 'Asha';
 const _dummyNewRequests = 3;
 const _dummyActiveJobs = 2;
 
+//
+// The bottom bar lives in HomeShell, which shows this screen as its Home tab
+// and passes [onOpenTab] so the Incoming requests and Active jobs tiles switch
+// tabs. Without it (e.g. in a test), they push the screen instead.
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({super.key});
+  final ValueChanged<int>? onOpenTab;
+  const DashboardScreen({super.key, this.onOpenTab});
 
   @override
   Widget build(BuildContext context) {
-    void openRequests() =>
-        Navigator.of(context).pushNamed('/incoming-requests');
-    void openJobs() => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen()));
-    void openProfile() => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    final openTab = onOpenTab;
+    void openRequests() => openTab != null
+        ? openTab(HomeTab.requests)
+        : Navigator.of(context).pushNamed('/incoming-requests');
+    void openJobs() => openTab != null
+        ? openTab(HomeTab.jobs)
+        : Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen()));
 
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
@@ -83,21 +90,6 @@ class DashboardScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: CurvedNavBar(
-        items: const [
-          CurvedNavItem(icon: OneHubIcons.home, label: 'Home'),
-          CurvedNavItem(icon: OneHubIcons.work, label: 'Requests'),
-          CurvedNavItem(icon: OneHubIcons.documentList, label: 'Jobs'),
-          CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
-        ],
-        selectedIndex: 0,
-        // Index 0 is this screen, so there's nothing to open for it.
-        onSelected: (index) {
-          if (index == 1) openRequests();
-          if (index == 2) openJobs();
-          if (index == 3) openProfile();
-        },
       ),
     );
   }
@@ -338,8 +330,8 @@ class _WalletCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
-        onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const EarningsScreen())),
+        onTap: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const EarningsScreen())),
         borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
         child: Padding(
           padding: const EdgeInsets.all(16),

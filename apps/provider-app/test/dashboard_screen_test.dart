@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_provider/features/dashboard/dashboard_screen.dart';
-import 'package:onehub_provider/features/profile/profile_screen.dart';
+import 'package:onehub_provider/features/home/home_shell.dart';
 import 'package:onehub_provider/features/requirements/active_jobs_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
@@ -63,13 +63,24 @@ void main() {
     }
   });
 
-  testWidgets('the bottom nav has 4 items with Home selected', (tester) async {
-    await pumpScreen(tester);
+  testWidgets(
+      'with a tab handler, the job tiles switch tabs instead of pushing',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final opened = <int>[];
+    await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: DashboardScreen(onOpenTab: opened.add)));
 
-    final navBar = tester.widget<CurvedNavBar>(find.byType(CurvedNavBar));
-    expect(navBar.items.map((i) => i.label),
-        ['Home', 'Requests', 'Jobs', 'Profile']);
-    expect(navBar.selectedIndex, 0);
+    await tester.tap(find.text('Incoming requests'));
+    await tester.tap(find.text('Active jobs'));
+    await tester.pumpAndSettle();
+
+    expect(opened, [HomeTab.requests, HomeTab.jobs]);
+    expect(find.byType(ActiveJobsScreen), findsNothing);
   });
 
   testWidgets('the Incoming requests tile opens the incoming requests route',
@@ -77,18 +88,6 @@ void main() {
     await pumpScreen(tester);
 
     await tester.tap(find.text('Incoming requests'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('incoming requests stub'), findsOneWidget);
-  });
-
-  testWidgets('the Requests nav item opens the incoming requests route',
-      (tester) async {
-    await pumpScreen(tester);
-
-    await tester.tap(find.descendant(
-        of: find.byType(CurvedNavBar),
-        matching: find.byIcon(OneHubIcons.work)));
     await tester.pumpAndSettle();
 
     expect(find.text('incoming requests stub'), findsOneWidget);
@@ -103,32 +102,6 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.byType(ActiveJobsScreen), findsOneWidget);
-  });
-
-  testWidgets('the Jobs nav item opens the active jobs screen', (tester) async {
-    await pumpScreen(tester);
-
-    await tester.tap(find.descendant(
-        of: find.byType(CurvedNavBar),
-        matching: find.byIcon(OneHubIcons.documentList)));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.byType(ActiveJobsScreen), findsOneWidget);
-  });
-
-  testWidgets('the Profile nav item opens the profile screen', (tester) async {
-    await pumpScreen(tester);
-
-    await tester.tap(find.descendant(
-        of: find.byType(CurvedNavBar),
-        matching: find.byIcon(OneHubIcons.profile)));
-    // Profile's Business card loads over the network, so its spinner never
-    // settles here; pump past the route transition instead.
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
   testWidgets('tapping the status badge toggles between online and offline',

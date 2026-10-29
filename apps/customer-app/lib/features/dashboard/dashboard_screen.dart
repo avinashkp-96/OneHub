@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
+import '../home/home_shell.dart';
 import '../notifications/dummy_notifications.dart';
-import '../profile/profile_screen.dart';
 import '../requirements/my_requests_screen.dart';
 
 // docx 4.1 — Customer Dashboard (Home Screen). Structure follows an
@@ -22,8 +22,13 @@ import '../requirements/my_requests_screen.dart';
 // (providers.controller.ts only supports GET /providers?subServiceId=...,
 // scoped to one sub-service) — kept as a prompt into category browsing
 // instead of inventing example providers.
+//
+// The bottom bar lives in HomeShell, which shows this screen as its Home tab
+// and passes [onOpenTab] so the shortcuts to My requests and categories
+// switch tabs. Without it (e.g. in a test), they push the screen instead.
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final ValueChanged<int>? onOpenTab;
+  const DashboardScreen({super.key, this.onOpenTab});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -66,10 +71,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (mounted) _load();
     }
 
-    void openCategories() => openThenRefresh(const CategoryGridScreen());
-    void openMyRequests() => openThenRefresh(const MyRequestsScreen());
-    void openProfile() => Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const ProfileScreen()));
+    final openTab = widget.onOpenTab;
+    void openCategories() => openTab != null
+        ? openTab(HomeTab.category)
+        : openThenRefresh(const CategoryGridScreen());
+    void openMyRequests() => openTab != null
+        ? openTab(HomeTab.requests)
+        : openThenRefresh(const MyRequestsScreen());
 
     return Scaffold(
       body: PageGlow(
@@ -116,21 +124,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: CurvedNavBar(
-        items: const [
-          CurvedNavItem(icon: OneHubIcons.home, label: 'Home'),
-          CurvedNavItem(icon: OneHubIcons.documentList, label: 'Requests'),
-          CurvedNavItem(icon: OneHubIcons.category, label: 'Category'),
-          CurvedNavItem(icon: OneHubIcons.profile, label: 'Profile'),
-        ],
-        selectedIndex: 0,
-        // Index 0 is this screen, so there's nothing to open for it.
-        onSelected: (index) {
-          if (index == 1) openMyRequests();
-          if (index == 2) openCategories();
-          if (index == 3) openProfile();
-        },
       ),
     );
   }

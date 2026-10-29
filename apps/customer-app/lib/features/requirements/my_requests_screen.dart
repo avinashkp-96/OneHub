@@ -79,7 +79,9 @@ List<TimelineStep> requestTimeline(RequestStatus status) {
 }
 
 class MyRequestsScreen extends StatefulWidget {
-  const MyRequestsScreen({super.key});
+  /// True when shown as the Requests tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const MyRequestsScreen({super.key, this.asTab = false});
 
   @override
   State<MyRequestsScreen> createState() => _MyRequestsScreenState();
@@ -189,7 +191,11 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: widget.asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: widget.asTab ? OneHubTheme.pageMargin : null,
           title: const Text('My requests')),
       body: PageGlow(
         child: SafeArea(

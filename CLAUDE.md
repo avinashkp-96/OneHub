@@ -663,6 +663,22 @@ across both apps and the shared package. Login, signup, reset password and the
 two dashboards keep their large hero headings and have no page-name bar.
 Tests: shared 75, customer 106, provider 100.
 
+2026-10-29 (bottom bar on tab pages): the bottom bar now stays on screen for
+the first page of each tab, with that tab highlighted, instead of only on
+Home. `/dashboard` is a new `HomeShell` in each app
+(`features/home/home_shell.dart`) holding the `CurvedNavBar` and swapping its
+body between the four tab pages (customer: Home, My requests, categories,
+Profile; provider: Home, Incoming requests, Active jobs, Profile). Those
+screens take `asTab: true` there, which drops the back arrow and gives the
+title the page margin. Anything opened from a tab is still pushed on the root
+navigator, so deeper pages cover the shell: back arrow, no bottom bar. Each
+tab is rebuilt when selected, so its data reloads (this replaces the old
+reload-on-return for the Home requests list). System back on a non-Home tab
+goes to Home. The dashboards' shortcuts to those same pages ("View all",
+"See all", the hero CTA, the provider's job tiles) now switch tabs through a
+new `onOpenTab` callback instead of pushing a second copy; without it (tests)
+they still push. Tests: customer 112, provider 104.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

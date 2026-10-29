@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import 'features/auth/login_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
+import 'features/home/home_shell.dart';
 import 'features/requirements/incoming_requests_screen.dart';
 
 void main() => runApp(const OneHubProviderApp());
@@ -19,7 +19,7 @@ class OneHubProviderApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginScreen(),
-        '/dashboard': (_) => const DashboardScreen(),
+        '/dashboard': (_) => const HomeShell(),
         '/incoming-requests': (_) => const IncomingRequestsScreen(),
       },
     );

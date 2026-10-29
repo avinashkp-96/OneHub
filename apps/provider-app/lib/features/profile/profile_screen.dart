@@ -24,7 +24,10 @@ import '../requirements/active_jobs_screen.dart';
 /// use a fake API.
 class ProfileScreen extends StatelessWidget {
   final ApiClient? client;
-  const ProfileScreen({super.key, this.client});
+
+  /// True when shown as the Profile tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const ProfileScreen({super.key, this.client, this.asTab = false});
 
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -69,7 +72,11 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: asTab ? OneHubTheme.pageMargin : null,
           title: const Text('Profile')),
       body: PageGlow(
         child: SafeArea(

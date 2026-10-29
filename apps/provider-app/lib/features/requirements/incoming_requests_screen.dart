@@ -10,7 +10,10 @@ import '../bids/price_range_screen.dart';
 // Takes an optional [client], like SignupScreen, so tests can use a fake API.
 class IncomingRequestsScreen extends StatefulWidget {
   final ApiClient? client;
-  const IncomingRequestsScreen({super.key, this.client});
+
+  /// True when shown as the Requests tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const IncomingRequestsScreen({super.key, this.client, this.asTab = false});
 
   @override
   State<IncomingRequestsScreen> createState() => _IncomingRequestsScreenState();
@@ -86,7 +89,11 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: widget.asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: widget.asTab ? OneHubTheme.pageMargin : null,
           title: const Text('Incoming requests')),
       body: PageGlow(
         child: SafeArea(

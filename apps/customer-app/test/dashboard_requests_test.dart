@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:onehub_customer/features/categories/category_grid_screen.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
-import 'package:onehub_customer/features/profile/profile_screen.dart';
+import 'package:onehub_customer/features/home/home_shell.dart';
 import 'package:onehub_customer/features/requirements/my_requests_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
@@ -30,9 +30,6 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
-
-  Finder navItem(IconData icon) => find.descendant(
-      of: find.byType(CurvedNavBar), matching: find.byIcon(icon));
 
   testWidgets('shows an empty message when there are no active requests',
       (tester) async {
@@ -195,37 +192,35 @@ void main() {
     expect(find.byType(CategoryGridScreen), findsOneWidget);
   });
 
-  testWidgets('View all and the Requests nav item open My Requests',
-      (tester) async {
+  testWidgets('View all opens My Requests', (tester) async {
     await pumpScreen(tester, {});
 
     await tester.tap(find.text('View all'));
     await tester.pumpAndSettle();
     expect(find.byType(MyRequestsScreen), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-
-    await tester.tap(navItem(OneHubIcons.documentList));
-    await tester.pumpAndSettle();
-    expect(find.byType(MyRequestsScreen), findsOneWidget);
   });
 
-  testWidgets('the Category nav item opens category browsing', (tester) async {
-    await pumpScreen(tester, {});
-
-    await tester.tap(navItem(OneHubIcons.category));
+  testWidgets('with a tab handler, shortcuts switch tabs instead of pushing',
+      (tester) async {
+    installFakeApi({'GET /requirements/mine': (_) => []});
+    tester.view.physicalSize = const Size(800, 3200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final opened = <int>[];
+    await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: DashboardScreen(onOpenTab: opened.add)));
     await tester.pumpAndSettle();
 
-    expect(find.byType(CategoryGridScreen), findsOneWidget);
-  });
-
-  testWidgets('the Profile nav item opens the profile screen', (tester) async {
-    await pumpScreen(tester, {});
-
-    await tester.tap(navItem(OneHubIcons.profile));
+    await tester.tap(find.text('View all'));
+    await tester.tap(find.text('See all').first);
+    await tester.tap(find.text('Post requirement'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(ProfileScreen), findsOneWidget);
+    expect(opened, [HomeTab.requests, HomeTab.category, HomeTab.category]);
+    expect(find.byType(MyRequestsScreen), findsNothing);
+    expect(find.byType(CategoryGridScreen), findsNothing);
   });
 
   testWidgets('the location chip opens an area picker and shows the choice',

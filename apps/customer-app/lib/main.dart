@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
-import 'features/dashboard/dashboard_screen.dart';
+import 'features/home/home_shell.dart';
 import 'features/requirements/bid_list_screen.dart';
 import 'features/requirements/post_requirement_screen.dart';
 
@@ -22,7 +22,7 @@ class OneHubCustomerApp extends StatelessWidget {
       routes: {
         '/login': (_) => const LoginScreen(),
         '/signup': (_) => const SignupScreen(),
-        '/dashboard': (_) => const DashboardScreen(),
+        '/dashboard': (_) => const HomeShell(),
       },
       onGenerateRoute: (settings) {
         // Category browsing (CategoryGridScreen -> SubServiceListScreen) is

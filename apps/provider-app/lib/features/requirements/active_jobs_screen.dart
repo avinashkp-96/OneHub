@@ -26,7 +26,10 @@ _JobState? _stateFor(Requirement r) {
 // [client], like SignupScreen, so tests can use a fake API.
 class ActiveJobsScreen extends StatefulWidget {
   final ApiClient? client;
-  const ActiveJobsScreen({super.key, this.client});
+
+  /// True when shown as the Jobs tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const ActiveJobsScreen({super.key, this.client, this.asTab = false});
 
   @override
   State<ActiveJobsScreen> createState() => _ActiveJobsScreenState();
@@ -135,7 +138,11 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: widget.asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: widget.asTab ? OneHubTheme.pageMargin : null,
           title: const Text('Active jobs')),
       body: PageGlow(
         child: SafeArea(

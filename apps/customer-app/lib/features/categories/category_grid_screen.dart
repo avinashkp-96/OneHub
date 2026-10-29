@@ -13,7 +13,9 @@ import 'sub_service_list_screen.dart';
 // name, muted caption) rather than the plain CircleAvatar + bodySmall text
 // this screen had.
 class CategoryGridScreen extends StatefulWidget {
-  const CategoryGridScreen({super.key});
+  /// True when shown as the Category tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const CategoryGridScreen({super.key, this.asTab = false});
 
   @override
   State<CategoryGridScreen> createState() => _CategoryGridScreenState();
@@ -57,7 +59,11 @@ class _CategoryGridScreenState extends State<CategoryGridScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: widget.asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: widget.asTab ? OneHubTheme.pageMargin : null,
           title: const Text('Browse services')),
       body: PageGlow(
         child: SafeArea(

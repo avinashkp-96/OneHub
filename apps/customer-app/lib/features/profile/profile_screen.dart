@@ -17,7 +17,9 @@ import '../requirements/my_requests_screen.dart';
 // and returns to the login screen with no way back.
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+  /// True when shown as the Profile tab under the bottom bar: no back arrow.
+  final bool asTab;
+  const ProfileScreen({super.key, this.asTab = false});
 
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
@@ -62,7 +64,11 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          automaticallyImplyLeading: false,
+          leading: asTab
+              ? null
+              : BackButton(onPressed: () => Navigator.of(context).pop()),
+          titleSpacing: asTab ? OneHubTheme.pageMargin : null,
           title: const Text('Profile')),
       body: PageGlow(
         child: SafeArea(
