@@ -682,6 +682,17 @@ goes to Home. The dashboards' shortcuts to those same pages ("View all",
 new `onOpenTab` callback instead of pushing a second copy; without it (tests)
 they still push. Tests: customer 112, provider 104.
 
+2026-10-29 (API CORS): the API had no CORS, so every browser client (the
+Flutter web builds, admin-web) was blocked from calling it. `main.ts` now calls
+`app.enableCors(corsOptions())` from `src/common/cors.ts`. Requests with no
+Origin (installed apps, curl) always pass. `CORS_ORIGINS` (comma-separated,
+exact) lists origins allowed in every environment and is the only list used
+in production; outside production, localhost and private-network origins
+(10.x, 172.16-31.x, 192.168.x) on any port are allowed too, which covers the
+web previews on the dev machine and on a phone over the same Wi-Fi.
+`CORS_ORIGINS` is documented in `.env.example`; set it before any deployed
+web client. Tests: API 173 (100% lines).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

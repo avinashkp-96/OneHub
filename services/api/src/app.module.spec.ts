@@ -4,6 +4,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from './app.module';
 import { PrismaService } from './prisma/prisma.service';
+import { corsOptions } from './common/cors';
 
 // Boots the real module graph with only the database swapped out, so a
 // missing provider or import, or a route without its guard, fails here.
@@ -29,6 +30,7 @@ describe('AppModule wiring', () => {
       .useValue(prisma)
       .compile();
     app = moduleRef.createNestApplication();
+    app.enableCors(corsOptions({ NODE_ENV: 'development' }));
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     app.setGlobalPrefix('api/v1');
     await app.init();
@@ -41,6 +43,27 @@ describe('AppModule wiring', () => {
   it('serves the public category list', async () => {
     const res = await request(app.getHttpServer()).get('/api/v1/categories').expect(200);
     expect(res.body).toEqual([{ id: 'c1', name: 'Electrician' }]);
+  });
+
+  it('answers a browser preflight from a local web preview', async () => {
+    const res = await request(app.getHttpServer())
+      .options('/api/v1/auth/customer/login')
+      .set('Origin', 'http://172.17.0.246:8081')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type,authorization')
+      .expect(204);
+
+    expect(res.headers['access-control-allow-origin']).toBe('http://172.17.0.246:8081');
+    expect(res.headers['access-control-allow-headers']).toBe('Authorization,Content-Type');
+  });
+
+  it('gives an unknown origin no CORS headers, so the browser blocks it', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/categories')
+      .set('Origin', 'https://evil.example')
+      .expect(200);
+
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 
   it('refuses a protected route without a token', async () => {
