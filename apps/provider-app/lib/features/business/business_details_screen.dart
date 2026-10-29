@@ -7,8 +7,7 @@ import 'business_details.dart';
 
 // docx 5.2 "Profile & Service Mapping": edit the services offered,
 // experience and coverage radius after signup. Reached from the Business card
-// on Profile. Same shell as the other provider screens (PageGlow, back-only
-// AppBar plus in-body heading, one GlowCard), and the same category and
+// on Profile. Same shell as the other provider screens (PageGlow, page title in the AppBar, one GlowCard), and the same category and
 // service tiles as signup step 2.
 //
 // Real endpoints: GET /providers/me to load, GET /categories and
@@ -198,17 +197,14 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Business details')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Business details',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('What you offer and how far you travel.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

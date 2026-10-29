@@ -5,7 +5,7 @@ import '../bids/price_range_screen.dart';
 
 // docx 5.3 — Incoming Requests. On Accept, moves to the Price Range screen (5.4).
 // Restyled to match the customer app's list screens (no new reference —
-// applied on request): PageGlow, back-only AppBar plus in-body heading, and
+// applied on request): PageGlow, page title in the AppBar, and
 // each request as a bordered card with full-height Reject / Accept buttons.
 // Takes an optional [client], like SignupScreen, so tests can use a fake API.
 class IncomingRequestsScreen extends StatefulWidget {
@@ -81,14 +81,13 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Incoming requests')),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -97,10 +96,6 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Incoming requests',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Accept a job to send the customer your price range.',
                   style: OneHubTextStyles.bodyText(textSecondary),

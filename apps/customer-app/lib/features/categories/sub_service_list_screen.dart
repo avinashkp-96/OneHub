@@ -6,8 +6,7 @@ import '../requirements/post_requirement_screen.dart';
 // docx 4.1 "tap to browse sub-services" -> 4.3 "Category / Sub-service" field,
 // pre-filled from here when the customer taps through to post a requirement.
 // Restyled to match the current OneHub design system (no new reference —
-// applied on request): PageGlow behind the page, a back-only AppBar plus an
-// in-body heading (the category name), and sub-service rows as bordered
+// applied on request): PageGlow behind the page, a page title in the AppBar (the category name), and sub-service rows as bordered
 // cards with a price-range TintedBadge and a trailing chevron, matching the
 // tile pattern used for provider/bid rows elsewhere in this feature.
 class SubServiceListScreen extends StatefulWidget {
@@ -52,14 +51,13 @@ class _SubServiceListScreenState extends State<SubServiceListScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: Text(widget.category.name)),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -68,10 +66,6 @@ class _SubServiceListScreenState extends State<SubServiceListScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text(widget.category.name,
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Pick a service to describe your job.',
                   style: OneHubTextStyles.bodyText(textSecondary),

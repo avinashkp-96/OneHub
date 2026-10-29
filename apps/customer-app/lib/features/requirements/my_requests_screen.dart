@@ -8,8 +8,7 @@ import 'rating_screen.dart';
 // combined into one list, since both read from the same /requirements/mine
 // endpoint and differ only in which statuses they'd normally filter to.
 // Restyled to match the current OneHub design system (no new reference —
-// applied on request): PageGlow behind the page, a back-only AppBar plus an
-// in-body heading, and request rows as bordered cards with a TintedBadge
+// applied on request): PageGlow behind the page, a page title in the AppBar, and request rows as bordered cards with a TintedBadge
 // status pill, matching the tile pattern used for provider/bid/sub-service
 // rows elsewhere in this feature. The status label/color mapping mirrors
 // DashboardScreen's _ActiveRequestCard, since both read the same
@@ -185,14 +184,13 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('My requests')),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -201,10 +199,6 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('My requests',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Everything you\'ve posted, and where it stands.',
                   style: OneHubTextStyles.bodyText(textSecondary),

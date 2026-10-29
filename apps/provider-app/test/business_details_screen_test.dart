@@ -143,7 +143,11 @@ void main() {
 
     expect(find.byType(PageGlow), findsOneWidget);
     expect(find.byType(GlowCard), findsOneWidget);
-    expect(find.text('Business details'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(AppBar), matching: find.text('Business details')),
+        findsOneWidget,
+        reason: 'the page name is in the top bar, not the body');
     expect(field(tester, 0).controller!.text, '8');
     expect(field(tester, 1).controller!.text, '10');
     expect(selected(tester, 'Electrician'), isTrue);

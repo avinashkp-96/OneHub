@@ -58,7 +58,23 @@ void main() {
     final theme = OneHubTheme.light();
     expect(theme.appBarTheme.backgroundColor, Colors.transparent);
     expect(theme.appBarTheme.foregroundColor, theme.colorScheme.onSurface);
-    expect(theme.appBarTheme.centerTitle, isTrue);
+  });
+
+  test(
+      'the page name in the app bar is left-aligned after the back arrow, '
+      'in the 20px bold heading font', () {
+    for (final (theme, color) in [
+      (OneHubTheme.light(), OneHubColors.textPrimaryLight),
+      (OneHubTheme.dark(), OneHubColors.textPrimaryDark),
+    ]) {
+      final bar = theme.appBarTheme;
+      expect(bar.centerTitle, isFalse);
+      expect(bar.titleSpacing, 0);
+      expect(bar.titleTextStyle?.fontFamily, OneHubTheme.fontFamilyDisplay);
+      expect(bar.titleTextStyle?.fontSize, 20);
+      expect(bar.titleTextStyle?.fontWeight, FontWeight.w700);
+      expect(bar.titleTextStyle?.color, color);
+    }
   });
 
   test('buttons are 14px rounded rectangles, not a full pill', () {

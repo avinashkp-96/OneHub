@@ -24,7 +24,7 @@ class DetailFact {
 /// apps, so it lives here and each app passes what it wants shown: the
 /// request text, a status badge, a progress timeline, extra facts and an
 /// optional [action] (a full-width button the app supplies). Same shell as
-/// the other screens (PageGlow, back-only AppBar, in-body heading). The one
+/// the other screens (PageGlow, page title in the AppBar). The one
 /// GlowCard holds the description and status; the timeline and facts are
 /// plain bordered cards.
 class RequestDetailScreen extends StatelessWidget {
@@ -60,17 +60,14 @@ class RequestDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: Text(heading)),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text(heading,
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: OneHubTheme.sectionGap),
               GlowCard(
                 child: Padding(
                   padding: const EdgeInsets.all(OneHubTheme.cardPadding),

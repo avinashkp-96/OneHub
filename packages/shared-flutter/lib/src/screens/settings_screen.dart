@@ -16,7 +16,7 @@ class SettingsToggle {
 
 /// Notification preferences and an About card, identical for both apps, so
 /// each passes its own [toggles]. Same shell as the other screens (PageGlow,
-/// back-only AppBar, in-body heading); the toggles sit in the screen's one
+/// page title in the AppBar); the toggles sit in the screen's one
 /// GlowCard.
 class SettingsScreen extends StatelessWidget {
   final List<SettingsToggle> toggles;
@@ -41,17 +41,14 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Settings')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Settings',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Choose what we tell you about.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

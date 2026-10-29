@@ -7,7 +7,7 @@ import '../../core/widgets/field_label.dart';
 // Restyled to match the current OneHub design system (no new reference —
 // applied on request): PageGlow behind the screen, a single GlowCard
 // holding the whole form (star picker + feedback field, the one primary
-// form card on this screen), and a back-only AppBar + in-body heading to
+// form card on this screen), and a page title in the AppBar to
 // match the pattern set on post_requirement_screen.dart.
 class RatingScreen extends StatefulWidget {
   final String requirementId;
@@ -66,8 +66,6 @@ class _RatingScreenState extends State<RatingScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
@@ -75,17 +73,14 @@ class _RatingScreenState extends State<RatingScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Rate this service')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Rate this service',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text(
                 'Your feedback helps other customers pick the right provider.',
                 style: OneHubTextStyles.bodyText(textSecondary),

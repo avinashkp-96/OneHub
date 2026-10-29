@@ -7,8 +7,7 @@ import 'sub_service_list_screen.dart';
 // (Electrician, Plumber, etc.) — tap to browse sub-services".
 // Restyled to match the current OneHub design system (no new reference —
 // applied on request, using existing tokens/components and general UX
-// principles): PageGlow behind the page, a back-only AppBar plus an
-// in-body heading (matching post_requirement_screen.dart etc.), and
+// principles): PageGlow behind the page, a page title in the AppBar (matching post_requirement_screen.dart etc.), and
 // category tiles that reuse the exact card style DashboardScreen's
 // "Expert services" section already established (icon-circle badge, bold
 // name, muted caption) rather than the plain CircleAvatar + bodySmall text
@@ -53,14 +52,13 @@ class _CategoryGridScreenState extends State<CategoryGridScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Browse services')),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -69,10 +67,6 @@ class _CategoryGridScreenState extends State<CategoryGridScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Browse services',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Pick a category to see the services under it.',
                   style: OneHubTextStyles.bodyText(textSecondary),

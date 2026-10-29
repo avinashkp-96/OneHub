@@ -3,8 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../plans/plans_screen.dart';
 
 // Provider earnings and wallet, opened from the wallet card on the
-// dashboard. Matches the other provider screens (PageGlow, back-only AppBar
-// plus in-body heading, one GlowCard, bordered cards) — no new reference,
+// dashboard. Matches the other provider screens (PageGlow, page title in the AppBar, one GlowCard, bordered cards) — no new reference,
 // applied on request.
 //
 // Every figure here is explicit dummy data: there is no earnings, wallet or
@@ -59,17 +58,14 @@ class EarningsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Earnings')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Earnings',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Your wallet and what you have earned.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

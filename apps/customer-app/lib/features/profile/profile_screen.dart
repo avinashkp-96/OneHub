@@ -6,8 +6,7 @@ import 'profile_state.dart';
 import '../requirements/my_requests_screen.dart';
 
 // Customer Profile, reached from the Profile item in the dashboard's nav bar.
-// Matches the other redesigned screens (PageGlow, back-only AppBar plus
-// in-body heading, one GlowCard, bordered tile) — no new reference, applied
+// Matches the other redesigned screens (PageGlow, page title in the AppBar, one GlowCard, bordered tile) — no new reference, applied
 // on request.
 //
 // The name, phone and email are explicit dummy data: there is no profile
@@ -63,17 +62,14 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Profile')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Profile',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Your account on OneHub.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

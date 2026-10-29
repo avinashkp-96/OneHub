@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 // Provider certification, opened from the "Get certified" card on the
-// dashboard. Matches the other provider screens (PageGlow, back-only AppBar
-// plus in-body heading, one GlowCard, bordered tiles) — no new reference,
+// dashboard. Matches the other provider screens (PageGlow, page title in the AppBar, one GlowCard, bordered tiles) — no new reference,
 // applied on request.
 //
 // The five steps and how far along they are, are explicit dummy data: there
@@ -54,17 +53,14 @@ class CertificationScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Get certified')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Get certified',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Certified providers get more requests.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

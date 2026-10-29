@@ -75,9 +75,13 @@ abstract final class OneHubTheme {
         backgroundColor: Colors.transparent,
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
-        centerTitle: true,
-        titleTextStyle: textTheme.titleLarge
-            ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
+        // The page name sits in the top bar, left-aligned right after the
+        // back arrow, in the heading font.
+        centerTitle: false,
+        titleSpacing: 0,
+        titleTextStyle: OneHubTextStyles.topBarTitle(dark
+            ? OneHubColors.textPrimaryDark
+            : OneHubColors.textPrimaryLight),
       ),
       // Translucent surface + a visible subtle border, not a shadow-only
       // card — reads as "a panel on the dark background" rather than as a
@@ -199,6 +203,15 @@ abstract final class OneHubTextStyles {
       fontFamily: OneHubTheme.fontFamilyDisplay,
       fontSize: 36,
       fontWeight: FontWeight.w800,
+      color: color);
+
+  /// Page name in the top bar of every back-arrow screen (via
+  /// `AppBarTheme.titleTextStyle`). Heading font, smaller than [pageHeading],
+  /// which stays for the hero headings on auth screens and dashboards.
+  static TextStyle topBarTitle(Color color) => TextStyle(
+      fontFamily: OneHubTheme.fontFamilyDisplay,
+      fontSize: 20,
+      fontWeight: FontWeight.w700,
       color: color);
 
   static TextStyle buttonLabel(Color color) => TextStyle(

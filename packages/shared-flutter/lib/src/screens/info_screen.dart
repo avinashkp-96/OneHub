@@ -11,8 +11,7 @@ class InfoSection {
 }
 
 /// A read-only text page (terms, privacy policy), identical for both apps.
-/// Same shell as the other screens (PageGlow, back-only AppBar, in-body
-/// heading); the sections sit in the screen's one GlowCard. [notice], when
+/// Same shell as the other screens (PageGlow, page title in the AppBar); the sections sit in the screen's one GlowCard. [notice], when
 /// given, shows above the sections, so placeholder text can say it is
 /// placeholder.
 class InfoScreen extends StatelessWidget {
@@ -38,17 +37,14 @@ class InfoScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: Text(title)),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text(title,
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text(subtitle, style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),
               if (notice != null) ...[

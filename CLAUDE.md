@@ -653,6 +653,16 @@ Availability screen as an in-memory value; that copy is removed so there is one
 editor, and it saves to the API. Tests: API 148 (100% lines), provider 100
 (about 96%).
 
+2026-10-29 (page titles in the top bar): every back-arrow screen now shows
+its page name in the `AppBar` title instead of a 26px heading at the top of
+the body; the one-line description stays as the first line of the body. The
+style is set once in `OneHubTheme`'s `appBarTheme`: left-aligned right after
+the back arrow (`centerTitle: false`, `titleSpacing: 0`), using the new
+`OneHubTextStyles.topBarTitle` (Bricolage Grotesque, 20px, w700). 22 screens
+across both apps and the shared package. Login, signup, reset password and the
+two dashboards keep their large hero headings and have no page-name bar.
+Tests: shared 75, customer 106, provider 100.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

@@ -10,8 +10,7 @@ import 'profile_state.dart';
 import '../requirements/active_jobs_screen.dart';
 
 // Provider Profile, reached from the Profile item in the dashboard's nav bar.
-// Mirrors the customer profile (PageGlow, back-only AppBar plus in-body
-// heading, one GlowCard, bordered tiles) — no new reference, applied on
+// Mirrors the customer profile (PageGlow, page title in the AppBar, one GlowCard, bordered tiles) — no new reference, applied on
 // request — plus a card of business details.
 //
 // The account card is explicit dummy data: there is no account endpoint to
@@ -70,17 +69,14 @@ class ProfileScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Profile')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Profile',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Your provider account.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),
@@ -293,8 +289,8 @@ class _BusinessCardState extends State<_BusinessCard> {
       _error = null;
     });
     try {
-      final json =
-          await (widget.client ?? api).get('/providers/me') as Map<String, dynamic>;
+      final json = await (widget.client ?? api).get('/providers/me')
+          as Map<String, dynamic>;
       if (!mounted) return;
       setState(() {
         _details = BusinessDetails.fromJson(json);
@@ -333,7 +329,8 @@ class _BusinessCardState extends State<_BusinessCard> {
     } else if (d == null) {
       body = Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Text(_error ?? '', style: TextStyle(color: context.statusDanger)),
+        child:
+            Text(_error ?? '', style: TextStyle(color: context.statusDanger)),
       );
     } else {
       body = Column(

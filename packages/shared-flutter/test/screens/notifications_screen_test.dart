@@ -58,7 +58,11 @@ void main() {
 
     expect(find.byType(PageGlow), findsOneWidget);
     expect(find.byType(GlowCard), findsNothing);
-    expect(find.text('Notifications'), findsOneWidget);
+    expect(
+        find.descendant(
+            of: find.byType(AppBar), matching: find.text('Notifications')),
+        findsOneWidget,
+        reason: 'the page name is in the top bar, not the body');
     for (final item in items) {
       expect(find.text(item.title), findsOneWidget, reason: item.title);
       expect(find.text(item.body), findsOneWidget, reason: item.title);

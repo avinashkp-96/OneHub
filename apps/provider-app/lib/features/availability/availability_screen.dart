@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 // Provider working hours and days, reached from the Profile screen.
-// Same shell as the other provider screens (PageGlow, back-only AppBar plus
-// in-body heading, one GlowCard, bordered cards) — no new reference, applied
+// Same shell as the other provider screens (PageGlow, page title in the AppBar, one GlowCard, bordered cards) — no new reference, applied
 // on request.
 //
 // There is no availability endpoint yet, so "Save changes" only updates the
@@ -106,17 +105,14 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Availability')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Availability',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('When you take jobs.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

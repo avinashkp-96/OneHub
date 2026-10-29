@@ -4,7 +4,7 @@ import '../../core/api.dart';
 
 // docx 5.5 "Plan Management Screen": see the current plan and switch between
 // pay-per-service and the two monthly plans. Same shell as the other provider
-// screens (PageGlow, back-only AppBar plus in-body heading, one GlowCard,
+// screens (PageGlow, page title in the AppBar, one GlowCard,
 // bordered cards).
 //
 // This one talks to the real endpoints: GET /users/me for the provider's own
@@ -146,17 +146,14 @@ class _PlansScreenState extends State<PlansScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Plans')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Plans',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Choose how you pay to unlock customer contacts.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

@@ -13,7 +13,7 @@ class FaqItem {
 
 /// Help and support, identical for both apps, so each passes its own [faqs]
 /// and the support contact details. Same shell as the other screens
-/// (PageGlow, back-only AppBar, in-body heading). The contact details sit in
+/// (PageGlow, page title in the AppBar). The contact details sit in
 /// the screen's one GlowCard; each FAQ is a plain bordered card that expands
 /// in place. There is no support system behind this yet, so the contact
 /// values the apps pass are placeholders and nothing here sends a message.
@@ -56,17 +56,14 @@ class HelpScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Help & support')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Help & support',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Answers to common questions, and how to reach us.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

@@ -21,7 +21,7 @@ _JobState? _stateFor(Requirement r) {
 // docx 5.6 — Job Confirmation & Completion: Awaiting Selection / Selected /
 // Not Selected, and the "Mark as Completed" action once selected.
 // Restyled to match the other redesigned list screens (no new reference —
-// applied on request): PageGlow, back-only AppBar plus in-body heading, and
+// applied on request): PageGlow, page title in the AppBar, and
 // each job as a bordered card with a status badge. Takes an optional
 // [client], like SignupScreen, so tests can use a fake API.
 class ActiveJobsScreen extends StatefulWidget {
@@ -130,14 +130,13 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Active jobs')),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -146,10 +145,6 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Active jobs',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text('Where each of your bids stands.',
                     style: OneHubTextStyles.bodyText(textSecondary)),
                 const SizedBox(height: OneHubTheme.sectionGap),

@@ -22,7 +22,7 @@ class ProfileDetails {
 /// would need a fresh OTP, which has no flow yet. Identical for the customer
 /// and provider apps, so it lives here; [onSave] receives the trimmed values
 /// and the app stores them. Same shell as the other screens (PageGlow,
-/// back-only AppBar, in-body heading, one GlowCard).
+/// page title in the AppBar, one GlowCard).
 class EditProfileScreen extends StatefulWidget {
   final ProfileDetails initial;
   final String nameLabel;
@@ -73,8 +73,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
@@ -82,17 +80,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Edit profile')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Edit profile',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text('Keep your details up to date.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),

@@ -7,7 +7,7 @@ import '../../core/widgets/field_label.dart';
 // optionally pay to unlock the customer's contact, then submit a refined
 // range once contact is unlocked.
 // Restyled to match the rest of the redesigned screens (no new reference —
-// applied on request): PageGlow, back-only AppBar plus in-body heading, and
+// applied on request): PageGlow, page title in the AppBar, and
 // one GlowCard holding the price fields and the step-appropriate actions.
 // Takes an optional [client], like SignupScreen, so tests can use a fake API.
 class PriceRangeScreen extends StatefulWidget {
@@ -125,24 +125,19 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Your price range')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Your price range',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Text(_subtitle, style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),
               GlowCard(

@@ -23,7 +23,7 @@ class OneHubNotification {
 
 /// Notifications list, identical for the customer and provider apps, so it
 /// lives here and each app passes its own [items]. Matches the other
-/// redesigned screens (PageGlow, back-only AppBar plus in-body heading,
+/// redesigned screens (PageGlow, page title in the AppBar,
 /// bordered tiles). Unread items carry a primary-coloured border and a dot;
 /// tapping one marks it read, and "Mark all as read" clears the rest. Read
 /// state is kept on this screen only, since nothing persists it yet.
@@ -46,25 +46,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final primary = Theme.of(context).colorScheme.primary;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Notifications')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('Notifications',
-                  style: OneHubTextStyles.pageHeading(textPrimary)
-                      .copyWith(fontSize: 26)),
-              const SizedBox(height: 8),
               Row(
                 children: [
                   Expanded(

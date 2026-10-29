@@ -7,8 +7,7 @@ import '../../core/api.dart';
 // Restyled to match the current OneHub design system (no new reference —
 // applied on request, using existing tokens/components and general UX
 // principles), matching the pattern set on post_requirement_screen.dart and
-// rating_screen.dart: PageGlow behind the page, a back-only AppBar plus an
-// in-body heading. Bid tiles are plain bordered cards rather than GlowCard,
+// rating_screen.dart: PageGlow behind the page, a page title in the AppBar. Bid tiles are plain bordered cards rather than GlowCard,
 // since GlowCard is reserved for the single primary form card per screen and
 // this screen is a repeated list, not a form.
 class BidListScreen extends StatefulWidget {
@@ -64,14 +63,13 @@ class _BidListScreenState extends State<BidListScreen> {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Bids received')),
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
@@ -80,10 +78,6 @@ class _BidListScreenState extends State<BidListScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Bids received',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Compare providers and confirm the one you want.',
                   style: OneHubTextStyles.bodyText(textSecondary),

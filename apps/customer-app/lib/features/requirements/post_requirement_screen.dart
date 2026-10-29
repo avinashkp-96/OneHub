@@ -11,7 +11,7 @@ import '../../core/widgets/field_label.dart';
 // principles): a GlowCard for the primary form fields (the single "form
 // card" per screen, per the standing pattern), a separate section for
 // provider selection since that's a repeated list, not more form-card
-// content, and a back-only AppBar + in-body heading matching the auth
+// content, and a page title in the AppBar matching the auth
 // screens' OTP step, rather than an AppBar title plus a second heading.
 class PostRequirementScreen extends StatefulWidget {
   final String subServiceId;
@@ -119,17 +119,14 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          leading: BackButton(onPressed: () => Navigator.of(context).pop())),
+          leading: BackButton(onPressed: () => Navigator.of(context).pop()),
+          title: const Text('Tell us what you need')),
       body: PageGlow(
         child: SafeArea(
           child: ListView(
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Tell us what you need',
-                    style: OneHubTextStyles.pageHeading(textPrimary)
-                        .copyWith(fontSize: 26)),
-                const SizedBox(height: 8),
                 Text(
                   'Describe the job and pick who should hear about it.',
                   style: OneHubTextStyles.bodyText(textSecondary),
