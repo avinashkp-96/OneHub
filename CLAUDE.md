@@ -734,6 +734,18 @@ or `★`, so those notifications were dropped (logged, not thrown); the dev
 database must be UTF-8 (README). Verified end to end through every event.
 Tests: API 207 (100% lines), shared 80, customer 113, provider 104.
 
+2026-10-29 (ratings received): provider `RatingsScreen` (docx 5.9), reached
+from a "Ratings" tile in Profile's Activity section. New route
+`GET /ratings/mine` (provider role, own ratings only) returns the average
+(one decimal), count, 5★-1★ distribution and the reviews newest first, all
+worked out from the rating rows so they always agree; reviewers are shown by
+first name and last initial (`shortName`), and customer ids are never
+returned. The older `GET /ratings/provider/:id` is unchanged. The screen has a
+`GlowCard` summary (big average, stars, count, a bar per star level scaled to
+the most common one) and bordered review cards with stars, name, relative time
+and feedback ("No written feedback." when empty), plus empty and error states.
+Tests: API 218 (100% lines), provider 110.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

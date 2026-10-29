@@ -148,6 +148,15 @@ describe('AppModule wiring', () => {
     expect(body).toContain('subServiceIds');
   });
 
+  it("refuses a customer reading a provider's own ratings summary", async () => {
+    const token = app.get(JwtService).sign({ sub: 'u1', role: 'CUSTOMER' });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/ratings/mine')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+  });
+
   it('rejects a customer token on a provider-only route', async () => {
     const token = app.get(JwtService).sign({ sub: 'u1', role: 'CUSTOMER' });
 

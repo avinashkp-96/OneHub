@@ -5,6 +5,7 @@ import '../availability/availability_screen.dart';
 import '../business/business_details.dart';
 import '../business/business_details_screen.dart';
 import '../plans/plans_screen.dart';
+import '../ratings/ratings_screen.dart';
 import '../help/help_content.dart';
 import 'profile_state.dart';
 import '../requirements/active_jobs_screen.dart';
@@ -239,6 +240,14 @@ class ProfileScreen extends StatelessWidget {
                 subtitle: 'Working hours and days',
                 onTap: () => Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const AvailabilityScreen())),
+              ),
+              const SizedBox(height: 12),
+              OneHubLinkTile(
+                icon: OneHubIcons.starOutline,
+                title: 'Ratings',
+                subtitle: 'What customers say about your work',
+                onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => RatingsScreen(client: client))),
               ),
               const SizedBox(height: 12),
               OneHubLinkTile(

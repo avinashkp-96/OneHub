@@ -65,6 +65,39 @@ export class RatingsService {
     return rating;
   }
 
+  // docx 5.9 "Ratings Received", for the signed-in provider: average, count,
+  // the 5★-1★ distribution and each review. Worked out from the ratings
+  // themselves so the three always agree. Reviewers appear by first name and
+  // last initial only.
+  async mine(userId: string) {
+    const provider = await this.prisma.provider.findUniqueOrThrow({ where: { userId }, select: { id: true } });
+    const rows = await this.prisma.ratingFeedback.findMany({
+      where: { providerId: provider.id },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, stars: true, feedback: true, createdAt: true, customer: { select: { fullName: true } } },
+    });
+
+    const distribution: Record<1 | 2 | 3 | 4 | 5, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    let total = 0;
+    for (const r of rows) {
+      distribution[r.stars as 1 | 2 | 3 | 4 | 5] += 1;
+      total += r.stars;
+    }
+
+    return {
+      averageRating: rows.length ? Math.round((total / rows.length) * 10) / 10 : 0,
+      ratingCount: rows.length,
+      distribution,
+      reviews: rows.map((r) => ({
+        id: r.id,
+        stars: r.stars,
+        feedback: r.feedback,
+        createdAt: r.createdAt,
+        customerName: shortName(r.customer.fullName),
+      })),
+    };
+  }
+
   overview(providerId: string) {
     return this.prisma.ratingFeedback.findMany({ where: { providerId }, orderBy: { createdAt: 'desc' } });
   }
@@ -75,4 +108,11 @@ export class RatingsService {
   forRequirement(requirementId: string) {
     return this.prisma.ratingFeedback.findUnique({ where: { requirementId } });
   }
+}
+
+// "Meera Nair" -> "Meera N.", "Meera" -> "Meera".
+export function shortName(fullName: string) {
+  const [first, ...rest] = fullName.trim().split(/\s+/);
+  const last = rest.at(-1);
+  return last ? `${first} ${last[0].toUpperCase()}.` : first;
 }

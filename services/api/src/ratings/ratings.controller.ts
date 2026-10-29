@@ -17,6 +17,12 @@ export class RatingsController {
     return this.ratings.submitRating(req.user.sub, dto);
   }
 
+  @Roles('PROVIDER')
+  @Get('mine')
+  mine(@Req() req: { user: JwtPayload }) {
+    return this.ratings.mine(req.user.sub);
+  }
+
   @Get('provider/:providerId')
   overview(@Param('providerId') providerId: string) {
     return this.ratings.overview(providerId);

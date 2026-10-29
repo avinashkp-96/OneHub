@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { RatingsController } from './ratings.controller';
-import { RatingsService } from './ratings.service';
+import { RatingsService, shortName } from './ratings.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -179,7 +179,105 @@ describe('RatingsService.overview', () => {
   });
 });
 
+describe('RatingsService.mine (Ratings received, docx 5.9)', () => {
+  function withRatings(rows: { stars: number; fullName: string; feedback?: string | null }[]) {
+    const prisma = {
+      provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p1' }) },
+      ratingFeedback: {
+        findMany: jest.fn().mockResolvedValue(
+          rows.map((r, i) => ({
+            id: `r${i}`,
+            stars: r.stars,
+            feedback: r.feedback ?? null,
+            createdAt: new Date(2026, 9, 29 - i),
+            customer: { fullName: r.fullName },
+          })),
+        ),
+      },
+    };
+    const service = new RatingsService(prisma as unknown as PrismaService, {} as NotificationsService);
+    return { service, prisma };
+  }
+
+  it("looks up the caller's own provider and their ratings, newest first", async () => {
+    const { service, prisma } = withRatings([]);
+
+    await service.mine('u-p1');
+
+    expect(prisma.provider.findUniqueOrThrow.mock.calls[0][0].where).toEqual({ userId: 'u-p1' });
+    const args = prisma.ratingFeedback.findMany.mock.calls[0][0];
+    expect(args.where).toEqual({ providerId: 'p1' });
+    expect(args.orderBy).toEqual({ createdAt: 'desc' });
+  });
+
+  it('summarises average, count and the 5-1 star distribution', async () => {
+    const { service } = withRatings([
+      { stars: 5, fullName: 'Meera Nair', feedback: 'Quick and tidy' },
+      { stars: 5, fullName: 'Arun Kumar' },
+      { stars: 4, fullName: 'Divya' },
+      { stars: 2, fullName: 'Joseph Mathew Varghese' },
+    ]);
+
+    const result = await service.mine('u-p1');
+
+    expect(result.averageRating).toBe(4);
+    expect(result.ratingCount).toBe(4);
+    expect(result.distribution).toEqual({ 5: 2, 4: 1, 3: 0, 2: 1, 1: 0 });
+    expect(result.reviews.map((r) => r.customerName)).toEqual(['Meera N.', 'Arun K.', 'Divya', 'Joseph V.']);
+    expect(result.reviews[0]).toEqual(
+      expect.objectContaining({ id: 'r0', stars: 5, feedback: 'Quick and tidy' }),
+    );
+  });
+
+  it('rounds the average to one decimal', async () => {
+    const { service } = withRatings([
+      { stars: 5, fullName: 'A' },
+      { stars: 4, fullName: 'B' },
+      { stars: 4, fullName: 'C' },
+    ]);
+    expect((await service.mine('u-p1')).averageRating).toBe(4.3);
+  });
+
+  it('reports zeros when there are no ratings yet', async () => {
+    const { service } = withRatings([]);
+    expect(await service.mine('u-p1')).toEqual({
+      averageRating: 0,
+      ratingCount: 0,
+      distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      reviews: [],
+    });
+  });
+
+  it('never exposes customer ids', async () => {
+    const { service, prisma } = withRatings([{ stars: 5, fullName: 'Meera Nair' }]);
+
+    const result = await service.mine('u-p1');
+
+    expect(prisma.ratingFeedback.findMany.mock.calls[0][0].select).not.toHaveProperty('customerId');
+    expect(result.reviews[0]).not.toHaveProperty('customerId');
+  });
+});
+
+describe('shortName', () => {
+  it.each([
+    ['Meera Nair', 'Meera N.'],
+    ['  meera   nair  ', 'meera N.'],
+    ['Divya', 'Divya'],
+    ['Joseph Mathew Varghese', 'Joseph V.'],
+  ])('%s -> %s', (full, short) => {
+    expect(shortName(full)).toBe(short);
+  });
+});
+
 describe('RatingsController', () => {
+  it('mine uses the signed-in provider', async () => {
+    const ratings = { mine: jest.fn().mockResolvedValue('summary') };
+    const controller = new RatingsController(ratings as unknown as RatingsService);
+
+    expect(await controller.mine({ user: { sub: 'u-p1', role: 'PROVIDER' } })).toBe('summary');
+    expect(ratings.mine).toHaveBeenCalledWith('u-p1');
+  });
+
   it('delegates submit, overview and forRequirement', async () => {
     const ratings = {
       submitRating: jest.fn().mockResolvedValue('submitted'),
