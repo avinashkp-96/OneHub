@@ -15,12 +15,32 @@ class BusinessDetails {
   final int? yearsExperience;
   final double coverageRadiusKm;
 
+  // Account and documents (docx 5.2). The API never sends the ID proof link
+  // or raw bank details back: only whether an ID is on file, whether a new
+  // one awaits review, and the payout details masked.
+  final String businessName;
+  final String mobile;
+  final String email;
+  final String? profilePhotoUrl;
+  final String status;
+  final bool idProofOnFile;
+  final bool idProofNeedsReview;
+  final String? bankOrUpiMasked;
+
   const BusinessDetails({
     required this.categoryId,
     required this.categoryName,
     required this.services,
     required this.yearsExperience,
     required this.coverageRadiusKm,
+    this.businessName = '',
+    this.mobile = '',
+    this.email = '',
+    this.profilePhotoUrl,
+    this.status = 'ACTIVE',
+    this.idProofOnFile = false,
+    this.idProofNeedsReview = false,
+    this.bankOrUpiMasked,
   });
 
   factory BusinessDetails.fromJson(Map<String, dynamic> json) {
@@ -30,13 +50,26 @@ class BusinessDetails {
       categoryName: category?['name'] as String?,
       services: [
         for (final s in (json['subServices'] as List? ?? const []))
-          OfferedService((s as Map<String, dynamic>)['id'] as String,
-              s['name'] as String),
+          OfferedService(
+              (s as Map<String, dynamic>)['id'] as String, s['name'] as String),
       ],
       yearsExperience: (json['yearsExperience'] as num?)?.toInt(),
       coverageRadiusKm: (json['coverageRadiusKm'] as num).toDouble(),
+      businessName: json['businessName'] as String? ?? '',
+      mobile: json['mobile'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      profilePhotoUrl: json['profilePhotoUrl'] as String?,
+      status: json['status'] as String? ?? 'ACTIVE',
+      idProofOnFile: json['idProofOnFile'] as bool? ?? false,
+      idProofNeedsReview: json['idProofNeedsReview'] as bool? ?? false,
+      bankOrUpiMasked: json['bankOrUpiMasked'] as String?,
     );
   }
+
+  /// "+91 90000 00002" for a 10-digit mobile, otherwise as stored.
+  String get phoneLabel => mobile.length == 10
+      ? '+91 ${mobile.substring(0, 5)} ${mobile.substring(5)}'
+      : mobile;
 
   String get experienceLabel => switch (yearsExperience) {
         null => 'Not set',

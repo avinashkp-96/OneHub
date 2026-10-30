@@ -2,14 +2,19 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
 
-// Fields the provider sees about their own business. Selected explicitly,
-// like the public search, so the response never carries the ID proof URL or
-// bank/UPI details even to the owner.
+// Fields read for the provider's own profile. The ID proof link and bank/UPI
+// details are read only to work out "on file" and a masked value: toBusiness
+// never returns them raw, even to the owner.
 const BUSINESS_SELECT = {
   id: true,
   businessName: true,
   yearsExperience: true,
   coverageRadiusKm: true,
+  status: true,
+  idProofUrl: true,
+  idProofNeedsReview: true,
+  bankOrUpiDetails: true,
+  user: { select: { fullName: true, mobile: true, email: true, profilePhotoUrl: true } },
   subServices: {
     select: {
       subService: {
@@ -24,6 +29,11 @@ type BusinessRow = {
   businessName: string | null;
   yearsExperience: number | null;
   coverageRadiusKm: number;
+  status: string;
+  idProofUrl: string | null;
+  idProofNeedsReview: boolean;
+  bankOrUpiDetails: string | null;
+  user: { fullName: string; mobile: string; email: string | null; profilePhotoUrl: string | null };
   subServices: { subService: { id: string; name: string; category: { id: string; name: string } } }[];
 };
 
@@ -70,15 +80,34 @@ export class ProvidersService {
 
   // docx 5.2. Updates the caller's own provider row only. A new service list
   // replaces the old one in the same nested write, so it is all or nothing.
+  //
+  // A different ID proof link marks it for review (docx 5.2: "re-upload
+  // triggers re-verification"). The provider stays ACTIVE, because there is
+  // no approval flow yet and a PENDING provider cannot log in; switch to
+  // re-verification once admins can approve. An empty payout value clears it.
   async updateMine(userId: string, dto: UpdateBusinessDto) {
     const ids = dto.subServiceIds ? [...new Set(dto.subServiceIds)] : undefined;
     if (ids) await this.assertOneCategory(ids);
 
+    const idProofUrl = dto.idProofUrl?.trim();
+    let idProofChanged = false;
+    if (idProofUrl !== undefined) {
+      const current = await this.prisma.provider.findUniqueOrThrow({
+        where: { userId },
+        select: { idProofUrl: true },
+      });
+      idProofChanged = idProofUrl !== current.idProofUrl;
+    }
+    const payout = dto.bankOrUpiDetails?.trim();
+
     const row = await this.prisma.provider.update({
       where: { userId },
       data: {
+        businessName: dto.businessName?.trim(),
         yearsExperience: dto.yearsExperience,
         coverageRadiusKm: dto.coverageRadiusKm,
+        ...(idProofChanged ? { idProofUrl, idProofNeedsReview: true } : {}),
+        ...(payout !== undefined ? { bankOrUpiDetails: payout === '' ? null : payout } : {}),
         subServices: ids
           ? { deleteMany: {}, create: ids.map((subServiceId) => ({ subServiceId })) }
           : undefined,
@@ -106,10 +135,30 @@ function toBusiness(row: BusinessRow) {
   const services = row.subServices.map((s) => s.subService);
   return {
     id: row.id,
-    businessName: row.businessName,
+    businessName: row.businessName ?? row.user.fullName,
+    mobile: row.user.mobile,
+    email: row.user.email,
+    profilePhotoUrl: row.user.profilePhotoUrl,
+    status: row.status,
     yearsExperience: row.yearsExperience,
     coverageRadiusKm: row.coverageRadiusKm,
     category: services[0]?.category ?? null,
     subServices: services.map(({ id, name }) => ({ id, name })),
+    idProofOnFile: !!row.idProofUrl,
+    idProofNeedsReview: row.idProofNeedsReview,
+    bankOrUpiMasked: maskPayout(row.bankOrUpiDetails),
   };
+}
+
+// Payout details are only ever shown masked. A UPI id keeps its first two
+// characters and its handle ("rajesh@okhdfc" -> "ra••••@okhdfc"); anything
+// else (an account number, or account and IFSC) keeps its last four
+// characters ("•••• 4321").
+export function maskPayout(value: string | null): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  const at = v.indexOf('@');
+  if (at > 0) return `${v.slice(0, Math.min(2, at))}••••${v.slice(at)}`;
+  const compact = v.replace(/\s+/g, '');
+  return compact.length <= 4 ? '••••' : `•••• ${compact.slice(-4)}`;
 }

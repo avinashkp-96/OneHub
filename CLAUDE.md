@@ -782,6 +782,30 @@ the sheet says so. The clear button is `OneHubIcons.plus` turned 45 degrees,
 since the vendored Iconly set has no close glyph. Tests: API 238 (100% lines),
 customer 127.
 
+2026-10-30 (provider profile details): the rest of the provider profile (docx
+5.2) is real. `GET /providers/me` now also returns business name (falling back
+to the person's name), mobile, email, photo link, status, `idProofOnFile`,
+`idProofNeedsReview` and `bankOrUpiMasked`; it still never returns the ID link
+or raw payout details (`maskPayout`: `ra••••@okhdfc`, `•••• 4321`).
+`PATCH /providers/me` also takes `businessName`, `idProofUrl` and
+`bankOrUpiDetails` (empty string clears it). A new ID link differing from the
+stored one sets the new `Provider.idProofNeedsReview` (migration
+`20261029114448_provider_id_proof_review`); per the agreed "flag, don't block",
+status stays ACTIVE and nothing clears the flag until provider verification
+(#4) exists. Photo and ID proof are links, since there is no file storage. In
+the provider app, Profile loads `/providers/me` once for both cards: the
+account card shows the real name, phone, email, photo (else the initial) and a
+VERIFIED / ID UNDER REVIEW / PENDING badge, with pull to refresh. Edit profile
+saves through the API (business name to `/providers/me`, email to
+`/users/me`); the shared `EditProfileScreen` now awaits an async `onSave`,
+shows "Saving…", stays open on error, and takes a `note` (empty hides it). New
+`PayoutDocumentsScreen` ("Payout & documents" tile): photo link, ID proof link
+with its status, and bank or UPI with the masked value as the hint; empty
+fields keep what is on file, and a checkbox removes payout details. The dummy
+`providerProfile` notifier is gone. Payouts are still not sent anywhere.
+Tests: API 250 (100% lines), shared 86, provider 128 (about 97%), customer
+127.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

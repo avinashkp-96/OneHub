@@ -17,7 +17,17 @@ describe('AppModule wiring', () => {
     provider: {
       findMany: jest.fn().mockResolvedValue([]),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }),
-      update: jest.fn().mockResolvedValue({ id: 'p-mine', coverageRadiusKm: 5, subServices: [] }),
+      update: jest.fn().mockResolvedValue({
+        id: 'p-mine',
+        businessName: 'Mine',
+        coverageRadiusKm: 5,
+        status: 'ACTIVE',
+        idProofUrl: null,
+        idProofNeedsReview: false,
+        bankOrUpiDetails: null,
+        user: { fullName: 'Me', mobile: '9000000009', email: null, profilePhotoUrl: null },
+        subServices: [],
+      }),
     },
     bid: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'b1', providerId: 'p-other' }) },
     payment: { create: jest.fn() },
@@ -129,7 +139,13 @@ describe('AppModule wiring', () => {
     await request(app.getHttpServer())
       .patch('/api/v1/providers/me')
       .set('Authorization', `Bearer ${token}`)
-      .send({ yearsExperience: 4, userId: 'u-other', status: 'ACTIVE', certified: true })
+      .send({
+        yearsExperience: 4,
+        userId: 'u-other',
+        status: 'ACTIVE',
+        certified: true,
+        idProofNeedsReview: false,
+      })
       .expect(200);
 
     const args = prisma.provider.update.mock.calls[0][0];
@@ -137,6 +153,7 @@ describe('AppModule wiring', () => {
     expect(args.data.yearsExperience).toBe(4);
     expect(args.data).not.toHaveProperty('status');
     expect(args.data).not.toHaveProperty('certified');
+    expect(args.data).not.toHaveProperty('idProofNeedsReview');
   });
 
   it('refuses a customer reading or editing provider business details', async () => {

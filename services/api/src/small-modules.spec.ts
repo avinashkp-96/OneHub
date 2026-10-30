@@ -3,7 +3,7 @@ import { CategoriesService } from './categories/categories.service';
 import { NotificationsController } from './notifications/notifications.controller';
 import { NotificationsService } from './notifications/notifications.service';
 import { ProvidersController } from './providers/providers.controller';
-import { ProvidersService } from './providers/providers.service';
+import { maskPayout, ProvidersService } from './providers/providers.service';
 import { ProviderMeController } from './providers/provider-me.controller';
 import { SubscriptionsController } from './subscriptions/subscriptions.controller';
 import { SubscriptionsService } from './subscriptions/subscriptions.service';
@@ -177,6 +177,11 @@ describe('Provider business details (providers/me)', () => {
     businessName: 'Rajesh Electricals',
     yearsExperience: 8,
     coverageRadiusKm: 10,
+    status: 'ACTIVE',
+    idProofUrl: 'https://docs.example/id.png',
+    idProofNeedsReview: false,
+    bankOrUpiDetails: 'rajesh@okhdfc',
+    user: { fullName: 'Rajesh K', mobile: '9000000002', email: 'rajesh@example.test', profilePhotoUrl: null },
     subServices: [
       { subService: { id: 's1', name: 'Fan Installation', category: { id: 'c1', name: 'Electrician' } } },
       { subService: { id: 's2', name: 'Light Fitting', category: { id: 'c1', name: 'Electrician' } } },
@@ -203,6 +208,10 @@ describe('Provider business details (providers/me)', () => {
     expect(result).toEqual({
       id: 'p1',
       businessName: 'Rajesh Electricals',
+      mobile: '9000000002',
+      email: 'rajesh@example.test',
+      profilePhotoUrl: null,
+      status: 'ACTIVE',
       yearsExperience: 8,
       coverageRadiusKm: 10,
       category: { id: 'c1', name: 'Electrician' },
@@ -210,7 +219,16 @@ describe('Provider business details (providers/me)', () => {
         { id: 's1', name: 'Fan Installation' },
         { id: 's2', name: 'Light Fitting' },
       ],
+      idProofOnFile: true,
+      idProofNeedsReview: false,
+      bankOrUpiMasked: 'ra••••@okhdfc',
     });
+  });
+
+  it('falls back to the person’s name when there is no business name', async () => {
+    const { service, prisma } = build();
+    prisma.provider.findUniqueOrThrow.mockResolvedValue({ ...row, businessName: null });
+    expect((await service.getMine('u1')).businessName).toBe('Rajesh K');
   });
 
   it('reports no category when the provider offers no services', async () => {
@@ -220,14 +238,15 @@ describe('Provider business details (providers/me)', () => {
     expect((await service.getMine('u1')).category).toBeNull();
   });
 
-  it('never selects the ID proof or bank details, even for the owner', async () => {
-    const { service, prisma } = build();
+  it('never returns the ID proof link or raw bank details, even to the owner', async () => {
+    const { service } = build();
 
-    await service.getMine('u1');
+    const result = await service.getMine('u1');
 
-    const { select } = prisma.provider.findUniqueOrThrow.mock.calls[0][0];
-    expect(select).not.toHaveProperty('idProofUrl');
-    expect(select).not.toHaveProperty('bankOrUpiDetails');
+    expect(result).not.toHaveProperty('idProofUrl');
+    expect(result).not.toHaveProperty('bankOrUpiDetails');
+    expect(JSON.stringify(result)).not.toContain('rajesh@okhdfc');
+    expect(JSON.stringify(result)).not.toContain('id.png');
   });
 
   it('updates only the fields given, on the caller\'s own row', async () => {
@@ -237,8 +256,50 @@ describe('Provider business details (providers/me)', () => {
 
     const args = prisma.provider.update.mock.calls[0][0];
     expect(args.where).toEqual({ userId: 'u1' });
-    expect(args.data).toEqual({ yearsExperience: 9, coverageRadiusKm: undefined, subServices: undefined });
+    expect(args.data).toEqual({
+      businessName: undefined,
+      yearsExperience: 9,
+      coverageRadiusKm: undefined,
+      subServices: undefined,
+    });
     expect(prisma.subService.findMany).not.toHaveBeenCalled();
+  });
+
+  it('saves a trimmed business name', async () => {
+    const { service, prisma } = build();
+    await service.updateMine('u1', { businessName: '  Rajesh Power Works ' });
+    expect(prisma.provider.update.mock.calls[0][0].data.businessName).toBe('Rajesh Power Works');
+  });
+
+  it('a new ID proof link is saved and marked for review, without blocking the provider', async () => {
+    const { service, prisma } = build();
+
+    await service.updateMine('u1', { idProofUrl: ' https://docs.example/new-id.png ' });
+
+    const data = prisma.provider.update.mock.calls[0][0].data;
+    expect(data.idProofUrl).toBe('https://docs.example/new-id.png');
+    expect(data.idProofNeedsReview).toBe(true);
+    expect(data).not.toHaveProperty('status');
+  });
+
+  it('sending the same ID proof link again changes nothing', async () => {
+    const { service, prisma } = build();
+
+    await service.updateMine('u1', { idProofUrl: 'https://docs.example/id.png' });
+
+    const data = prisma.provider.update.mock.calls[0][0].data;
+    expect(data).not.toHaveProperty('idProofUrl');
+    expect(data).not.toHaveProperty('idProofNeedsReview');
+  });
+
+  it('saves payout details trimmed, and an empty value clears them', async () => {
+    const { service, prisma } = build();
+
+    await service.updateMine('u1', { bankOrUpiDetails: ' meera@oksbi ' });
+    expect(prisma.provider.update.mock.calls[0][0].data.bankOrUpiDetails).toBe('meera@oksbi');
+
+    await service.updateMine('u1', { bankOrUpiDetails: '  ' });
+    expect(prisma.provider.update.mock.calls[1][0].data.bankOrUpiDetails).toBeNull();
   });
 
   it('replaces the service list in one write, dropping duplicate ids', async () => {
@@ -251,10 +312,23 @@ describe('Provider business details (providers/me)', () => {
 
     expect(prisma.subService.findMany.mock.calls[0][0].where).toEqual({ id: { in: ['s1', 's2'] } });
     expect(prisma.provider.update.mock.calls[0][0].data).toEqual({
+      businessName: undefined,
       yearsExperience: undefined,
       coverageRadiusKm: 15,
       subServices: { deleteMany: {}, create: [{ subServiceId: 's1' }, { subServiceId: 's2' }] },
     });
+  });
+
+  it.each([
+    ['rajesh@okhdfc', 'ra••••@okhdfc'],
+    ['r@ybl', 'r••••@ybl'],
+    ['123456789012', '•••• 9012'],
+    ['1234 5678 9012 HDFC0001234', '•••• 1234'],
+    ['123', '••••'],
+    ['  ', null],
+    [null, null],
+  ])('masks payout %p as %p', (value, masked) => {
+    expect(maskPayout(value)).toBe(masked);
   });
 
   it('refuses an unknown sub-service', async () => {

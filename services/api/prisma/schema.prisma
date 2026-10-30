@@ -80,6 +80,9 @@ model Provider {
   yearsExperience   Int?
   coverageRadiusKm  Float
   idProofUrl        String?
+  // A new ID proof was submitted after signup and waits for an admin to
+  // look at it. The provider stays ACTIVE meanwhile (no approval flow yet).
+  idProofNeedsReview Boolean       @default(false)
   bankOrUpiDetails  String?
   status            ProviderStatus @default(PENDING_VERIFICATION)
   online            Boolean        @default(false)

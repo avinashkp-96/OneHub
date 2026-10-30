@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../theme/glow_card.dart';
 import '../theme/onehub_colors.dart';
@@ -21,17 +22,22 @@ class ProfileDetails {
 /// Edit name and email. The phone number is shown but locked: changing it
 /// would need a fresh OTP, which has no flow yet. Identical for the customer
 /// and provider apps, so it lives here; [onSave] receives the trimmed values
-/// and the app stores them. Same shell as the other screens (PageGlow,
-/// page title in the AppBar, one GlowCard).
+/// and the app stores them, either in memory or through the API. A save that
+/// returns a Future is awaited, and if it throws the screen stays open with
+/// the error. [note] is the small caption under the button; empty hides it.
+/// Same shell as the other screens (PageGlow, page title in the AppBar, one
+/// GlowCard).
 class EditProfileScreen extends StatefulWidget {
   final ProfileDetails initial;
   final String nameLabel;
-  final void Function(String name, String email) onSave;
+  final FutureOr<void> Function(String name, String email) onSave;
+  final String note;
   const EditProfileScreen({
     super.key,
     required this.initial,
     required this.onSave,
     this.nameLabel = 'FULL NAME',
+    this.note = 'Saved on this device only for now.',
   });
 
   @override
@@ -43,6 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final _email = TextEditingController(text: widget.initial.email);
   late final _phone = TextEditingController(text: widget.initial.phone);
   String? _error;
+  bool _saving = false;
 
   @override
   void dispose() {
@@ -52,7 +59,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final name = _name.text.trim();
     final email = _email.text.trim();
     if (name.isEmpty) {
@@ -64,7 +71,21 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       setState(() => _error = 'Enter a valid email address.');
       return;
     }
-    widget.onSave(name, email);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(name, email);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not save your profile: $e';
+        _saving = false;
+      });
+      return;
+    }
+    if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     messenger.showSnackBar(const SnackBar(content: Text('Profile updated.')));
@@ -131,12 +152,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              PrimaryCta(onPressed: _save, child: const Text('Save changes')),
-              const SizedBox(height: 12),
-              Text('Saved on this device only for now.',
-                  textAlign: TextAlign.center,
-                  style: OneHubTextStyles.fieldLabel(textMuted)
-                      .copyWith(letterSpacing: 0, fontSize: 12)),
+              PrimaryCta(
+                  onPressed: _saving ? null : _save,
+                  child: Text(_saving ? 'Saving…' : 'Save changes')),
+              if (widget.note.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(widget.note,
+                    textAlign: TextAlign.center,
+                    style: OneHubTextStyles.fieldLabel(textMuted)
+                        .copyWith(letterSpacing: 0, fontSize: 12)),
+              ],
             ],
           ),
         ),

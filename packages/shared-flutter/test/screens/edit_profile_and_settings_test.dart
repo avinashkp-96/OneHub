@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_shared/onehub_shared.dart';
@@ -16,19 +17,21 @@ void main() {
   group('EditProfileScreen', () {
     late List<List<String>> saved;
 
-    Future<void> pumpEdit(WidgetTester tester) async {
+    Future<void> pumpEdit(WidgetTester tester,
+        {FutureOr<void> Function(String, String)? onSave, String? note}) async {
       saved = [];
       tallView(tester);
+      final save = onSave ?? (String n, String e) => saved.add([n, e]);
       await tester.pumpWidget(MaterialApp(
         theme: OneHubTheme.dark(),
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => EditProfileScreen(
-                        initial: initial,
-                        onSave: (n, e) => saved.add([n, e]),
-                      ))),
+                  builder: (_) => note == null
+                      ? EditProfileScreen(initial: initial, onSave: save)
+                      : EditProfileScreen(
+                          initial: initial, note: note, onSave: save))),
               child: const Text('open'),
             ),
           ),
@@ -91,6 +94,51 @@ void main() {
 
       expect(find.text('Enter a valid email address.'), findsOneWidget);
       expect(saved, isEmpty);
+    });
+
+    testWidgets('shows the default note, or none when it is empty',
+        (tester) async {
+      await pumpEdit(tester);
+      expect(find.text('Saved on this device only for now.'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox());
+      await pumpEdit(tester, note: '');
+      expect(find.text('Saved on this device only for now.'), findsNothing);
+    });
+
+    testWidgets('waits for an async save, disabling the button meanwhile',
+        (tester) async {
+      final done = Completer<void>();
+      await pumpEdit(tester, onSave: (n, e) => done.future);
+
+      await tester.tap(find.text('Save changes'));
+      await tester.pump();
+
+      expect(find.text('Saving…'), findsOneWidget);
+      expect(
+          tester.widget<PrimaryCta>(find.byType(PrimaryCta)).onPressed, isNull);
+      expect(find.byType(EditProfileScreen), findsOneWidget);
+
+      done.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(EditProfileScreen), findsNothing);
+      expect(find.text('Profile updated.'), findsOneWidget);
+    });
+
+    testWidgets('a failed save stays open with the error and can retry',
+        (tester) async {
+      await pumpEdit(tester,
+          onSave: (n, e) async => throw Exception('offline'));
+
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(EditProfileScreen), findsOneWidget);
+      expect(
+          find.textContaining('Could not save your profile'), findsOneWidget);
+      expect(find.text('Save changes'), findsOneWidget);
+      expect(tester.widget<PrimaryCta>(find.byType(PrimaryCta)).onPressed,
+          isNotNull);
     });
 
     test('copyWith keeps the phone number', () {
