@@ -7,6 +7,8 @@ import '../bids/price_range_screen.dart';
 // Restyled to match the customer app's list screens (no new reference —
 // applied on request): PageGlow, page title in the AppBar, and
 // each request as a bordered card with full-height Reject / Accept buttons.
+// Each card also shows the customer name, their city and the distance from
+// the provider, so the provider can decide before accepting.
 // Takes an optional [client], like SignupScreen, so tests can use a fake API.
 class IncomingRequestsScreen extends StatefulWidget {
   final ApiClient? client;
@@ -154,6 +156,11 @@ class _RequestCard extends StatelessWidget {
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final photos = request.photoUrls.length;
+    final distance = request.distanceKm;
+    final place = [
+      if (request.customerPlace != null) request.customerPlace!,
+      if (distance != null) '${distance.toStringAsFixed(1)} km away',
+    ].join(' · ');
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -169,6 +176,14 @@ class _RequestCard extends StatelessWidget {
               style: OneHubTextStyles.bodyText(textPrimary)
                   .copyWith(fontWeight: FontWeight.w600),
             ),
+            if (request.customerName != null) ...[
+              const SizedBox(height: 10),
+              _DetailLine(icon: OneHubIcons.user, text: request.customerName!),
+            ],
+            if (place.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              _DetailLine(icon: OneHubIcons.location, text: place),
+            ],
             if (photos > 0) ...[
               const SizedBox(height: 8),
               Align(
@@ -201,6 +216,34 @@ class _RequestCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One icon-and-text line under a request's description: who posted it, or
+/// where it is and how far away.
+class _DetailLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _DetailLine({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: textSecondary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: OneHubTextStyles.bodyText(textSecondary)),
+        ),
+      ],
     );
   }
 }

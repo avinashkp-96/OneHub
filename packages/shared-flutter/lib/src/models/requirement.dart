@@ -29,6 +29,12 @@ class Requirement {
   // Customer side only: each provider the request was sent to and how they
   // answered (docx 4.4). Empty on the provider side.
   final List<TargetedProvider> targetedProviders;
+  // Provider side only (/requirements/incoming): who posted it, their city
+  // and the straight-line distance from the provider, so the provider can
+  // decide before accepting. Null when unknown or on the customer side.
+  final String? customerName;
+  final String? customerPlace;
+  final double? distanceKm;
 
   const Requirement({
     required this.id,
@@ -38,6 +44,9 @@ class Requirement {
     required this.status,
     this.bids = const [],
     this.targetedProviders = const [],
+    this.customerName,
+    this.customerPlace,
+    this.distanceKm,
   });
 
   factory Requirement.fromJson(Map<String, dynamic> json) => Requirement(
@@ -53,6 +62,9 @@ class Requirement {
                 .map(TargetedProvider.fromJson)
                 .toList() ??
             const [],
+        customerName: json['customerName'] as String?,
+        customerPlace: json['customerPlace'] as String?,
+        distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       );
 }
 

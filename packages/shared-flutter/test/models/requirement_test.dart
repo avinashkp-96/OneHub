@@ -44,5 +44,33 @@ void main() {
       });
       expect(requirement.status, RequestStatus.sent);
     });
+
+    test('parses the customer details sent with /requirements/incoming', () {
+      final requirement = Requirement.fromJson({
+        'id': 'req_1',
+        'subServiceId': 'sub_1',
+        'description': 'Fix a leaking tap',
+        'status': 'SENT',
+        'customerName': 'Meera Nair',
+        'customerPlace': 'Kochi',
+        'distanceKm': 7,
+      });
+      expect(requirement.customerName, 'Meera Nair');
+      expect(requirement.customerPlace, 'Kochi');
+      expect(requirement.distanceKm, 7.0);
+    });
+
+    test('leaves the customer details null when absent', () {
+      final requirement = Requirement.fromJson({
+        'id': 'req_1',
+        'subServiceId': 'sub_1',
+        'description': 'Fix a leaking tap',
+        'status': 'SENT',
+        'distanceKm': null,
+      });
+      expect(requirement.customerName, isNull);
+      expect(requirement.customerPlace, isNull);
+      expect(requirement.distanceKm, isNull);
+    });
   });
 }

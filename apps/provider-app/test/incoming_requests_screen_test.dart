@@ -87,6 +87,69 @@ void main() {
     expect(find.widgetWithText(OutlinedButton, 'Reject'), findsNWidgets(2));
   });
 
+  group('customer details', () {
+    Map<String, dynamic> request(Map<String, dynamic> extra) => {
+          'id': 'r1',
+          'subServiceId': 's1',
+          'description': 'Ceiling fan making a rattling noise',
+          'photoUrls': [],
+          'status': 'SENT',
+          ...extra,
+        };
+
+    testWidgets('shows the customer name, place and distance',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'customerName': 'Meera Nair',
+              'customerPlace': 'Kochi',
+              'distanceKm': 6.74,
+            })
+          ]));
+
+      expect(find.text('Meera Nair'), findsOneWidget);
+      expect(find.text('Kochi · 6.7 km away'), findsOneWidget);
+      expect(find.byIcon(OneHubIcons.user), findsOneWidget);
+      expect(find.byIcon(OneHubIcons.location), findsOneWidget);
+    });
+
+    testWidgets('shows the place alone when the distance is unknown',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'customerName': 'Meera Nair',
+              'customerPlace': 'Kochi',
+              'distanceKm': null,
+            })
+          ]));
+
+      expect(find.text('Kochi'), findsOneWidget);
+      expect(find.textContaining('km away'), findsNothing);
+    });
+
+    testWidgets('shows the distance alone when the city is unknown',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({'customerName': 'Meera Nair', 'distanceKm': 0.4})
+          ]));
+
+      expect(find.text('0.4 km away'), findsOneWidget);
+    });
+
+    testWidgets('hides both lines when nothing is known', (tester) async {
+      await pumpScreen(tester, fakeClient(requests: [request({})]));
+
+      expect(find.byIcon(OneHubIcons.user), findsNothing);
+      expect(find.byIcon(OneHubIcons.location), findsNothing);
+    });
+  });
+
   testWidgets('shows an empty state when there are no requests',
       (tester) async {
     await pumpScreen(tester, fakeClient(requests: []));

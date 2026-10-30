@@ -36,11 +36,14 @@ export const DEMO_CUSTOMER = {
   mobile: '9000000001',
   email: 'meera@example.test',
   city: 'Kochi',
+  // Edappally, so the providers' incoming requests show a distance.
+  latitude: 10.0261,
+  longitude: 76.3125,
 };
 
 export const DEMO_PROVIDERS = [
-  { mobile: '9000000002', name: 'Rajesh Electricals', category: 'Electrician', years: 8, email: 'rajesh@example.test' },
-  { mobile: '9000000003', name: 'Kochi Plumbing Co', category: 'Plumber', years: 5, email: 'kochiplumbing@example.test' },
+  { mobile: '9000000002', name: 'Rajesh Electricals', category: 'Electrician', years: 8, email: 'rajesh@example.test', latitude: 9.9667, longitude: 76.2999 },
+  { mobile: '9000000003', name: 'Kochi Plumbing Co', category: 'Plumber', years: 5, email: 'kochiplumbing@example.test', latitude: 10.0159, longitude: 76.3419 },
 ];
 
 export function assertNotProduction(env: { NODE_ENV?: string }) {
@@ -71,7 +74,7 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
 
   const customer = await db.user.upsert({
     where: { mobile: DEMO_CUSTOMER.mobile },
-    update: { passwordHash },
+    update: { passwordHash, latitude: DEMO_CUSTOMER.latitude, longitude: DEMO_CUSTOMER.longitude },
     create: { ...DEMO_CUSTOMER, role: 'CUSTOMER', mobileVerifiedAt: new Date(), passwordHash },
   });
 
@@ -79,7 +82,7 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
   for (const p of DEMO_PROVIDERS) {
     const user = await db.user.upsert({
       where: { mobile: p.mobile },
-      update: { passwordHash },
+      update: { passwordHash, latitude: p.latitude, longitude: p.longitude },
       create: {
         role: 'PROVIDER',
         fullName: p.name,
@@ -88,6 +91,8 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
         email: p.email,
         passwordHash,
         city: 'Kochi',
+        latitude: p.latitude,
+        longitude: p.longitude,
         provider: {
           create: {
             businessName: p.name,

@@ -806,6 +806,21 @@ fields keep what is on file, and a checkbox removes payout details. The dummy
 Tests: API 250 (100% lines), shared 86, provider 128 (about 97%), customer
 127.
 
+2026-10-30 (incoming request details): each incoming request card in the
+provider app now shows the customer's name and "<city> · <n> km away" under
+the description, so the provider can decide before accepting (docx 5.3).
+`GET /requirements/incoming` adds `customerName`, `customerPlace` (the
+customer's `User.city`; requests carry no address of their own) and
+`distanceKm`, a straight-line haversine distance to one decimal from the
+provider's saved coordinates (`distanceKm` in `requirements.service.ts`), null
+when either side lacks them. The customer's coordinates and contact details
+are not sent. The shared `Requirement` model gains the three nullable fields;
+each card line hides when its data is missing. Customer rating was asked for
+and dropped: only customers rate providers today. Demo users now have Kochi
+coordinates (customer Edappally, Rajesh Kadavanthra, Kochi Plumbing
+Kakkanad), set again on every reseed. Tests: API 255 (100% lines), shared 88,
+provider 132 (96.7%), customer 127.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

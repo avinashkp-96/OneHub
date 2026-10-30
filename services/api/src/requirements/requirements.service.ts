@@ -67,12 +67,36 @@ export class RequirementsService {
   // so the client can tell "my bid was confirmed" apart from "a different
   // provider on this multi-provider request was confirmed" without the
   // requirement's single global `status` field being ambiguous between them.
-  listForProvider(providerId: string) {
-    return this.prisma.requirement.findMany({
-      where: { targetedProviders: { some: { providerId } } },
-      include: { subService: true, bids: { where: { providerId } } },
-      orderBy: { createdAt: 'desc' },
-    });
+  //
+  // Each request also carries what the provider needs to decide on it:
+  // `customerName`, `customerPlace` (the customer's city; requests have no
+  // address of their own) and `distanceKm` from the provider's saved location,
+  // null when either side has no coordinates. The customer's coordinates and
+  // contact details are never sent.
+  async listForProvider(providerId: string) {
+    const [requirements, provider] = await Promise.all([
+      this.prisma.requirement.findMany({
+        where: { targetedProviders: { some: { providerId } } },
+        include: {
+          subService: true,
+          bids: { where: { providerId } },
+          customer: { select: { fullName: true, city: true, latitude: true, longitude: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.provider.findUnique({
+        where: { id: providerId },
+        select: { user: { select: { latitude: true, longitude: true } } },
+      }),
+    ]);
+    const from = provider?.user;
+
+    return requirements.map(({ customer, ...r }) => ({
+      ...r,
+      customerName: customer.fullName,
+      customerPlace: customer.city,
+      distanceKm: from ? distanceKm(from, customer) : null,
+    }));
   }
 
   // docx 5.3 Accept / Reject
@@ -118,4 +142,24 @@ export class RequirementsService {
     await this.notifications.jobCompleted(requirementId);
     return completed;
   }
+}
+
+interface Coordinates {
+  latitude: number | null;
+  longitude: number | null;
+}
+
+// Straight-line (haversine) distance in km, to one decimal; null when either
+// point is missing a coordinate.
+export function distanceKm(a: Coordinates, b: Coordinates): number | null {
+  if (a.latitude == null || a.longitude == null || b.latitude == null || b.longitude == null) {
+    return null;
+  }
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = rad(b.latitude - a.latitude);
+  const dLon = rad(b.longitude - a.longitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLon / 2) ** 2;
+  const km = 2 * 6371 * Math.asin(Math.sqrt(h));
+  return Math.round(km * 10) / 10;
 }

@@ -71,7 +71,10 @@ describe('seedDemoData', () => {
     expect(hash).toHaveBeenCalledTimes(1);
     expect(hash).toHaveBeenCalledWith(DEMO_PASSWORD);
     for (const call of db.user.upsert.mock.calls) {
-      expect(call[0].update).toEqual({ passwordHash: `hashed:${DEMO_PASSWORD}` });
+      expect(call[0].update).toEqual(expect.objectContaining({ passwordHash: `hashed:${DEMO_PASSWORD}` }));
+      expect(call[0].update.latitude).toBe(call[0].create.latitude);
+      expect(call[0].update.longitude).toBe(call[0].create.longitude);
+      expect(call[0].create.latitude).toEqual(expect.any(Number));
       expect(call[0].create.passwordHash).toBe(`hashed:${DEMO_PASSWORD}`);
     }
   });
