@@ -211,6 +211,32 @@ void main() {
     expect(find.byType(ActiveJobsScreen), findsOneWidget);
   });
 
+  testWidgets('the header pill and bell are bright on the dark theme',
+      (tester) async {
+    await pumpScreen(tester);
+
+    final online = tester.widget<Text>(find.text('Online'));
+    expect(online.style!.color, OneHubColors.textPrimaryDark);
+    final dot = find.descendant(
+        of: find.ancestor(of: find.text('Online'), matching: find.byType(Row)),
+        matching: find.byWidgetPredicate((w) =>
+            w is Container &&
+            w.decoration is BoxDecoration &&
+            (w.decoration as BoxDecoration).shape == BoxShape.circle));
+    expect(
+        (tester.widget<Container>(dot.first).decoration as BoxDecoration)
+            .color,
+        onlineGreenDark);
+    final bell =
+        tester.widget<Icon>(find.byIcon(OneHubIcons.notification)).color;
+    expect(bell, OneHubColors.textPrimaryDark);
+
+    await tester.tap(find.text('Online'));
+    await tester.pump();
+    expect(tester.widget<Text>(find.text('Offline')).style!.color,
+        OneHubColors.textSecondaryDark);
+  });
+
   testWidgets('tapping the status toggle switches between online and offline',
       (tester) async {
     await pumpScreen(tester);

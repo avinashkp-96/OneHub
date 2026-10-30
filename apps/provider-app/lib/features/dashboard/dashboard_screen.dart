@@ -163,7 +163,7 @@ class _TopRowState extends State<_TopRow> {
         _StatusToggle(
             online: _online, onTap: () => setState(() => _online = !_online)),
         const SizedBox(width: 8),
-        NotificationBell(api: widget.client ?? api),
+        NotificationBell(api: widget.client ?? api, iconColor: textPrimary),
       ],
     );
   }
@@ -171,6 +171,10 @@ class _TopRowState extends State<_TopRow> {
 
 /// Online/offline pill: a green dot when online, a grey one when offline.
 /// Tapping it switches.
+/// The Online pill's green in dark mode.
+@visibleForTesting
+const onlineGreenDark = Color(0xFF4ADE80);
+
 class _StatusToggle extends StatelessWidget {
   final bool online;
   final VoidCallback onTap;
@@ -178,13 +182,22 @@ class _StatusToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Same neutral circle style as the bell and the page's cards; only the
+    // dot carries the status color.
     final dark = Theme.of(context).brightness == Brightness.dark;
     final fill = dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
     final border =
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
-    final textMuted =
-        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final color = online ? context.statusSuccess : textMuted;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final textColor = online ? textPrimary : textSecondary;
+    // The theme's success green is too dark to see on the dark background,
+    // so dark mode uses a brighter green for the dot.
+    final dotColor = online
+        ? (dark ? onlineGreenDark : context.statusSuccess)
+        : textSecondary;
 
     return Semantics(
       button: true,
@@ -206,11 +219,11 @@ class _StatusToggle extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration:
-                    BoxDecoration(shape: BoxShape.circle, color: color),
+                    BoxDecoration(shape: BoxShape.circle, color: dotColor),
               ),
               const SizedBox(width: 6),
               Text(online ? 'Online' : 'Offline',
-                  style: OneHubTextStyles.bodyText(color).copyWith(
+                  style: OneHubTextStyles.bodyText(textColor).copyWith(
                       fontSize: 12, fontWeight: FontWeight.w600)),
             ],
           ),

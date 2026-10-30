@@ -9,9 +9,12 @@ import '../theme/onehub_theme.dart';
 /// a red dot only while the signed-in user has unread notifications, checked
 /// when the bell is built and again on return from the list. If the check
 /// fails the dot stays hidden rather than guessing.
+///
+/// [iconColor] overrides the default muted icon color.
 class NotificationBell extends StatefulWidget {
   final ApiClient api;
-  const NotificationBell({super.key, required this.api});
+  final Color? iconColor;
+  const NotificationBell({super.key, required this.api, this.iconColor});
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
@@ -50,8 +53,8 @@ class _NotificationBellState extends State<NotificationBell> {
         dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
     final cardBorder =
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
-    final textMuted =
-        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+    final textMuted = widget.iconColor ??
+        (dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight);
 
     return Stack(
       clipBehavior: Clip.none,

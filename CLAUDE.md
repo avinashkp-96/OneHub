@@ -851,6 +851,15 @@ strip is a solid light blue (#528EF8, picked by the user), so the rings do
 not show through it; its icons, the rating star included, are white. Tests:
 provider 139 (96.8%).
 
+2026-10-30 (provider header contrast): the Online pill and bell in the provider
+header looked dim on the dark theme. The pill now matches the bell and the
+cards (neutral card fill and border, primary text; secondary text when
+Offline), and only its dot carries the status color, a brighter green in dark
+mode (`onlineGreenDark`, #4ADE80; the theme success green #2E7D32 is too dark
+there). A green-tinted pill was tried first and dropped as off-style. The shared `NotificationBell` gains an optional `iconColor`; the
+provider passes the primary text color, and the customer app keeps the muted
+default. Tests: shared 89, provider 144, customer 127.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

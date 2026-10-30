@@ -59,6 +59,25 @@ void main() {
     expect(dot, findsOneWidget);
   });
 
+  testWidgets('uses iconColor when given, else the muted color',
+      (tester) async {
+    Color? iconColor() =>
+        tester.widget<Icon>(find.byIcon(OneHubIcons.notification)).color;
+
+    await pumpBell(tester, fakeApi());
+    expect(iconColor(), OneHubColors.textMutedDark);
+
+    await tester.pumpWidget(MaterialApp(
+      theme: OneHubTheme.dark(),
+      home: Scaffold(
+          body: Center(
+              child: NotificationBell(
+                  api: fakeApi(), iconColor: OneHubColors.textPrimaryDark))),
+    ));
+    await tester.pumpAndSettle();
+    expect(iconColor(), OneHubColors.textPrimaryDark);
+  });
+
   testWidgets('hides the dot when everything is read', (tester) async {
     await pumpBell(tester, fakeApi(unread: false));
     expect(dot, findsNothing);
