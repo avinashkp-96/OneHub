@@ -821,6 +821,36 @@ coordinates (customer Edappally, Rajesh Kadavanthra, Kochi Plumbing
 Kakkanad), set again on every reseed. Tests: API 255 (100% lines), shared 88,
 provider 132 (96.7%), customer 127.
 
+2026-10-30 (provider summary card): the provider home page's summary card
+repeated the new-request and active-job counts that the Your work tiles show
+right below it. Per the user's choice it is now "YOUR PERFORMANCE": earned
+this month (still dummy, `dummyEarnedMonth`, shared with the Earnings screen),
+jobs done (real: requests from `GET /requirements/incoming` that are completed
+with this provider's bid confirmed, the rule Active jobs uses) and the average
+rating with a star (real, `GET /ratings/mine`; "New" with no ratings). A
+first version showed contact unlocks left; the user found "₹50 per unlock" not
+useful, so it was dropped. Each real figure loads on its own and shows "–"
+until it arrives or if its call fails. Nothing else on the home page changed.
+Tests: provider 132.
+
+2026-10-30 (provider overview card): Home restyled on request. A header row
+on the page background holds the avatar initial, "Welcome back" and the name
+on the left, and an Online/Offline pill (still local only) and the bell on the
+right. Below it, the performance card is now a blue `_OverviewCard` (the
+PrimaryCta gradient) with two lighter, narrower layers stacked behind it for a
+3D look: earned this month as the headline (dummy), a wallet button that opens
+Earnings, and a strip with jobs done and rating (real, same rules as
+before; the star fills once rated). A first pass with a full-bleed gradient
+header was dropped on request. Your work is now a two-card grid: Incoming
+requests and Active jobs side by side, icon and count badge on top. Wallet and
+Certification are unchanged. The card also paints a faint pattern
+(`_CardPattern`: white rings from the top-right corner, fading from 0.24
+opacity on the innermost ring to 0.02 on the outermost via `ringOpacity`, and
+a soft glow bottom-left) so its middle is not plain. The jobs done and rating
+strip is a solid light blue (#528EF8, picked by the user), so the rings do
+not show through it; its icons, the rating star included, are white. Tests:
+provider 139 (96.8%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

@@ -16,7 +16,7 @@ const dummyPlan = 'PRO PLAN';
 const dummyRenewal = 'Renews 12 Nov';
 
 const _dummyEarnedWeek = '₹6,420';
-const _dummyEarnedMonth = '₹21,300';
+const dummyEarnedMonth = '₹21,300';
 
 class _Transaction {
   final String title;
@@ -125,7 +125,7 @@ class EarningsScreen extends StatelessWidget {
                           label: 'THIS WEEK', value: _dummyEarnedWeek),
                       Divider(height: 1, color: divider),
                       const _EarnedRow(
-                          label: 'THIS MONTH', value: _dummyEarnedMonth),
+                          label: 'THIS MONTH', value: dummyEarnedMonth),
                     ],
                   ),
                 ),
