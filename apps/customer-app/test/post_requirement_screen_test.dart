@@ -56,11 +56,10 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> describe(WidgetTester tester) async {
+  Future<void> describe(WidgetTester tester, {String title = ' Fan repair '}) async {
+    await tester.enterText(find.byKey(const Key('request-title')), title);
     await tester.enterText(
-        find.widgetWithText(
-            TextField, 'e.g. Ceiling fan making a rattling noise'),
-        ' Fan is noisy ');
+        find.byKey(const Key('request-description')), ' Fan is noisy ');
   }
 
   Future<void> send(WidgetTester tester) async {
@@ -142,14 +141,39 @@ void main() {
     await pumpScreen(tester);
 
     await send(tester);
-    expect(find.text('Describe the work and select at least one provider.'),
+    expect(find.text('Add a title, describe the work and select at least one provider.'),
         findsOneWidget);
 
     await describe(tester);
     await send(tester);
-    expect(find.text('Describe the work and select at least one provider.'),
+    expect(find.text('Add a title, describe the work and select at least one provider.'),
         findsOneWidget);
     expect(fake.calls.where((c) => c.startsWith('POST')), isEmpty);
+  });
+
+  testWidgets('a blank title stops the request', (tester) async {
+    final fake = installFakeApi({'GET /providers': (_) => providers});
+    await pumpScreen(tester);
+
+    await describe(tester, title: '   ');
+    await tester.tap(find.text('Asha Electricals'));
+    await send(tester);
+
+    expect(
+        find.text(
+            'Add a title, describe the work and select at least one provider.'),
+        findsOneWidget);
+    expect(fake.calls.where((c) => c.startsWith('POST')), isEmpty);
+  });
+
+  testWidgets('the title field is limited to the API maximum', (tester) async {
+    installFakeApi({'GET /providers': (_) => providers});
+    await pumpScreen(tester);
+
+    final field =
+        tester.widget<TextField>(find.byKey(const Key('request-title')));
+    expect(field.maxLength, requestTitleMaxLength);
+    expect(find.textContaining('TITLE', findRichText: true), findsOneWidget);
   });
 
   testWidgets('sends the request and returns true to the previous screen',
@@ -169,6 +193,7 @@ void main() {
     await send(tester);
 
     expect(fake.bodies.single['subServiceId'], 'sub-1');
+    expect(fake.bodies.single['title'], 'Fan repair');
     expect(fake.bodies.single['description'], 'Fan is noisy');
     expect(fake.bodies.single['providerIds'], ['p1', 'p2']);
     expect(fake.bodies.single.containsKey('preferredAt'), isFalse);

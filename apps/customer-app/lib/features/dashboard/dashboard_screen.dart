@@ -586,20 +586,23 @@ class _ActiveRequestCard extends StatelessWidget {
   final VoidCallback onTap;
   const _ActiveRequestCard({required this.requirement, required this.onTap});
 
-  static const _steps = ['Sent', 'Accepted', 'Bids', 'Confirmed'];
+  // No Accepted step: providers accept by sending a price. An old ACCEPTED
+  // request is still waiting for prices, so it sits at Sent.
+  static const _steps = ['Sent', 'Bids', 'Confirmed'];
 
   int? _stepIndex(RequestStatus status) => switch (status) {
-        RequestStatus.sent => 0,
-        RequestStatus.accepted => 1,
-        RequestStatus.bidReceived => 2,
-        RequestStatus.confirmed => 3,
+        RequestStatus.sent || RequestStatus.accepted => 0,
+        RequestStatus.bidReceived => 1,
+        RequestStatus.confirmed => 2,
         _ => null, // terminal/negative statuses don't map onto this stepper
       };
 
   String _tagLabel(RequestStatus status) => switch (status) {
         RequestStatus.sent => 'Sent',
-        RequestStatus.accepted => 'Accepted',
-        RequestStatus.bidReceived => '${requirement.bids.length} bids',
+        RequestStatus.accepted => 'Sent',
+        RequestStatus.bidReceived => requirement.bids.length == 1
+            ? '1 bid'
+            : '${requirement.bids.length} bids',
         RequestStatus.confirmed => 'Confirmed',
         RequestStatus.rejected => 'Rejected',
         RequestStatus.cancelled => 'Cancelled',
@@ -625,6 +628,8 @@ class _ActiveRequestCard extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textSecondary =
+        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final textMuted =
         dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
     final lineColor =
@@ -646,7 +651,7 @@ class _ActiveRequestCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      requirement.description,
+                      requirement.heading,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: OneHubTextStyles.bodyText(textPrimary)
@@ -669,6 +674,16 @@ class _ActiveRequestCard extends StatelessWidget {
                   ),
                 ],
               ),
+              if (requirement.title.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  requirement.description,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: OneHubTextStyles.bodyText(textSecondary)
+                      .copyWith(fontSize: 13),
+                ),
+              ],
               if (step != null) ...[
                 const SizedBox(height: 14),
                 Row(

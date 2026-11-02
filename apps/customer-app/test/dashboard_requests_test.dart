@@ -44,20 +44,60 @@ void main() {
     await pumpScreen(tester, {
       'GET /requirements/mine': (_) => [
             requirementJson('r1', 'Sent request', 'SENT'),
-            requirementJson('r2', 'Accepted request', 'ACCEPTED'),
+            requirementJson('r2', 'Bid request', 'BID_RECEIVED',
+                bids: [bidJson('b1'), bidJson('b2')]),
             requirementJson('r3', 'Third request', 'CONFIRMED'),
           ],
     });
 
     expect(find.text('Sent request'), findsOneWidget);
-    expect(find.text('Accepted request'), findsOneWidget);
+    expect(find.text('Bid request'), findsOneWidget);
     expect(find.text('Third request'), findsNothing,
         reason: 'only two cards are shown');
-    // Each card has its own tag, and every card lists all four stepper labels.
+    // Each card has its own tag, and every card lists the three stepper
+    // labels. There is no Accepted step: providers accept by sending a price.
     expect(find.text('Sent'), findsNWidgets(3));
-    expect(find.text('Accepted'), findsNWidgets(3));
     expect(find.text('Bids'), findsNWidgets(2));
+    expect(find.text('2 bids'), findsOneWidget);
     expect(find.text('Confirmed'), findsNWidgets(2));
+    expect(find.text('Accepted'), findsNothing);
+  });
+
+  testWidgets('a titled request shows its title with the description below',
+      (tester) async {
+    await pumpScreen(tester, {
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'The fan rattles at high speed', 'SENT',
+                title: 'Fan repair'),
+          ],
+    });
+
+    final title = tester.getRect(find.text('Fan repair'));
+    final description =
+        tester.getRect(find.text('The fan rattles at high speed'));
+    expect(description.top, greaterThan(title.top));
+  });
+
+  testWidgets('an old ACCEPTED request shows as Sent', (tester) async {
+    await pumpScreen(tester, {
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Old request', 'ACCEPTED'),
+          ],
+    });
+
+    expect(find.text('Sent'), findsNWidgets(2));
+    expect(find.text('Accepted'), findsNothing);
+  });
+
+  testWidgets('a single bid reads 1 bid', (tester) async {
+    await pumpScreen(tester, {
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan request', 'BID_RECEIVED',
+                bids: [bidJson('b1')]),
+          ],
+    });
+
+    expect(find.text('1 bid'), findsOneWidget);
   });
 
   testWidgets('leaves completed requests out of the active list',

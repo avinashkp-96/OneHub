@@ -60,6 +60,55 @@ void main() {
       expect(requirement.distanceKm, 7.0);
     });
 
+    test('parses the title and uses it as the heading', () {
+      final requirement = Requirement.fromJson({
+        'id': 'req_1',
+        'subServiceId': 'sub_1',
+        'title': 'Leaking tap',
+        'description': 'Fix a leaking tap',
+        'status': 'SENT',
+      });
+      expect(requirement.title, 'Leaking tap');
+      expect(requirement.heading, 'Leaking tap');
+    });
+
+    test('falls back to the description when there is no title', () {
+      final requirement = Requirement.fromJson({
+        'id': 'req_1',
+        'subServiceId': 'sub_1',
+        'description': 'Fix a leaking tap',
+        'status': 'SENT',
+      });
+      expect(requirement.title, '');
+      expect(requirement.heading, 'Fix a leaking tap');
+    });
+
+    test('parses the provider\'s own answer, null when absent', () {
+      Requirement parse(Map<String, dynamic> extra) => Requirement.fromJson({
+            'id': 'req_1',
+            'subServiceId': 'sub_1',
+            'description': 'Fix a leaking tap',
+            'status': 'ACCEPTED',
+            ...extra,
+          });
+      expect(parse({'myResponse': 'REJECTED'}).myResponse,
+          RequestStatus.rejected);
+      expect(parse({}).myResponse, isNull);
+    });
+
+    test('parses the preferred date, null when absent', () {
+      Requirement parse(Map<String, dynamic> extra) => Requirement.fromJson({
+            'id': 'req_1',
+            'subServiceId': 'sub_1',
+            'description': 'Fix a leaking tap',
+            'status': 'SENT',
+            ...extra,
+          });
+      expect(parse({'preferredAt': '2026-11-05T10:00:00.000Z'}).preferredAt,
+          DateTime.utc(2026, 11, 5, 10).toLocal());
+      expect(parse({'preferredAt': null}).preferredAt, isNull);
+    });
+
     test('leaves the customer details null when absent', () {
       final requirement = Requirement.fromJson({
         'id': 'req_1',

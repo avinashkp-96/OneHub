@@ -2,13 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../bids/price_range_screen.dart';
+import 'job_detail.dart';
 
-// docx 5.3 — Incoming Requests. On Accept, moves to the Price Range screen (5.4).
+// docx 5.3 — Incoming Requests. Send price opens the Price Range screen (5.4).
 // Restyled to match the customer app's list screens (no new reference —
-// applied on request): PageGlow, page title in the AppBar, and
-// each request as a bordered card with full-height Reject / Accept buttons.
-// Each card also shows the customer name, their city and the distance from
-// the provider, so the provider can decide before accepting.
+// applied on request): PageGlow and a page title in the AppBar.
+// A new request offers Reject or Send price. Sending a price is how a
+// provider accepts (there is no separate accept step); after that there are
+// no buttons, and the customer chooses among the prices.
+// The label comes from this provider's own answer and bid (incomingStageOf),
+// not the request's overall status. Requests they rejected are hidden.
+// Each request is the shared RequestCard (status, posted time,
+// title, description, then customer, location and distance, and photos), so
+// the provider can decide before sending a price.
 // Takes an optional [client], like SignupScreen, so tests can use a fake API.
 class IncomingRequestsScreen extends StatefulWidget {
   final ApiClient? client;
@@ -39,8 +45,10 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
       final json = await _api.get('/requirements/incoming') as List;
       if (!mounted) return;
       setState(() {
+        // Requests this provider turned down drop off the list.
         _requests = json
             .map((r) => Requirement.fromJson(r as Map<String, dynamic>))
+            .where((r) => r.myResponse != RequestStatus.rejected)
             .toList();
         _error = null;
         _loading = false;
@@ -54,21 +62,43 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
     }
   }
 
-  Future<void> _accept(Requirement r) async {
-    try {
-      await _api.patch('/requirements/${r.id}/accept', {}, auth: true);
-      if (!mounted) return;
-      showSuccessMessage(context, 'Request accepted. Send your price range.');
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (_) =>
-                PriceRangeScreen(requirementId: r.id, client: widget.client)),
-      );
-      if (mounted) _load();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _error = 'Could not accept: $e');
-    }
+  // Sending a price is how a provider accepts a request; there is no separate
+  // accept step. The customer then chooses among the prices they get.
+  Future<void> _sendPrice(Requirement r) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) =>
+              PriceRangeScreen(requirementId: r.id, client: widget.client)),
+    );
+    if (mounted) _load();
+  }
+
+  // The full request: whole description, timeline, the provider's own
+  // price once sent, the preferred date and photo count. A new request keeps
+  // Reject and Send price at the bottom; they close the detail first.
+  Future<void> _openDetail(Requirement r) {
+    final stage = incomingStageOf(r);
+    return openJobDetail(
+      context,
+      r,
+      statusLabel: incomingStageLabel(stage),
+      statusColor: incomingStageColor(context, stage),
+      steps: jobTimeline(stage),
+      action: stage == IncomingStage.newRequest
+          ? Builder(
+              builder: (ctx) => _NewRequestActions(
+                onReject: () {
+                  Navigator.of(ctx).pop();
+                  _reject(r);
+                },
+                onSendPrice: () {
+                  Navigator.of(ctx).pop();
+                  _sendPrice(r);
+                },
+              ),
+            )
+          : null,
+    );
   }
 
   Future<void> _reject(Requirement r) async {
@@ -106,7 +136,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
                 Text(
-                  'Accept a job to send the customer your price range.',
+                  'Send a price to take a job. The customer picks from the prices they get.',
                   style: OneHubTextStyles.bodyText(textSecondary),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
@@ -132,8 +162,9 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
                   for (final r in _requests)
                     _RequestCard(
                         request: r,
-                        onAccept: () => _accept(r),
-                        onReject: () => _reject(r)),
+                        onReject: () => _reject(r),
+                        onSendPrice: () => _sendPrice(r),
+                        onOpen: () => _openDetail(r)),
               ],
             ),
           ),
@@ -143,106 +174,82 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
   }
 }
 
+/// One incoming request as the shared [RequestCard]: status and when it was
+/// posted, the title and description, then the customer, where they are and
+/// how far, and any photos, with Reject and Send price on a new one.
 class _RequestCard extends StatelessWidget {
   final Requirement request;
-  final VoidCallback onAccept;
   final VoidCallback onReject;
+  final VoidCallback onSendPrice;
+  final VoidCallback onOpen;
   const _RequestCard(
-      {required this.request, required this.onAccept, required this.onReject});
+      {required this.request,
+      required this.onReject,
+      required this.onSendPrice,
+      required this.onOpen});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final photos = request.photoUrls.length;
     final distance = request.distanceKm;
     final place = [
       if (request.customerPlace != null) request.customerPlace!,
-      if (distance != null) '${distance.toStringAsFixed(1)} km away',
+      if (distance != null) '${distance.toStringAsFixed(1)} km',
     ].join(' · ');
+    final stage = incomingStageOf(request);
+    final bid = bidRangeLabel(request);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              request.description,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: OneHubTextStyles.bodyText(textPrimary)
-                  .copyWith(fontWeight: FontWeight.w600),
-            ),
-            if (request.customerName != null) ...[
-              const SizedBox(height: 10),
-              _DetailLine(icon: OneHubIcons.user, text: request.customerName!),
-            ],
-            if (place.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              _DetailLine(icon: OneHubIcons.location, text: place),
-            ],
-            if (photos > 0) ...[
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TintedBadge(
-                    label: photos == 1 ? '1 PHOTO' : '$photos PHOTOS',
-                    color: OneHubColors.primary),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onReject,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: context.statusDanger,
-                      side: BorderSide(
-                          color: context.statusDanger.withValues(alpha: 0.5)),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                    child: PrimaryCta(
-                        onPressed: onAccept, child: const Text('Accept'))),
-              ],
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: RequestCard(
+        statusLabel: incomingStageLabel(stage),
+        statusColor: incomingStageColor(context, stage),
+        postedAt: request.createdAt,
+        title: request.heading,
+        description: request.title.isNotEmpty ? request.description : '',
+        facts: [
+          if (request.customerName != null)
+            RequestCardFact('CUSTOMER', request.customerName!),
+          if (place.isNotEmpty) RequestCardFact('LOCATION', place),
+          if (bid != null) RequestCardFact('YOUR BID', bid),
+          if (photos > 0)
+            RequestCardFact(
+                'PHOTOS', photos == 1 ? '1 photo' : '$photos photos'),
+        ],
+        footer: stage == IncomingStage.newRequest
+            ? _NewRequestActions(onReject: onReject, onSendPrice: onSendPrice)
+            : null,
+        onTap: onOpen,
       ),
     );
   }
 }
 
-/// One icon-and-text line under a request's description: who posted it, or
-/// where it is and how far away.
-class _DetailLine extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _DetailLine({required this.icon, required this.text});
+/// Reject and Send price, on a new request's card and its detail page.
+class _NewRequestActions extends StatelessWidget {
+  final VoidCallback onReject;
+  final VoidCallback onSendPrice;
+  const _NewRequestActions({required this.onReject, required this.onSendPrice});
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final textSecondary =
-        dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
-
     return Row(
       children: [
-        Icon(icon, size: 16, color: textSecondary),
-        const SizedBox(width: 8),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: OneHubTextStyles.bodyText(textSecondary)),
+          child: OutlinedButton(
+            onPressed: onReject,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: context.statusDanger,
+              side: BorderSide(
+                  color: context.statusDanger.withValues(alpha: 0.5)),
+            ),
+            child: const Text('Reject'),
+          ),
         ),
+        const SizedBox(width: 12),
+        Expanded(
+            child: PrimaryCta(
+                onPressed: onSendPrice, child: const Text('Send price'))),
       ],
     );
   }

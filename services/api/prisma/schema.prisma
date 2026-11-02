@@ -135,6 +135,7 @@ model Requirement {
   customer       User          @relation("CustomerRequirements", fields: [customerId], references: [id])
   subServiceId   String
   subService     SubService    @relation(fields: [subServiceId], references: [id])
+  title          String
   description    String
   voiceTranscript String?
   photoUrls      String[]

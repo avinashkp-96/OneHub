@@ -8,6 +8,7 @@ interface Setup {
   bid?: object;
   link?: object | null;
   requirement?: object | null;
+  existingBid?: object | null;
 }
 
 function buildService(o: Setup = {}) {
@@ -24,15 +25,18 @@ function buildService(o: Setup = {}) {
       findUniqueOrThrow: jest.fn().mockResolvedValue(bid),
       update: jest.fn().mockImplementation(async (args) => ({ id: args.where.id, ...args.data })),
       findMany: jest.fn().mockResolvedValue([{ id: 'b1' }]),
+      findFirst: jest.fn().mockResolvedValue(o.existingBid ?? null),
     },
     requirement: {
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUnique: jest
         .fn()
         .mockResolvedValue(o.requirement === undefined ? { customerId: 'cust-1' } : o.requirement),
     },
     requirementProvider: {
-      findUnique: jest.fn().mockResolvedValue(o.link === undefined ? { providerId: 'p1' } : o.link),
+      findUnique: jest.fn().mockResolvedValue(o.link === undefined ? { providerId: 'p1', status: 'SENT' } : o.link),
+      update: jest.fn().mockResolvedValue({}),
     },
     payment: { create: jest.fn().mockResolvedValue({}) },
     $transaction: jest.fn().mockResolvedValue([]),
@@ -56,11 +60,40 @@ describe('BidsService.submitInitialBid', () => {
     expect(prisma.bid.create).toHaveBeenCalledWith({
       data: { requirementId: 'r1', providerId: 'p1', initialMinPrice: 500, initialMaxPrice: 900 },
     });
-    expect(prisma.requirement.update).toHaveBeenCalledWith({
-      where: { id: 'r1' },
+    expect(prisma.requirement.updateMany).toHaveBeenCalledWith({
+      where: { id: 'r1', status: { in: ['SENT', 'ACCEPTED'] } },
       data: { status: 'BID_RECEIVED' },
     });
     expect(bid).toEqual({ id: 'b1' });
+  });
+
+  it('sending a price records the provider as having accepted', async () => {
+    const { service, prisma } = buildService();
+
+    await service.submitInitialBid('r1', 'p1', { minPrice: 500, maxPrice: 900 });
+
+    expect(prisma.requirementProvider.update).toHaveBeenCalledWith({
+      where: { requirementId_providerId: { requirementId: 'r1', providerId: 'p1' } },
+      data: { status: 'ACCEPTED' },
+    });
+  });
+
+  it('refuses a provider who rejected the request', async () => {
+    const { service, prisma } = buildService({ link: { providerId: 'p1', status: 'REJECTED' } });
+
+    await expect(service.submitInitialBid('r1', 'p1', { minPrice: 1, maxPrice: 2 })).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(prisma.bid.create).not.toHaveBeenCalled();
+  });
+
+  it('refuses a second price from the same provider', async () => {
+    const { service, prisma } = buildService({ existingBid: { id: 'b0' } });
+
+    await expect(service.submitInitialBid('r1', 'p1', { minPrice: 1, maxPrice: 2 })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.bid.create).not.toHaveBeenCalled();
   });
 
   it('refuses a provider the request was never sent to', async () => {

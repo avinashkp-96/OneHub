@@ -32,10 +32,12 @@ describe('RequirementsService.listForProvider', () => {
     const findMany = jest.fn().mockResolvedValue([
       {
         id: 'r1',
+        targetedProviders: [{ status: 'ACCEPTED' }],
         customer: { fullName: 'Meera Nair', city: 'Kochi', latitude: 10.0261, longitude: 76.3125 },
       },
       {
         id: 'r2',
+        targetedProviders: [],
         customer: { fullName: 'Anil Kumar', city: null, latitude: null, longitude: null },
       },
     ]);
@@ -44,13 +46,42 @@ describe('RequirementsService.listForProvider', () => {
 
     const [withLocation, withoutLocation] = await service.listForProvider('provider-1');
 
-    expect(withLocation).toEqual({ id: 'r1', customerName: 'Meera Nair', customerPlace: 'Kochi', distanceKm: 6.7 });
-    expect(withoutLocation).toEqual({ id: 'r2', customerName: 'Anil Kumar', customerPlace: null, distanceKm: null });
+    expect(withLocation).toEqual({
+      id: 'r1',
+      myResponse: 'ACCEPTED',
+      customerName: 'Meera Nair',
+      customerPlace: 'Kochi',
+      distanceKm: 6.7,
+    });
+    expect(withoutLocation).toEqual({
+      id: 'r2',
+      myResponse: 'SENT',
+      customerName: 'Anil Kumar',
+      customerPlace: null,
+      distanceKm: null,
+    });
+  });
+
+  it("reads only this provider's own answer", async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const prisma = { requirement: { findMany }, provider: providerAt(kochi) } as unknown as PrismaService;
+    const service = new RequirementsService(prisma, unusedNotifications);
+
+    await service.listForProvider('provider-1');
+
+    expect(findMany.mock.calls[0][0].include.targetedProviders).toEqual({
+      where: { providerId: 'provider-1' },
+      select: { status: true },
+    });
   });
 
   it('leaves the distance out when the provider has no saved location', async () => {
     const findMany = jest.fn().mockResolvedValue([
-      { id: 'r1', customer: { fullName: 'Meera Nair', city: 'Kochi', latitude: 10.0261, longitude: 76.3125 } },
+      {
+        id: 'r1',
+        targetedProviders: [{ status: 'SENT' }],
+        customer: { fullName: 'Meera Nair', city: 'Kochi', latitude: 10.0261, longitude: 76.3125 },
+      },
     ]);
     const prisma = { requirement: { findMany }, provider: providerAt(null) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);

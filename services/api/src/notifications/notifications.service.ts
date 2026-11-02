@@ -14,6 +14,8 @@ import { PrismaService } from '../prisma/prisma.service';
 // triggered it (a bid must not be lost because its notification was not).
 export const NotificationEvent = {
   NEW_REQUEST: 'NEW_REQUEST',
+  // No longer sent (providers accept by bidding, which sends BID_RECEIVED);
+  // kept so notifications already stored still display.
   REQUEST_ACCEPTED: 'REQUEST_ACCEPTED',
   BID_RECEIVED: 'BID_RECEIVED',
   CONTACT_UNLOCKED: 'CONTACT_UNLOCKED',
@@ -68,7 +70,7 @@ export class NotificationsService {
       const r = await this.prisma.requirement.findUniqueOrThrow({
         where: { id: requirementId },
         select: {
-          subService: { select: { name: true } },
+          title: true,
           targetedProviders: { select: { providerId: true } },
         },
       });
@@ -76,20 +78,8 @@ export class NotificationsService {
       return users.map((u) => ({
         userId: u.userId,
         event: NotificationEvent.NEW_REQUEST,
-        message: `New job request: ${r.subService.name}`,
+        message: `New job request: ${r.title}`,
       }));
-    });
-  }
-
-  // Provider accepts a request -> the customer. Rejections are not sent (docx
-  // 5.3: the customer only sees the overall status).
-  requestAccepted(requirementId: string, providerId: string) {
-    return this.send(`requestAccepted ${requirementId}`, async () => {
-      const [r, p] = await Promise.all([
-        this.prisma.requirement.findUniqueOrThrow({ where: { id: requirementId }, select: { customerId: true } }),
-        this.provider(providerId),
-      ]);
-      return [{ userId: r.customerId, event: NotificationEvent.REQUEST_ACCEPTED, message: `${p.name} accepted your request` }];
     });
   }
 
@@ -196,9 +186,9 @@ export class NotificationsService {
   private async provider(providerId: string) {
     const p = await this.prisma.provider.findUniqueOrThrow({
       where: { id: providerId },
-      select: { userId: true, businessName: true, user: { select: { fullName: true } } },
+      select: { userId: true },
     });
-    return { userId: p.userId, name: p.businessName ?? p.user.fullName };
+    return { userId: p.userId };
   }
 
   private async providerUsers(providerIds: string[]) {

@@ -860,6 +860,77 @@ there). A green-tinted pill was tried first and dropped as off-style. The shared
 provider passes the primary text color, and the customer app keeps the muted
 default. Tests: shared 89, provider 144, customer 127.
 
+2026-10-30 (request title): service requests now have a title as well as a
+description. `Requirement.title` is required (migration
+`20261030120000_requirement_title` backfills existing rows with their
+sub-service name). `POST /requirements` takes `title` (non-blank, at most
+`REQUIREMENT_TITLE_MAX` = 60; the shared `requestTitleMaxLength` mirrors it),
+and the provider's new-request notification now names the title instead of
+the sub-service. The customer form has a TITLE field above the description.
+Both apps show the title in bold with the description below: customer
+dashboard cards, My requests, provider Incoming requests and Active jobs, and
+the shared `RequestDetailScreen` (new optional `title`). `Requirement.heading`
+falls back to the description if a response has no title. Removing the
+sub-service picker page was raised and then withdrawn; it stays. Tests: API
+256 (100% lines), shared 92, customer 131 (99.3%), provider 146 (96.8%).
+
+2026-10-30 (request card style): requests now show as a brand-gradient card
+after a reference the user gave: a glassy status pill with a dot in the status
+colour and "Posted 2 days ago", the title large and bold, the description,
+then label/value facts two to a row under a divider. It is the shared
+`RequestCard` (`postedLabel` builds the posted text from `relativeTimeLabel`)
+used by provider Incoming requests (CUSTOMER, LOCATION, PHOTOS; status
+NEW/ACCEPTED/BID SENT…), customer My requests (LOWEST BID once there are bids;
+tap opens the detail) and the top of `RequestDetailScreen` (new optional
+`postedAt`). A typical price on the provider card and SERVICE / SENT TO on
+the customer card were tried and removed on request. `Requirement` gains
+`createdAt` and `subService` (the provider list already includes it). The customer dashboard
+cards are unchanged. A first pass filled the whole card with the gradient;
+per a second reference it is now a dark surface (`navBarFillDark`) with the
+brand blue fading in from the top-left (22% blend, gone by 70% of the way)
+and a faint blue border, with theme text colours, a `TintedBadge` status
+pill, and the normal danger-outline Reject and PrimaryCta Accept. Incoming
+requests now follow this provider's own position, not the request's overall
+status: `GET /requirements/incoming` adds `myResponse` (this provider's
+RequirementProvider status) and `incomingStageOf` maps it plus their bid to
+NEW (Reject / Accept), ACCEPTED (Send price range), BID SENT, SELECTED, NOT
+SELECTED, COMPLETED or CLOSED, with no buttons after a price is sent;
+requests they rejected are hidden. A provider accepting set the request to
+ACCEPTED, and a bid set BID_RECEIVED, unconditionally, so on a multi-provider
+request a later answer could pull a newer status back (one rated, completed
+request showed ACCEPTED). Both are now forward-only `updateMany` writes (accept
+only from SENT; a bid only from SENT or ACCEPTED), and migration
+`20261102090000_repair_requirement_status` moves damaged rows forward: rated →
+COMPLETED, confirmed bid → CONFIRMED, any bid → BID_RECEIVED. Customer labels
+read "1 BID" / "1 bid" for a single bid.
+
+2026-11-02 (no separate accept): per the user, a provider accepts a request by
+sending a price, and the customer then chooses among the prices. `PATCH
+/requirements/:id/accept` and `NotificationsService.requestAccepted` are gone
+(REQUEST_ACCEPTED stays in the enum so stored notifications still display);
+`respond` became `reject`. `submitInitialBid` refuses a provider who rejected
+and a second price from the same provider (refine instead), and records the
+provider's answer as ACCEPTED. Provider Incoming: a new request offers Reject
+and Send price (straight to the price screen); an old accept with no price
+counts as new. Customer: no Accepted step (timeline Sent → Bids received →
+Provider confirmed → Job completed; dashboard stepper Sent / Bids /
+Confirmed); an old ACCEPTED request shows as Sent, and a provider who accepted
+without a price shows PENDING. Provider jobs now show the provider's own
+price and open a detail page: new `job_detail.dart` holds the stage logic
+(`IncomingStage`, `incomingStageOf`, labels/colours), `bidRangeLabel` (refined
+range when there is one), `jobTimeline` (Send your price → Customer chooses →
+Job in progress → Completed; Not selected / Closed end early) and
+`openJobDetail` (customer, location, your bid, preferred date, photo count).
+Incoming cards show YOUR BID once a price is sent and open the detail on tap;
+a new request's detail keeps Reject / Send price (closing the detail first).
+Active jobs cards now use the same `RequestCard` (CUSTOMER, LOCATION, YOUR
+BID; Mark as Completed in the footer when selected) and the same detail.
+`Requirement` gains `preferredAt`. Active jobs then narrowed, per the user, to
+jobs whose price the customer accepted (SELECTED, with Mark as Completed) and
+finished ones (COMPLETED); price-sent and not-selected requests stay in
+Incoming requests only. Tests: API 258 (100% lines), shared 99, customer 135,
+provider 160 (96.8%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

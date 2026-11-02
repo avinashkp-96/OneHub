@@ -30,10 +30,11 @@ void main() {
       };
 
   Map<String, dynamic> job(String id, String description, String status,
-          {List<Map<String, dynamic>>? bids}) =>
+          {List<Map<String, dynamic>>? bids, String? title}) =>
       {
         'id': id,
         'subServiceId': 's1',
+        if (title != null) 'title': title,
         'description': description,
         'photoUrls': [],
         'status': status,
@@ -81,18 +82,52 @@ void main() {
   }
 
   testWidgets(
-      'shows a status badge per job and hides requests the provider has not bid on',
+      'lists only jobs whose price the customer accepted, and finished ones',
       (tester) async {
     await pumpScreen(tester, fakeClient());
 
     expect(find.byType(PageGlow), findsOneWidget);
     expect(find.byType(GlowCard), findsNothing);
     expect(find.text('Active jobs'), findsOneWidget);
-    expect(find.text('AWAITING SELECTION'), findsOneWidget);
+    expect(find.text('Selected job'), findsOneWidget);
     expect(find.text('SELECTED'), findsOneWidget);
-    expect(find.text('NOT SELECTED'), findsOneWidget);
+    expect(find.text('Done job'), findsOneWidget);
     expect(find.text('COMPLETED'), findsOneWidget);
+    expect(find.text('Awaiting job'), findsNothing,
+        reason: 'the customer has not accepted this price yet');
+    expect(find.text('Lost job'), findsNothing,
+        reason: 'another provider was chosen');
     expect(find.text('Not bid on yet'), findsNothing);
+  });
+
+  testWidgets('a titled job shows the title, the description and both in detail',
+      (tester) async {
+    await pumpScreen(
+        tester,
+        fakeClient(jobs: [
+          job('j1', 'Kitchen light flickers', 'CONFIRMED',
+              bids: [bid(confirmed: true)], title: 'Light repair'),
+        ]));
+
+    expect(find.text('Light repair'), findsOneWidget);
+    expect(find.text('Kitchen light flickers'), findsOneWidget);
+
+    await tester.tap(find.text('Light repair'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.text('Light repair'), findsOneWidget);
+  });
+
+  testWidgets("each job card shows the provider's own bid", (tester) async {
+    await pumpScreen(
+        tester,
+        fakeClient(jobs: [
+          job('j1', 'Fan job', 'CONFIRMED', bids: [bid(confirmed: true)]),
+        ]));
+
+    expect(find.byKey(const Key('request-card')), findsOneWidget);
+    expect(find.text('YOUR BID'), findsOneWidget);
+    expect(find.text('₹500 – ₹900'), findsOneWidget);
   });
 
   testWidgets('only a selected job offers Mark as Completed', (tester) async {
@@ -149,29 +184,20 @@ void main() {
       (tester) async {
     await pumpScreen(tester, fakeClient());
 
-    await tester.tap(find.text('Awaiting job'));
+    await tester.tap(find.text('Selected job'));
     await tester.pumpAndSettle();
 
     expect(find.byType(RequestDetailScreen), findsOneWidget);
     expect(find.text('Job'), findsOneWidget);
-    expect(find.text('₹500 - ₹900'), findsOneWidget);
+    expect(find.text('₹500 – ₹900'), findsOneWidget);
     expect(find.text('Customer chooses a provider'), findsOneWidget);
     expect(find.text('Job in progress'), findsOneWidget);
-    expect(find.byType(PrimaryCta), findsNothing);
+    expect(find.byType(PrimaryCta), findsNothing,
+        reason: 'Mark as Completed stays on the card');
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byType(RequestDetailScreen), findsNothing);
-  });
-
-  testWidgets('a job the provider lost ends at Not selected', (tester) async {
-    await pumpScreen(tester, fakeClient());
-
-    await tester.tap(find.text('Lost job'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Not selected'), findsOneWidget);
-    expect(find.text('Job in progress'), findsNothing);
   });
 
   testWidgets('a completed job shows every step done', (tester) async {

@@ -14,6 +14,7 @@ function buildService(
       create: jest.fn().mockResolvedValue({ id: 'r1' }),
       findMany: jest.fn().mockResolvedValue([]),
       update: jest.fn().mockResolvedValue({ id: 'r1', status: 'COMPLETED' }),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       findUniqueOrThrow: jest.fn().mockResolvedValue(requirement),
     },
     bid: { findUniqueOrThrow: jest.fn().mockResolvedValue(bid) },
@@ -24,7 +25,6 @@ function buildService(
   };
   const notifications = {
     requestSent: jest.fn().mockResolvedValue(undefined),
-    requestAccepted: jest.fn().mockResolvedValue(undefined),
     jobCompleted: jest.fn().mockResolvedValue(undefined),
   };
   return {
@@ -38,22 +38,12 @@ function buildService(
 }
 
 describe('RequirementsService notifications', () => {
-  const dto = { subServiceId: 's1', description: 'Fix fan', providerIds: ['p1', 'p2'] };
+  const dto = { subServiceId: 's1', title: 'Fan repair', description: 'Fix fan', providerIds: ['p1', 'p2'] };
 
   it('tells the targeted providers about a new request', async () => {
     const { service, notifications } = buildService();
     await service.postRequirement('cust-1', dto);
     expect(notifications.requestSent).toHaveBeenCalledWith('r1');
-  });
-
-  it('tells the customer when a provider accepts, but not when one rejects', async () => {
-    const { service, notifications } = buildService();
-    await service.respond('r1', 'p1', true);
-    expect(notifications.requestAccepted).toHaveBeenCalledWith('r1', 'p1');
-
-    notifications.requestAccepted.mockClear();
-    await service.respond('r1', 'p1', false);
-    expect(notifications.requestAccepted).not.toHaveBeenCalled();
   });
 
   it('tells the customer when the job is completed', async () => {
@@ -75,6 +65,7 @@ describe('RequirementsService.postRequirement', () => {
 
     await service.postRequirement('cust-1', {
       subServiceId: 's1',
+      title: '  Fan repair  ',
       description: 'Fix a fan',
       providerIds: ['p1', 'p2'],
     });
@@ -82,6 +73,7 @@ describe('RequirementsService.postRequirement', () => {
     const data = prisma.requirement.create.mock.calls[0][0].data;
     expect(data.customerId).toBe('cust-1');
     expect(data.status).toBe('SENT');
+    expect(data.title).toBe('Fan repair');
     expect(data.photoUrls).toEqual([]);
     expect(data.preferredAt).toBeUndefined();
     expect(data.targetedProviders.create).toEqual([{ providerId: 'p1' }, { providerId: 'p2' }]);
@@ -92,6 +84,7 @@ describe('RequirementsService.postRequirement', () => {
 
     await service.postRequirement('cust-1', {
       subServiceId: 's1',
+      title: '  Fan repair  ',
       description: 'Fix a fan',
       photoUrls: ['a.png'],
       preferredAt: '2026-11-01T10:00:00.000Z',
@@ -162,39 +155,25 @@ describe('RequirementsService.listForCustomer', () => {
   });
 });
 
-describe('RequirementsService.respond', () => {
-  it('rejects a provider the request was not sent to', async () => {
+describe('RequirementsService.reject', () => {
+  it('refuses a provider the request was not sent to', async () => {
     const { service, prisma } = buildService(null);
 
-    await expect(service.respond('r1', 'p9', true)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(service.reject('r1', 'p9')).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.requirementProvider.update).not.toHaveBeenCalled();
   });
 
-  it('accepting updates the link and the requirement', async () => {
+  it("records only this provider's answer, leaving the request open", async () => {
     const { service, prisma } = buildService();
 
-    const result = await service.respond('r1', 'p1', true);
-
-    expect(prisma.requirementProvider.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: { status: 'ACCEPTED' } }),
-    );
-    expect(prisma.requirement.update).toHaveBeenCalledWith({
-      where: { id: 'r1' },
-      data: { status: 'ACCEPTED' },
-    });
-    expect(result).toEqual({ requirementId: 'r1', providerId: 'p1', status: 'ACCEPTED' });
-  });
-
-  it('rejecting updates only the link', async () => {
-    const { service, prisma } = buildService();
-
-    const result = await service.respond('r1', 'p1', false);
+    const result = await service.reject('r1', 'p1');
 
     expect(prisma.requirementProvider.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { status: 'REJECTED' } }),
     );
     expect(prisma.requirement.update).not.toHaveBeenCalled();
-    expect(result.status).toBe('REJECTED');
+    expect(prisma.requirement.updateMany).not.toHaveBeenCalled();
+    expect(result).toEqual({ requirementId: 'r1', providerId: 'p1', status: 'REJECTED' });
   });
 });
 
@@ -238,7 +217,7 @@ describe('RequirementsController', () => {
       postRequirement: jest.fn().mockResolvedValue('posted'),
       listForCustomer: jest.fn().mockResolvedValue('mine'),
       listForProvider: jest.fn().mockResolvedValue('incoming'),
-      respond: jest.fn().mockResolvedValue('responded'),
+      reject: jest.fn().mockResolvedValue('rejected'),
       markCompleted: jest.fn().mockResolvedValue('completed'),
     };
     const prisma = { provider: { findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'prov-1' }) } };
@@ -252,7 +231,7 @@ describe('RequirementsController', () => {
 
   it('post and mine use the signed-in customer id', async () => {
     const { controller, requirements } = build();
-    const dto = { subServiceId: 's', description: 'd', providerIds: ['p'] };
+    const dto = { subServiceId: 's', title: 't', description: 'd', providerIds: ['p'] };
 
     expect(await controller.post(req, dto)).toBe('posted');
     expect(await controller.mine(req)).toBe('mine');
@@ -260,16 +239,19 @@ describe('RequirementsController', () => {
     expect(requirements.listForCustomer).toHaveBeenCalledWith('user-1');
   });
 
-  it('incoming, accept and reject resolve the provider id first', async () => {
+  it('incoming and reject resolve the provider id first', async () => {
     const { controller, requirements } = build();
 
     expect(await controller.incoming(req)).toBe('incoming');
-    await controller.accept(req, 'r1');
-    await controller.reject(req, 'r1');
+    expect(await controller.reject(req, 'r1')).toBe('rejected');
 
     expect(requirements.listForProvider).toHaveBeenCalledWith('prov-1');
-    expect(requirements.respond).toHaveBeenNthCalledWith(1, 'r1', 'prov-1', true);
-    expect(requirements.respond).toHaveBeenNthCalledWith(2, 'r1', 'prov-1', false);
+    expect(requirements.reject).toHaveBeenCalledWith('r1', 'prov-1');
+  });
+
+  it('has no accept route: providers accept by sending a price', () => {
+    const { controller } = build();
+    expect((controller as unknown as Record<string, unknown>).accept).toBeUndefined();
   });
 
   it('complete delegates', async () => {

@@ -1,3 +1,5 @@
+import 'category.dart';
+
 // Mirrors services/api Prisma model `Requirement` / `Bid` — docx sections 4.3-4.5, 5.3-5.4.
 enum RequestStatus { sent, accepted, rejected, bidReceived, confirmed, completed, cancelled, expired }
 
@@ -12,12 +14,19 @@ const _requestStatusByApiValue = {
   'EXPIRED': RequestStatus.expired,
 };
 
+/// Longest request title the API accepts (REQUIREMENT_TITLE_MAX in
+/// services/api post-requirement.dto.ts).
+const requestTitleMaxLength = 60;
+
 RequestStatus requestStatusFromJson(String value) =>
     _requestStatusByApiValue[value] ?? RequestStatus.sent;
 
 class Requirement {
   final String id;
   final String subServiceId;
+  // Short headline shown above the description. Empty only for a response
+  // that predates titles; screens then fall back to the description.
+  final String title;
   final String description;
   final List<String> photoUrls;
   final RequestStatus status;
@@ -35,10 +44,22 @@ class Requirement {
   final String? customerName;
   final String? customerPlace;
   final double? distanceKm;
+  // Provider side only: this provider's own answer (sent = not answered yet,
+  // accepted or rejected). [status] can reflect another provider on a
+  // multi-provider request. Null on the customer side.
+  final RequestStatus? myResponse;
+  // When the customer posted it. Null if the response leaves it out.
+  final DateTime? createdAt;
+  // When the customer would like the job done, if they picked a date.
+  final DateTime? preferredAt;
+  // The sub-service it was posted under, with its typical price range. Null
+  // when the response does not include it.
+  final SubService? subService;
 
   const Requirement({
     required this.id,
     required this.subServiceId,
+    this.title = '',
     required this.description,
     required this.photoUrls,
     required this.status,
@@ -47,11 +68,16 @@ class Requirement {
     this.customerName,
     this.customerPlace,
     this.distanceKm,
+    this.myResponse,
+    this.createdAt,
+    this.preferredAt,
+    this.subService,
   });
 
   factory Requirement.fromJson(Map<String, dynamic> json) => Requirement(
         id: json['id'] as String,
         subServiceId: json['subServiceId'] as String,
+        title: json['title'] as String? ?? '',
         description: json['description'] as String,
         photoUrls: (json['photoUrls'] as List?)?.cast<String>() ?? const [],
         status: requestStatusFromJson(json['status'] as String),
@@ -65,7 +91,22 @@ class Requirement {
         customerName: json['customerName'] as String?,
         customerPlace: json['customerPlace'] as String?,
         distanceKm: (json['distanceKm'] as num?)?.toDouble(),
+        myResponse: json['myResponse'] == null
+            ? null
+            : requestStatusFromJson(json['myResponse'] as String),
+        createdAt: json['createdAt'] == null
+            ? null
+            : DateTime.parse(json['createdAt'] as String).toLocal(),
+        preferredAt: json['preferredAt'] == null
+            ? null
+            : DateTime.parse(json['preferredAt'] as String).toLocal(),
+        subService: json['subService'] is Map<String, dynamic>
+            ? SubService.fromJson(json['subService'] as Map<String, dynamic>)
+            : null,
       );
+
+  /// The title, or the description when there is no title.
+  String get heading => title.isNotEmpty ? title : description;
 }
 
 /// One provider a request was sent to, with their own answer: still pending

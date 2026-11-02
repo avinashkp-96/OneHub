@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import 'job_detail.dart';
 
-enum _JobState { awaitingSelection, selected, notSelected, completed }
+enum _JobState { selected, completed }
 
+// A job is active only once the customer has accepted this provider's price.
+// Before that (price sent, waiting, or another provider chosen) the request
+// stays in Incoming requests.
 _JobState? _stateFor(Requirement r) {
-  if (r.bids.isEmpty) return null; // this provider hasn't bid on it (yet)
-  final myBid = r.bids.first;
-  if (r.status == RequestStatus.completed && myBid.confirmed) {
-    return _JobState.completed;
-  }
-  if (r.status == RequestStatus.confirmed ||
-      r.status == RequestStatus.completed) {
-    return myBid.confirmed ? _JobState.selected : _JobState.notSelected;
-  }
-  if (r.status == RequestStatus.bidReceived) return _JobState.awaitingSelection;
-  return null;
+  if (r.bids.isEmpty || !r.bids.first.confirmed) return null;
+  return r.status == RequestStatus.completed
+      ? _JobState.completed
+      : _JobState.selected;
 }
 
-// docx 5.6 — Job Confirmation & Completion: Awaiting Selection / Selected /
-// Not Selected, and the "Mark as Completed" action once selected.
+// docx 5.6 — Job Confirmation & Completion: jobs whose price the customer
+// accepted (Selected) and finished ones (Completed), with "Mark as Completed"
+// once selected. Waiting and not-selected requests stay in Incoming requests.
 // Restyled to match the other redesigned list screens (no new reference —
 // applied on request): PageGlow, page title in the AppBar, and
-// each job as a bordered card with a status badge. Takes an optional
+// each job as the shared RequestCard (status, posted time, title,
+// description, then customer, location and the provider's own bid), like
+// Incoming requests. Takes an optional
 // [client], like SignupScreen, so tests can use a fake API.
 class ActiveJobsScreen extends StatefulWidget {
   final ApiClient? client;
@@ -88,46 +88,19 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
   }
 
   // The detail view is read-only: Mark as Completed stays on the card so
-  // there is one place to do it.
+  // there is one place to do it. Same page Incoming requests opens.
   void _openDetail(Requirement job) {
     final state = _stateFor(job)!;
-    final bid = job.bids.first;
-    final lo = (bid.refinedMinPrice ?? bid.initialMinPrice).round();
-    final hi = (bid.refinedMaxPrice ?? bid.initialMaxPrice).round();
-    final awaiting = state == _JobState.awaitingSelection;
-    final lost = state == _JobState.notSelected;
-    final done = state == _JobState.completed;
-
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (ctx) => RequestDetailScreen(
-        heading: 'Job',
-        description: job.description,
-        statusLabel: _jobLabel(state),
-        statusColor: _jobColor(ctx, state),
-        steps: [
-          const TimelineStep('Bid submitted', TimelineState.done),
-          TimelineStep('Customer chooses a provider',
-              awaiting ? TimelineState.current : TimelineState.done),
-          if (lost)
-            const TimelineStep('Not selected', TimelineState.current)
-          else ...[
-            TimelineStep(
-                'Job in progress',
-                awaiting
-                    ? TimelineState.todo
-                    : done
-                        ? TimelineState.done
-                        : TimelineState.current),
-            TimelineStep(
-                'Completed', done ? TimelineState.done : TimelineState.todo),
-          ],
-        ],
-        facts: [
-          DetailFact('Your bid', '₹$lo - ₹$hi'),
-          DetailFact('Photos', '${job.photoUrls.length}'),
-        ],
-      ),
-    ));
+    openJobDetail(
+      context,
+      job,
+      statusLabel: _jobLabel(state),
+      statusColor: _jobColor(context, state),
+      steps: jobTimeline(switch (state) {
+        _JobState.selected => IncomingStage.selected,
+        _JobState.completed => IncomingStage.completed,
+      }),
+    );
   }
 
   @override
@@ -152,7 +125,7 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
               padding: const EdgeInsets.symmetric(
                   horizontal: OneHubTheme.pageMargin, vertical: 8),
               children: [
-                Text('Where each of your bids stands.',
+                Text('Jobs where the customer accepted your price.',
                     style: OneHubTextStyles.bodyText(textSecondary)),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 if (_error != null)
@@ -204,48 +177,47 @@ class _JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
     final state = _stateFor(job)!;
+    final distance = job.distanceKm;
+    final place = [
+      if (job.customerPlace != null) job.customerPlace!,
+      if (distance != null) '${distance.toStringAsFixed(1)} km',
+    ].join(' · ');
+    final bid = bidRangeLabel(job);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: RequestCard(
+        statusLabel: _label(state),
+        statusColor: _color(context, state),
+        postedAt: job.createdAt,
+        title: job.heading,
+        description: job.title.isNotEmpty ? job.description : '',
+        descriptionMaxLines: 2,
+        facts: [
+          if (job.customerName != null)
+            RequestCardFact('CUSTOMER', job.customerName!),
+          if (place.isNotEmpty) RequestCardFact('LOCATION', place),
+          if (bid != null) RequestCardFact('YOUR BID', bid),
+        ],
+        footer: state == _JobState.selected
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('You were picked. Go ahead with the job.',
+                      style: OneHubTextStyles.bodyText(textSecondary)),
+                  const SizedBox(height: 12),
+                  PrimaryCta(
+                    onPressed: busy ? null : onMarkCompleted,
+                    child:
+                        Text(busy ? 'Marking complete…' : 'Mark as Completed'),
+                  ),
+                ],
+              )
+            : null,
         onTap: onOpen,
-        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                job.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: OneHubTextStyles.bodyText(textPrimary)
-                    .copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TintedBadge(
-                    label: _label(state), color: _color(context, state)),
-              ),
-              if (state == _JobState.selected) ...[
-                const SizedBox(height: 8),
-                Text('You were picked. Go ahead with the job.',
-                    style: OneHubTextStyles.bodyText(textSecondary)),
-                const SizedBox(height: 16),
-                PrimaryCta(
-                  onPressed: busy ? null : onMarkCompleted,
-                  child: Text(busy ? 'Marking complete…' : 'Mark as Completed'),
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -257,15 +229,11 @@ class _JobCard extends StatelessWidget {
 }
 
 String _jobLabel(_JobState state) => switch (state) {
-      _JobState.awaitingSelection => 'AWAITING SELECTION',
       _JobState.selected => 'SELECTED',
-      _JobState.notSelected => 'NOT SELECTED',
       _JobState.completed => 'COMPLETED',
     };
 
 Color _jobColor(BuildContext context, _JobState state) => switch (state) {
-      _JobState.awaitingSelection => context.statusWarning,
       _JobState.selected => context.statusSuccess,
-      _JobState.notSelected => context.statusDanger,
       _JobState.completed => context.statusSuccess,
     };

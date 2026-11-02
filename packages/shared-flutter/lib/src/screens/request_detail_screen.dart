@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/glow_card.dart';
+import '../widgets/request_card.dart';
 import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
 import '../theme/onehub_theme.dart';
@@ -34,11 +35,22 @@ class DetailBadgeRow {
 /// of [badgeRows] (the customer app lists each provider and their answer),
 /// extra facts and an optional [action] (a full-width button the app
 /// supplies). Same shell as the other screens (PageGlow, page title in the
-/// AppBar). The one GlowCard holds the description and status; the timeline,
-/// badge rows and facts are plain bordered cards.
+/// AppBar). The top card is the brand gradient [RequestCard] with the status,
+/// posted time, title and description; the timeline, badge rows and facts
+/// are plain bordered cards.
 class RequestDetailScreen extends StatelessWidget {
   final String heading;
+
+  /// The request's own title, shown in bold above the description. Empty
+  /// hides it.
+  final String title;
   final String description;
+
+  /// When the request was posted; shown on the card when given.
+  final DateTime? postedAt;
+
+  /// Fixes "now" for the posted label in tests.
+  final DateTime? now;
   final String statusLabel;
   final Color statusColor;
   final List<TimelineStep> steps;
@@ -49,7 +61,10 @@ class RequestDetailScreen extends StatelessWidget {
   const RequestDetailScreen({
     super.key,
     required this.heading,
+    this.title = '',
     required this.description,
+    this.postedAt,
+    this.now,
     required this.statusLabel,
     required this.statusColor,
     required this.steps,
@@ -81,19 +96,14 @@ class RequestDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              GlowCard(
-                child: Padding(
-                  padding: const EdgeInsets.all(OneHubTheme.cardPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TintedBadge(label: statusLabel, color: statusColor),
-                      const SizedBox(height: 12),
-                      Text(description,
-                          style: OneHubTextStyles.bodyText(textPrimary)),
-                    ],
-                  ),
-                ),
+              RequestCard(
+                statusLabel: statusLabel,
+                statusColor: statusColor,
+                postedAt: postedAt,
+                now: now,
+                title: title.isNotEmpty ? title : description,
+                description: title.isNotEmpty ? description : '',
+                descriptionMaxLines: null,
               ),
               const SizedBox(height: 26),
               Text('Progress',

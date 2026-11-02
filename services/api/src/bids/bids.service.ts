@@ -29,12 +29,17 @@ export class BidsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  // docx 5.4 "Submit Bid" — only a provider the request was sent to may bid.
+  // docx 5.4 "Submit Bid" — only a provider the request was sent to may bid,
+  // once. Sending a price is how a provider accepts a request (there is no
+  // separate accept step), so it also records their answer as ACCEPTED.
   async submitInitialBid(requirementId: string, providerId: string, range: PriceRangeDto) {
     const link = await this.prisma.requirementProvider.findUnique({
       where: { requirementId_providerId: { requirementId, providerId } },
     });
     if (!link) throw new ForbiddenException('this request was not sent to you');
+    if (link.status === 'REJECTED') throw new ForbiddenException('you rejected this request');
+    const existing = await this.prisma.bid.findFirst({ where: { requirementId, providerId } });
+    if (existing) throw new BadRequestException('you already sent a price for this request; refine it instead');
 
     const bid = await this.prisma.bid.create({
       data: {
@@ -44,7 +49,16 @@ export class BidsService {
         initialMaxPrice: range.maxPrice,
       },
     });
-    await this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'BID_RECEIVED' } });
+    // Forward only: a late bid must not pull a confirmed or finished request
+    // back to BID_RECEIVED.
+    await this.prisma.requirement.updateMany({
+      where: { id: requirementId, status: { in: ['SENT', 'ACCEPTED'] } },
+      data: { status: 'BID_RECEIVED' },
+    });
+    await this.prisma.requirementProvider.update({
+      where: { requirementId_providerId: { requirementId, providerId } },
+      data: { status: 'ACCEPTED' },
+    });
     await this.notifications.bidSubmitted(bid.id);
     return bid;
   }

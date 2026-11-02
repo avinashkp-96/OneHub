@@ -8,7 +8,9 @@ import 'rating_screen.dart';
 // combined into one list, since both read from the same /requirements/mine
 // endpoint and differ only in which statuses they'd normally filter to.
 // Restyled to match the current OneHub design system (no new reference —
-// applied on request): PageGlow behind the page, a page title in the AppBar, and request rows as bordered cards with a TintedBadge
+// applied on request): PageGlow behind the page, a page title in the AppBar,
+// and each request as the shared brand-gradient RequestCard (restyled on
+// request after a reference card). Earlier the rows were bordered cards with a TintedBadge
 // status pill, matching the tile pattern used for provider/bid/sub-service
 // rows elsewhere in this feature. The status label/color mapping mirrors
 // DashboardScreen's _ActiveRequestCard, since both read the same
@@ -19,9 +21,12 @@ import 'rating_screen.dart';
 // sensible position for a terminal status.
 String requestStatusLabel(Requirement r) => switch (r.status) {
       RequestStatus.sent => 'SENT',
-      RequestStatus.accepted => 'ACCEPTED',
+      // Providers accept by sending a price now; an old ACCEPTED request
+      // is still waiting for prices, like SENT.
+      RequestStatus.accepted => 'SENT',
       RequestStatus.rejected => 'REJECTED',
-      RequestStatus.bidReceived => '${r.bids.length} BIDS',
+      RequestStatus.bidReceived =>
+        r.bids.length == 1 ? '1 BID' : '${r.bids.length} BIDS',
       RequestStatus.confirmed => 'CONFIRMED',
       RequestStatus.completed => 'COMPLETED',
       RequestStatus.cancelled => 'CANCELLED',
@@ -41,8 +46,8 @@ Color requestStatusColor(BuildContext context, RequestStatus status) =>
       _ => OneHubColors.primary,
     };
 
-// docx 4.4: one provider's answer on a request, combining their own status
-// (pending, accepted, rejected) with how their bid fared. Uses the refined
+// docx 4.4: one provider's answer on a request: pending until they send a
+// price or reject, then their price and how it fared. Uses the refined
 // range once a provider has updated their bid.
 (String, Color) providerStatusBadge(
     BuildContext context, Requirement r, TargetedProvider t) {
@@ -68,24 +73,24 @@ Color requestStatusColor(BuildContext context, RequestStatus status) =>
       context.statusWarning
     );
   }
-  if (t.status == RequestStatus.accepted) {
-    return ('ACCEPTED', OneHubColors.primary);
-  }
   return ('PENDING', muted);
 }
 
-// The happy path is Sent → Accepted → Bids received → Confirmed → Completed.
+// The happy path is Sent → Bids received → Confirmed → Completed. Providers
+// accept by sending a price, so there is no separate Accepted step; an old
+// ACCEPTED request shows at Sent.
 // A request that ended any other way (rejected, cancelled, expired) shows
 // Sent followed by how it ended, since the rest never happened.
 List<TimelineStep> requestTimeline(RequestStatus status) {
   const path = [
     ('Sent', RequestStatus.sent),
-    ('Accepted by a provider', RequestStatus.accepted),
     ('Bids received', RequestStatus.bidReceived),
     ('Provider confirmed', RequestStatus.confirmed),
     ('Job completed', RequestStatus.completed),
   ];
-  final index = path.indexWhere((p) => p.$2 == status);
+  final current =
+      status == RequestStatus.accepted ? RequestStatus.sent : status;
+  final index = path.indexWhere((p) => p.$2 == current);
   if (index == -1) {
     final ended = switch (status) {
       RequestStatus.rejected => 'Rejected',
@@ -200,6 +205,8 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => RequestDetailScreen(
         heading: 'Request',
+        postedAt: r.createdAt,
+        title: r.title,
         description: r.description,
         statusLabel: requestStatusLabel(r),
         statusColor: requestStatusColor(context, r.status),
@@ -282,6 +289,9 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
   }
 }
 
+/// One request as the shared gradient [RequestCard]: status and when it was
+/// posted, the title and description, then the lowest bid so far once there
+/// is one. Tapping opens the detail.
 class _RequestTile extends StatelessWidget {
   final Requirement requirement;
   final VoidCallback onTap;
@@ -289,45 +299,32 @@ class _RequestTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary =
-        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    final textMuted =
-        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
-    final statusColor = requestStatusColor(context, requirement.status);
+    final r = requirement;
+    String price(double v) => '₹${v.toStringAsFixed(0)}';
+    final lowest = r.bids.isEmpty
+        ? null
+        : (r.bids.toList()
+              ..sort((a, b) => (a.refinedMinPrice ?? a.initialMinPrice)
+                  .compareTo(b.refinedMinPrice ?? b.initialMinPrice)))
+            .first;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: RequestCard(
+        statusLabel: requestStatusLabel(r),
+        statusColor: requestStatusColor(context, r.status),
+        postedAt: r.createdAt,
+        title: r.heading,
+        description: r.title.isNotEmpty ? r.description : '',
+        descriptionMaxLines: 2,
+        facts: [
+          if (lowest != null)
+            RequestCardFact(
+                'LOWEST BID',
+                '${price(lowest.refinedMinPrice ?? lowest.initialMinPrice)} – '
+                    '${price(lowest.refinedMaxPrice ?? lowest.initialMaxPrice)}')
+        ],
         onTap: onTap,
-        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      requirement.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: OneHubTextStyles.bodyText(textPrimary)
-                          .copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 6),
-                    TintedBadge(
-                        label: requestStatusLabel(requirement),
-                        color: statusColor),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
-            ],
-          ),
-        ),
       ),
     );
   }

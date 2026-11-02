@@ -34,18 +34,13 @@ export class RequirementsController {
     return this.requirements.listForProvider(providerId);
   }
 
-  @Roles('PROVIDER')
-  @Patch(':id/accept')
-  async accept(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
-    const providerId = await this.providerIdFor(req.user.sub);
-    return this.requirements.respond(id, providerId, true);
-  }
-
+  // There is no accept route: a provider accepts by sending a price
+  // (POST /bids), and the customer then chooses among the bids.
   @Roles('PROVIDER')
   @Patch(':id/reject')
   async reject(@Req() req: { user: JwtPayload }, @Param('id') id: string) {
     const providerId = await this.providerIdFor(req.user.sub);
-    return this.requirements.respond(id, providerId, false);
+    return this.requirements.reject(id, providerId);
   }
 
   @Roles('PROVIDER')

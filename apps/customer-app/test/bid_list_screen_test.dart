@@ -70,7 +70,7 @@ void main() {
     await pumpScreen(tester);
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('No bids yet'), findsOneWidget);
+    expect(find.textContaining('No prices yet'), findsOneWidget);
   });
 
   testWidgets('shows an error when the bids cannot be loaded', (tester) async {

@@ -98,7 +98,7 @@ class _BidListScreenState extends State<BidListScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Text(
-                      'No bids yet. Providers who accept your request will appear here.',
+                      'No prices yet. Each provider who takes the job will appear here with their price.',
                       style: OneHubTextStyles.bodyText(context.statusWarning),
                     ),
                   )

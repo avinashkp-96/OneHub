@@ -16,6 +16,7 @@ export class RequirementsService {
       data: {
         customerId,
         subServiceId: dto.subServiceId,
+        title: dto.title.trim(),
         description: dto.description,
         voiceTranscript: dto.voiceTranscript,
         photoUrls: dto.photoUrls ?? [],
@@ -72,7 +73,9 @@ export class RequirementsService {
   // `customerName`, `customerPlace` (the customer's city; requests have no
   // address of their own) and `distanceKm` from the provider's saved location,
   // null when either side has no coordinates. The customer's coordinates and
-  // contact details are never sent.
+  // contact details are never sent. `myResponse` is this provider's own
+  // answer (SENT until they accept or reject), since the requirement's
+  // `status` can reflect another provider on a multi-provider request.
   async listForProvider(providerId: string) {
     const [requirements, provider] = await Promise.all([
       this.prisma.requirement.findMany({
@@ -80,6 +83,7 @@ export class RequirementsService {
         include: {
           subService: true,
           bids: { where: { providerId } },
+          targetedProviders: { where: { providerId }, select: { status: true } },
           customer: { select: { fullName: true, city: true, latitude: true, longitude: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -91,16 +95,19 @@ export class RequirementsService {
     ]);
     const from = provider?.user;
 
-    return requirements.map(({ customer, ...r }) => ({
+    return requirements.map(({ customer, targetedProviders, ...r }) => ({
       ...r,
+      myResponse: targetedProviders[0]?.status ?? 'SENT',
       customerName: customer.fullName,
       customerPlace: customer.city,
       distanceKm: from ? distanceKm(from, customer) : null,
     }));
   }
 
-  // docx 5.3 Accept / Reject
-  async respond(requirementId: string, providerId: string, accept: boolean) {
+  // docx 5.3 Reject. There is no separate accept: a provider accepts by
+  // sending a price (BidsService.submitInitialBid). Rejecting only records
+  // this provider's answer; the request stays open for the others.
+  async reject(requirementId: string, providerId: string) {
     const link = await this.prisma.requirementProvider.findUnique({
       where: { requirementId_providerId: { requirementId, providerId } },
     });
@@ -108,14 +115,9 @@ export class RequirementsService {
 
     await this.prisma.requirementProvider.update({
       where: { requirementId_providerId: { requirementId, providerId } },
-      data: { status: accept ? 'ACCEPTED' : 'REJECTED' },
+      data: { status: 'REJECTED' },
     });
-
-    if (accept) {
-      await this.prisma.requirement.update({ where: { id: requirementId }, data: { status: 'ACCEPTED' } });
-      await this.notifications.requestAccepted(requirementId, providerId);
-    }
-    return { requirementId, providerId, status: accept ? 'ACCEPTED' : 'REJECTED' };
+    return { requirementId, providerId, status: 'REJECTED' };
   }
 
   // docx 5.6 "Mark as Completed" — triggers the customer's rating prompt (docx 4.6).

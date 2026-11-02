@@ -22,7 +22,16 @@ class PostRequirementScreen extends StatefulWidget {
 }
 
 class _PostRequirementScreenState extends State<PostRequirementScreen> {
+  final _title = TextEditingController();
   final _description = TextEditingController();
+
+  @override
+  void dispose() {
+    _title.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
   DateTime? _preferredAt;
   List<ProviderSummary> _providers = [];
   final Set<String> _selectedProviderIds = {};
@@ -67,9 +76,11 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   }
 
   Future<void> _sendRequest() async {
-    if (_description.text.trim().isEmpty || _selectedProviderIds.isEmpty) {
-      setState(
-          () => _error = 'Describe the work and select at least one provider.');
+    if (_title.text.trim().isEmpty ||
+        _description.text.trim().isEmpty ||
+        _selectedProviderIds.isEmpty) {
+      setState(() => _error =
+          'Add a title, describe the work and select at least one provider.');
       return;
     }
     setState(() {
@@ -81,6 +92,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
           '/requirements',
           {
             'subServiceId': widget.subServiceId,
+            'title': _title.text.trim(),
             'description': _description.text.trim(),
             if (_preferredAt != null)
               'preferredAt': _preferredAt!.toIso8601String(),
@@ -144,15 +156,28 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const FieldLabel('WHAT DO YOU NEED DONE?',
+                        const FieldLabel('TITLE',
                             required: true, icon: OneHubIcons.edit),
                         const SizedBox(height: OneHubTheme.gapFieldInternals),
                         TextField(
+                          key: const Key('request-title'),
+                          controller: _title,
+                          maxLength: requestTitleMaxLength,
+                          textCapitalization: TextCapitalization.sentences,
+                          decoration: const InputDecoration(
+                              hintText: 'e.g. Ceiling fan repair'),
+                        ),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
+                        const FieldLabel('WHAT DO YOU NEED DONE?',
+                            required: true, icon: OneHubIcons.documentList),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
+                        TextField(
+                          key: const Key('request-description'),
                           controller: _description,
                           maxLines: 4,
                           decoration: const InputDecoration(
                               hintText:
-                                  'e.g. Ceiling fan making a rattling noise'),
+                                  'e.g. The fan makes a rattling noise at high speed'),
                         ),
                         const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('PREFERRED DATE/TIME (OPTIONAL)',

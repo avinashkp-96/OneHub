@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:onehub_provider/features/bids/price_range_screen.dart';
 import 'package:onehub_provider/features/requirements/incoming_requests_screen.dart';
+import 'package:onehub_provider/features/requirements/job_detail.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 void main() {
@@ -24,7 +25,7 @@ void main() {
   late List<String> calls;
 
   ApiClient fakeClient(
-      {List<Map<String, dynamic>>? requests, bool failAccept = false}) {
+      {List<Map<String, dynamic>>? requests}) {
     calls = [];
     final items = requests ??
         [
@@ -49,9 +50,6 @@ void main() {
         calls.add('${request.method} ${request.url.path}');
         if (request.url.path == '/requirements/incoming') {
           return http.Response(jsonEncode(items), 200);
-        }
-        if (request.url.path.endsWith('/accept') && failAccept) {
-          return http.Response(jsonEncode({'message': 'Already taken'}), 409);
         }
         return http.Response(jsonEncode({'ok': true}), 200);
       }),
@@ -82,9 +80,13 @@ void main() {
     expect(find.text('Incoming requests'), findsOneWidget);
     expect(find.text('Ceiling fan making a rattling noise'), findsOneWidget);
     expect(find.text('Fix a leaking tap'), findsOneWidget);
-    expect(find.text('2 PHOTOS'), findsOneWidget);
-    expect(find.widgetWithText(PrimaryCta, 'Accept'), findsNWidgets(2));
+    expect(find.byKey(const Key('request-card')), findsNWidgets(2));
+    expect(find.text('PHOTOS'), findsOneWidget);
+    expect(find.text('2 photos'), findsOneWidget);
+    expect(find.text('NEW'), findsNWidgets(2));
+    expect(find.widgetWithText(PrimaryCta, 'Send price'), findsNWidgets(2));
     expect(find.widgetWithText(OutlinedButton, 'Reject'), findsNWidgets(2));
+    expect(find.text('Accept'), findsNothing);
   });
 
   group('customer details', () {
@@ -96,6 +98,19 @@ void main() {
           'status': 'SENT',
           ...extra,
         };
+
+    testWidgets('shows the title in bold with the description below',
+        (tester) async {
+      await pumpScreen(
+          tester, fakeClient(requests: [request({'title': 'Fan repair'})]));
+
+      final title = tester.widget<Text>(find.text('Fan repair'));
+      expect(title.style!.fontSize, 24);
+      expect(find.text('Ceiling fan making a rattling noise'), findsOneWidget);
+      expect(
+          tester.getRect(find.text('Ceiling fan making a rattling noise')).top,
+          greaterThan(tester.getRect(find.text('Fan repair')).top));
+    });
 
     testWidgets('shows the customer name, place and distance',
         (tester) async {
@@ -109,10 +124,167 @@ void main() {
             })
           ]));
 
+      expect(find.text('CUSTOMER'), findsOneWidget);
       expect(find.text('Meera Nair'), findsOneWidget);
-      expect(find.text('Kochi · 6.7 km away'), findsOneWidget);
-      expect(find.byIcon(OneHubIcons.user), findsOneWidget);
-      expect(find.byIcon(OneHubIcons.location), findsOneWidget);
+      expect(find.text('LOCATION'), findsOneWidget);
+      expect(find.text('Kochi · 6.7 km'), findsOneWidget);
+    });
+
+    testWidgets('shows when it was posted, and no typical price',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'createdAt': DateTime.now()
+                  .subtract(const Duration(days: 2, hours: 1))
+                  .toUtc()
+                  .toIso8601String(),
+              'subService': {
+                'id': 's1',
+                'categoryId': 'c1',
+                'name': 'Fan Installation',
+                'suggestedMinPrice': 250,
+                'suggestedMaxPrice': 450,
+              },
+            })
+          ]));
+
+      expect(find.text('Posted 2 days ago'), findsOneWidget);
+      expect(find.text('TYPICAL PRICE'), findsNothing);
+      expect(find.text('₹250 – ₹450'), findsNothing);
+    });
+
+    Map<String, dynamic> bid({bool confirmed = false}) => {
+          'id': 'b1',
+          'providerId': 'p1',
+          'initialMinPrice': 300,
+          'initialMaxPrice': 500,
+          'contactUnlocked': false,
+          'confirmed': confirmed,
+        };
+
+    testWidgets('an old accept with no price yet still offers Send price',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({'status': 'ACCEPTED', 'myResponse': 'ACCEPTED'})
+          ]));
+
+      expect(find.text('NEW'), findsOneWidget);
+      expect(find.widgetWithText(PrimaryCta, 'Send price'), findsOneWidget);
+    });
+
+    testWidgets(
+        "uses this provider's own answer, not the request status",
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({'status': 'ACCEPTED', 'myResponse': 'SENT'})
+          ]));
+
+      expect(find.text('NEW'), findsOneWidget,
+          reason: 'another provider accepted, this one has not answered');
+      expect(find.widgetWithText(PrimaryCta, 'Send price'), findsOneWidget);
+    });
+
+    testWidgets('once a price is sent there are no buttons', (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'status': 'BID_RECEIVED',
+              'myResponse': 'ACCEPTED',
+              'bids': [bid()],
+            })
+          ]));
+
+      expect(find.text('BID SENT'), findsOneWidget);
+      expect(find.byType(PrimaryCta), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+    });
+
+    testWidgets('a card with a price sent shows YOUR BID', (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'status': 'BID_RECEIVED',
+              'bids': [bid()],
+            })
+          ]));
+
+      expect(find.text('YOUR BID'), findsOneWidget);
+      expect(find.text('₹300 – ₹500'), findsOneWidget);
+    });
+
+    testWidgets('tapping a sent card opens its detail with the bid, no actions',
+        (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({
+              'title': 'Fan repair',
+              'status': 'BID_RECEIVED',
+              'customerName': 'Meera Nair',
+              'preferredAt': '2026-11-05T10:00:00.000Z',
+              'bids': [bid()],
+            })
+          ]));
+
+      await tester.tap(find.text('Fan repair'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RequestDetailScreen), findsOneWidget);
+      expect(find.text('YOUR BID'), findsOneWidget);
+      expect(find.text('₹300 – ₹500'), findsOneWidget);
+      expect(find.text('PREFERRED DATE'), findsOneWidget);
+      expect(find.text('Customer chooses a provider'), findsOneWidget);
+      expect(find.byType(PrimaryCta), findsNothing);
+    });
+
+    testWidgets("a new request's detail keeps Reject and Send price",
+        (tester) async {
+      await pumpScreen(
+          tester, fakeClient(requests: [request({'title': 'Fan repair'})]));
+
+      await tester.tap(find.text('Fan repair'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestDetailScreen), findsOneWidget);
+      expect(find.text('YOUR BID'), findsNothing);
+
+      await tester.tap(find.widgetWithText(PrimaryCta, 'Send price'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(find.byType(PriceRangeScreen), findsOneWidget);
+    });
+
+    testWidgets("Reject from a new request's detail rejects and closes it",
+        (tester) async {
+      await pumpScreen(
+          tester, fakeClient(requests: [request({'title': 'Fan repair'})]));
+
+      await tester.tap(find.text('Fan repair'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Reject'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(calls, contains('PATCH /requirements/r1/reject'));
+    });
+
+    testWidgets('hides requests this provider rejected', (tester) async {
+      await pumpScreen(
+          tester,
+          fakeClient(requests: [
+            request({'myResponse': 'REJECTED'}),
+            {...request({'myResponse': 'SENT'}), 'id': 'r2', 'title': 'Kept'},
+          ]));
+
+      expect(find.byKey(const Key('request-card')), findsOneWidget);
+      expect(find.text('Kept'), findsOneWidget);
     });
 
     testWidgets('shows the place alone when the distance is unknown',
@@ -128,7 +300,7 @@ void main() {
           ]));
 
       expect(find.text('Kochi'), findsOneWidget);
-      expect(find.textContaining('km away'), findsNothing);
+      expect(find.textContaining(' km'), findsNothing);
     });
 
     testWidgets('shows the distance alone when the city is unknown',
@@ -139,14 +311,16 @@ void main() {
             request({'customerName': 'Meera Nair', 'distanceKm': 0.4})
           ]));
 
-      expect(find.text('0.4 km away'), findsOneWidget);
+      expect(find.text('0.4 km'), findsOneWidget);
     });
 
-    testWidgets('hides both lines when nothing is known', (tester) async {
+    testWidgets('leaves out the facts row when nothing is known',
+        (tester) async {
       await pumpScreen(tester, fakeClient(requests: [request({})]));
 
-      expect(find.byIcon(OneHubIcons.user), findsNothing);
-      expect(find.byIcon(OneHubIcons.location), findsNothing);
+      expect(find.text('CUSTOMER'), findsNothing);
+      expect(find.text('LOCATION'), findsNothing);
+      expect(find.byType(Divider), findsNothing);
     });
   });
 
@@ -181,28 +355,68 @@ void main() {
     expect(calls.where((c) => c == 'GET /requirements/incoming').length, 2);
   });
 
-  testWidgets('accepting a request opens the price range screen for it',
+  testWidgets(
+      'Send price opens the price range screen without a separate accept',
       (tester) async {
     await pumpScreen(tester, fakeClient());
 
-    await tester.tap(find.widgetWithText(PrimaryCta, 'Accept').first);
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Send price').first);
     await tester.pumpAndSettle();
 
-    expect(calls, contains('PATCH /requirements/r1/accept'));
-    expect(
-        find.text('Request accepted. Send your price range.'), findsOneWidget);
     expect(find.byType(PriceRangeScreen), findsOneWidget);
     expect(find.text('Your price range'), findsOneWidget);
+    expect(calls.where((c) => c.startsWith('PATCH')), isEmpty);
   });
 
-  testWidgets('shows an error and stays on the list when accepting fails',
+  testWidgets('coming back from the price screen reloads the list',
       (tester) async {
-    await pumpScreen(tester, fakeClient(failAccept: true));
+    await pumpScreen(tester, fakeClient());
 
-    await tester.tap(find.widgetWithText(PrimaryCta, 'Accept').first);
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Send price').first);
+    await tester.pumpAndSettle();
+    await tester.pageBack();
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Could not accept'), findsOneWidget);
-    expect(find.byType(PriceRangeScreen), findsNothing);
+    expect(calls.where((c) => c == 'GET /requirements/incoming').length, 2);
+  });
+
+  group('incomingStageOf', () {
+    Requirement r(String status,
+            {String? mine, bool hasBid = false, bool confirmed = false}) =>
+        Requirement.fromJson({
+          'id': 'r',
+          'subServiceId': 's',
+          'description': 'd',
+          'status': status,
+          if (mine != null) 'myResponse': mine,
+          'bids': [
+            if (hasBid)
+              {
+                'id': 'b',
+                'providerId': 'p',
+                'initialMinPrice': 1,
+                'initialMaxPrice': 2,
+                'contactUnlocked': false,
+                'confirmed': confirmed,
+              }
+          ],
+        });
+
+    test('covers every stage', () {
+      expect(incomingStageOf(r('SENT')), IncomingStage.newRequest);
+      expect(incomingStageOf(r('ACCEPTED', mine: 'ACCEPTED')),
+          IncomingStage.newRequest);
+      expect(incomingStageOf(r('BID_RECEIVED', hasBid: true)),
+          IncomingStage.bidSent);
+      expect(incomingStageOf(r('CONFIRMED', hasBid: true, confirmed: true)),
+          IncomingStage.selected);
+      expect(incomingStageOf(r('COMPLETED', hasBid: true, confirmed: true)),
+          IncomingStage.completed);
+      expect(incomingStageOf(r('CONFIRMED', hasBid: true)),
+          IncomingStage.notSelected);
+      expect(incomingStageOf(r('CONFIRMED', mine: 'ACCEPTED')),
+          IncomingStage.closed);
+      expect(incomingStageOf(r('EXPIRED')), IncomingStage.closed);
+    });
   });
 }

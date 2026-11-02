@@ -103,7 +103,7 @@ describe('PriceRangeDto', () => {
 });
 
 describe('PostRequirementDto', () => {
-  const ok = { subServiceId: 's1', description: 'Fix', providerIds: ['p1'] };
+  const ok = { subServiceId: 's1', title: 'Fan repair', description: 'Fix', providerIds: ['p1'] };
 
   it('accepts a minimal body', async () => {
     expect(await errorsFor(PostRequirementDto, ok)).toEqual([]);
@@ -111,6 +111,15 @@ describe('PostRequirementDto', () => {
 
   it('needs at least one provider', async () => {
     expect(await errorsFor(PostRequirementDto, { ...ok, providerIds: [] })).toContain('providerIds');
+  });
+
+  it('needs a title that is not blank and at most 60 characters', async () => {
+    const noTitle: Partial<typeof ok> = { ...ok };
+    delete noTitle.title;
+    expect(await errorsFor(PostRequirementDto, noTitle)).toContain('title');
+    expect(await errorsFor(PostRequirementDto, { ...ok, title: '   ' })).toContain('title');
+    expect(await errorsFor(PostRequirementDto, { ...ok, title: 'x'.repeat(61) })).toContain('title');
+    expect(await errorsFor(PostRequirementDto, { ...ok, title: 'x'.repeat(60) })).toEqual([]);
   });
 
   it('rejects a malformed preferred date', async () => {

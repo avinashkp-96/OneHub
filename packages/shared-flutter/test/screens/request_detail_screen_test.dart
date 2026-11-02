@@ -4,7 +4,8 @@ import 'package:onehub_shared/onehub_shared.dart';
 
 void main() {
   Future<void> pumpScreen(WidgetTester tester,
-      {List<DetailFact> facts = const [],
+      {String title = '',
+      List<DetailFact> facts = const [],
       List<DetailBadgeRow> badgeRows = const [],
       Widget? action}) async {
     tester.view.physicalSize = const Size(800, 2400);
@@ -21,6 +22,7 @@ void main() {
               onPressed: () => Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) => RequestDetailScreen(
                   heading: 'Request',
+                  title: title,
                   description: 'Fix a ceiling fan',
                   statusLabel: '2 BIDS',
                   statusColor: Colors.orange,
@@ -45,12 +47,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  testWidgets('shows the title above the description when given',
+      (tester) async {
+    await pumpScreen(tester, title: 'Fan repair');
+
+    expect(find.text('Fan repair'), findsOneWidget);
+    expect(tester.getRect(find.text('Fix a ceiling fan')).top,
+        greaterThan(tester.getRect(find.text('Fan repair')).top));
+  });
+
   testWidgets('shows heading, description, status and every timeline step',
       (tester) async {
     await pumpScreen(tester);
 
     expect(find.byType(PageGlow), findsOneWidget);
-    expect(find.byType(GlowCard), findsOneWidget);
+    expect(find.byType(RequestCard), findsOneWidget);
     expect(find.text('Request'), findsOneWidget);
     expect(find.text('Fix a ceiling fan'), findsOneWidget);
     expect(find.text('2 BIDS'), findsOneWidget);

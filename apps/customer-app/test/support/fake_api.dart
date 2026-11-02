@@ -69,10 +69,12 @@ Map<String, dynamic> requirementJson(
   List<Map<String, dynamic>> bids = const [],
   List<String> photos = const [],
   List<Map<String, dynamic>> providers = const [],
+  String? title,
 }) =>
     {
       'id': id,
       'subServiceId': 'sub-1',
+      if (title != null) 'title': title,
       'description': description,
       'photoUrls': photos,
       'status': status,

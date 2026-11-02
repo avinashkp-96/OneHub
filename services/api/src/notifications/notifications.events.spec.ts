@@ -13,7 +13,7 @@ function build() {
     requirement: {
       findUniqueOrThrow: jest.fn().mockResolvedValue({
         customerId: 'cust-1',
-        subService: { name: 'Switchboard Repair' },
+        title: 'Kitchen switchboard sparking',
         targetedProviders: [{ providerId: 'p1' }, { providerId: 'p2' }],
       }),
     },
@@ -49,32 +49,18 @@ describe('Notification Matrix events', () => {
     const { service, sent } = build();
     await service.requestSent('r1');
     expect(sent()).toEqual([
-      { userId: 'u-p1', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Switchboard Repair', channel: 'IN_APP' },
-      { userId: 'u-p2', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Switchboard Repair', channel: 'IN_APP' },
+      { userId: 'u-p1', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', channel: 'IN_APP' },
+      { userId: 'u-p2', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', channel: 'IN_APP' },
     ]);
   });
 
   it('new request with no providers sends nothing', async () => {
     const { service, prisma } = build();
-    prisma.requirement.findUniqueOrThrow.mockResolvedValue({ subService: { name: 'X' }, targetedProviders: [] });
+    prisma.requirement.findUniqueOrThrow.mockResolvedValue({ title: 'X', targetedProviders: [] });
     await service.requestSent('r1');
     expect(prisma.notification.createMany).not.toHaveBeenCalled();
   });
 
-  it('accepted: the customer, by business name', async () => {
-    const { service, sent } = build();
-    await service.requestAccepted('r1', 'p1');
-    expect(sent()).toEqual([
-      expect.objectContaining({ userId: 'cust-1', event: NotificationEvent.REQUEST_ACCEPTED, message: 'Rajesh Electricals accepted your request' }),
-    ]);
-  });
-
-  it('falls back to the full name when a provider has no business name', async () => {
-    const { service, prisma, sent } = build();
-    prisma.provider.findUniqueOrThrow.mockResolvedValue({ userId: 'u-p1', businessName: null, user: { fullName: 'Rajesh K' } });
-    await service.requestAccepted('r1', 'p1');
-    expect(sent()[0].message).toBe('Rajesh K accepted your request');
-  });
 
   it('bid submitted: the customer, with the range in rupees', async () => {
     const { service, sent } = build();
@@ -86,6 +72,18 @@ describe('Notification Matrix events', () => {
         message: 'New bid received from Rajesh Electricals: ₹300–₹1,450',
       }),
     ]);
+  });
+
+  it("bid submitted: falls back to the person's name without a business name", async () => {
+    const { service, prisma, sent } = build();
+    prisma.bid.findUniqueOrThrow.mockResolvedValue({
+      initialMinPrice: 300,
+      initialMaxPrice: 1450,
+      requirement: { customerId: 'cust-1' },
+      provider: { userId: 'u-p1', businessName: null, user: { fullName: 'Rajesh K' } },
+    });
+    await service.bidSubmitted('b1');
+    expect(sent()[0].message).toBe('New bid received from Rajesh K: ₹300–₹1,450');
   });
 
   it('contact unlocked: the provider who paid', async () => {

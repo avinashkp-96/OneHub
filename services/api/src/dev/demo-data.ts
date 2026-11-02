@@ -118,6 +118,7 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
       data: {
         customerId: customer.id,
         subServiceId: subsByCategory.Electrician[0].id,
+        title: 'Switchboard sparking',
         description: 'Kitchen switchboard sparks when the mixer is plugged in. Need it checked and fixed.',
         photoUrls: [],
         targetedProviders: { create: [{ providerId: providerIds.Electrician }] },
