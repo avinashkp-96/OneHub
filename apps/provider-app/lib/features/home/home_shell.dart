@@ -60,6 +60,10 @@ class _HomeShellState extends State<HomeShell> {
         if (!didPop) _open(HomeTab.home);
       },
       child: Scaffold(
+        // The bar floats, so the page (and its glow) runs on behind it rather
+        // than stopping above it on the plain background. Each tab's SafeArea
+        // keeps its content clear of the bar.
+        extendBody: true,
         body: KeyedSubtree(key: ValueKey(_tab), child: page),
         bottomNavigationBar: CurvedNavBar(
           items: homeTabItems,

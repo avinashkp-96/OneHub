@@ -939,6 +939,12 @@ share it, along with its View bids / Rate provider action). View all still
 opens My requests. The list behind a detail now reloads when the detail
 closes. Tests: customer 137 (99.4%).
 
+2026-11-02 (nav bar background): both apps' HomeShell Scaffold now sets
+`extendBody: true`. Before, the body stopped above the floating CurvedNavBar,
+so a plain black strip showed behind the bar and the page glow ended above
+it. Each tab's own SafeArea keeps its content clear of the bar. Tests:
+customer 138, provider 161.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

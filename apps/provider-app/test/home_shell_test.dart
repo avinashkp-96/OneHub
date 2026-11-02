@@ -53,6 +53,22 @@ void main() {
   int selectedTab(WidgetTester tester) =>
       tester.widget<CurvedNavBar>(find.byType(CurvedNavBar)).selectedIndex;
 
+  testWidgets('the page and its glow run behind the floating bar',
+      (tester) async {
+    await pumpShell(tester);
+
+    final shell = tester.widget<Scaffold>(find
+        .ancestor(of: find.byType(CurvedNavBar), matching: find.byType(Scaffold))
+        .first);
+    expect(shell.extendBody, isTrue);
+    final screen = tester.getRect(find.byType(HomeShell));
+    final glow = tester.getRect(find.byType(PageGlow).first);
+    final bar = tester.getRect(find.byType(CurvedNavBar));
+    expect(glow.bottom, screen.bottom,
+        reason: 'no plain strip under the page behind the bar');
+    expect(bar.top, lessThan(glow.bottom));
+  });
+
   testWidgets('starts on Home with the four tabs and Home active',
       (tester) async {
     await pumpShell(tester);
