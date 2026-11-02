@@ -931,6 +931,14 @@ finished ones (COMPLETED); price-sent and not-selected requests stay in
 Incoming requests only. Tests: API 258 (100% lines), shared 99, customer 135,
 provider 160 (96.8%).
 
+2026-11-02 (dashboard request cards): on the customer dashboard the two
+Active requests cards touched, and tapping one opened My requests instead of
+that request. The cards now have a 12px gap, and each opens its own detail
+through `openRequestDetail` (moved out of `MyRequestsScreen` so both screens
+share it, along with its View bids / Rate provider action). View all still
+opens My requests. The list behind a detail now reloads when the detail
+closes. Tests: customer 137 (99.4%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

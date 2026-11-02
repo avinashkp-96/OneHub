@@ -180,6 +180,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(BidListScreen), findsNothing);
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+
+    // Leaving the detail reloads the list behind it.
+    await tester.tap(find.byType(BackButton));
+    await tester.pumpAndSettle();
     expect(fake.calls.where((c) => c == 'GET /requirements/mine').length, 2);
   });
 

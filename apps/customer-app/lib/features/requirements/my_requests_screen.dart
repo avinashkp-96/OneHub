@@ -155,79 +155,8 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     }
   }
 
-  Future<void> _open(Requirement r) async {
-    if (r.status == RequestStatus.completed) {
-      Bid? confirmedBid;
-      for (final b in r.bids) {
-        if (b.confirmed) {
-          confirmedBid = b;
-          break;
-        }
-      }
-      if (confirmedBid == null) {
-        return; // shouldn't happen, but nothing sane to open
-      }
-      final providerId = confirmedBid
-          .providerId; // captured as final so the closure below can use it
-      final alreadyRated = await api.get('/ratings/requirement/${r.id}');
-      if (!mounted) return;
-      if (alreadyRated != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("You've already rated this job.")));
-        return;
-      }
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (_) =>
-                RatingScreen(requirementId: r.id, providerId: providerId)),
-      );
-      _load();
-      return;
-    }
-    await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => BidListScreen(requirementId: r.id)));
-    _load();
-  }
-
-  // Tapping a row opens the detail view first; the old tap behaviour (bids
-  // or rating) is now its action button.
   Future<void> _openDetail(Requirement r) async {
-    final String? actionLabel = r.status == RequestStatus.completed
-        ? (r.bids.any((b) => b.confirmed) ? 'Rate provider' : null)
-        : switch (r.status) {
-            RequestStatus.accepted ||
-            RequestStatus.bidReceived ||
-            RequestStatus.confirmed =>
-              'View bids',
-            _ => null,
-          };
-
-    await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) => RequestDetailScreen(
-        heading: 'Request',
-        postedAt: r.createdAt,
-        title: r.title,
-        description: r.description,
-        statusLabel: requestStatusLabel(r),
-        statusColor: requestStatusColor(context, r.status),
-        steps: requestTimeline(r.status),
-        badgeRowsTitle: 'Providers',
-        badgeRows: [
-          for (final t in r.targetedProviders)
-            () {
-              final (badge, color) = providerStatusBadge(context, r, t);
-              return DetailBadgeRow(t.providerName, badge, color);
-            }(),
-        ],
-        facts: [
-          DetailFact('Bids', '${r.bids.length}'),
-          DetailFact('Photos', '${r.photoUrls.length}'),
-        ],
-        action: actionLabel == null
-            ? null
-            : PrimaryCta(onPressed: () => _open(r), child: Text(actionLabel)),
-      ),
-    ));
+    await openRequestDetail(context, r);
     if (mounted) _load();
   }
 
@@ -287,6 +216,84 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
       ),
     );
   }
+}
+
+/// Opens the detail for [r]: the request card, progress, each provider's
+/// answer, and an action button (View bids, or Rate provider once completed).
+/// Shared by My requests and the dashboard's Active requests cards; the
+/// caller reloads its list when this returns.
+Future<void> openRequestDetail(BuildContext context, Requirement r) {
+  final String? actionLabel = r.status == RequestStatus.completed
+      ? (r.bids.any((b) => b.confirmed) ? 'Rate provider' : null)
+      : switch (r.status) {
+          RequestStatus.accepted ||
+          RequestStatus.bidReceived ||
+          RequestStatus.confirmed =>
+            'View bids',
+          _ => null,
+        };
+
+  return Navigator.of(context).push(MaterialPageRoute(
+    builder: (detailContext) => RequestDetailScreen(
+      heading: 'Request',
+      postedAt: r.createdAt,
+      title: r.title,
+      description: r.description,
+      statusLabel: requestStatusLabel(r),
+      statusColor: requestStatusColor(context, r.status),
+      steps: requestTimeline(r.status),
+      badgeRowsTitle: 'Providers',
+      badgeRows: [
+        for (final t in r.targetedProviders)
+          () {
+            final (badge, color) = providerStatusBadge(context, r, t);
+            return DetailBadgeRow(t.providerName, badge, color);
+          }(),
+      ],
+      facts: [
+        DetailFact('Bids', '${r.bids.length}'),
+        DetailFact('Photos', '${r.photoUrls.length}'),
+      ],
+      action: actionLabel == null
+          ? null
+          : PrimaryCta(
+              onPressed: () => _openRequestAction(detailContext, r),
+              child: Text(actionLabel)),
+    ),
+  ));
+}
+
+// The detail's action: the bid list, or the rating screen for a completed
+// job that has not been rated yet.
+Future<void> _openRequestAction(BuildContext context, Requirement r) async {
+  if (r.status == RequestStatus.completed) {
+    Bid? confirmedBid;
+    for (final b in r.bids) {
+      if (b.confirmed) {
+        confirmedBid = b;
+        break;
+      }
+    }
+    if (confirmedBid == null) {
+      return; // shouldn't happen, but nothing sane to open
+    }
+    final providerId = confirmedBid.providerId;
+    final alreadyRated = await api.get('/ratings/requirement/${r.id}');
+    if (!context.mounted) return;
+    if (alreadyRated != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You've already rated this job.")));
+      return;
+    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+          builder: (_) =>
+              RatingScreen(requirementId: r.id, providerId: providerId)),
+    );
+    return;
+  }
+  await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => BidListScreen(requirementId: r.id)));
 }
 
 /// One request as the shared gradient [RequestCard]: status and when it was

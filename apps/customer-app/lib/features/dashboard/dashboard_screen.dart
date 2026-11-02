@@ -112,7 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 12),
                 if (!_loading)
                   _ActiveRequestsSection(
-                      requirements: _requirements, onOpen: openMyRequests),
+                      requirements: _requirements,
+                      onOpen: (r) async {
+                        await openRequestDetail(context, r);
+                        if (mounted) _load();
+                      }),
                 const SizedBox(height: 26),
                 _SectionHeader(
                     title: 'Nearby providers',
@@ -557,7 +561,9 @@ class _ServiceCard extends StatelessWidget {
 
 class _ActiveRequestsSection extends StatelessWidget {
   final List<Requirement> requirements;
-  final VoidCallback onOpen;
+
+  /// Opens that request's detail.
+  final ValueChanged<Requirement> onOpen;
   const _ActiveRequestsSection(
       {required this.requirements, required this.onOpen});
 
@@ -576,7 +582,11 @@ class _ActiveRequestsSection extends StatelessWidget {
           style: OneHubTextStyles.bodyText(textMuted));
     }
     return Column(children: [
-      for (final r in active) _ActiveRequestCard(requirement: r, onTap: onOpen)
+      for (var i = 0; i < active.length; i++) ...[
+        if (i > 0) const SizedBox(height: 12),
+        _ActiveRequestCard(
+            requirement: active[i], onTap: () => onOpen(active[i])),
+      ],
     ]);
   }
 }

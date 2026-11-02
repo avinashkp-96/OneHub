@@ -148,16 +148,50 @@ void main() {
     }
   });
 
-  testWidgets('tapping a request card opens My Requests', (tester) async {
+  testWidgets("tapping a request card opens that request's detail",
+      (tester) async {
+    await pumpScreen(tester, {
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan rattles', 'SENT', title: 'Fan request'),
+            requirementJson('r2', 'Tap drips', 'SENT', title: 'Tap request'),
+          ],
+    });
+
+    await tester.tap(find.text('Tap request'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MyRequestsScreen), findsNothing);
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.text('Tap request'), findsOneWidget);
+    expect(find.text('Tap drips'), findsOneWidget);
+    expect(find.text('Fan request'), findsNothing);
+  });
+
+  testWidgets('View all still opens My Requests', (tester) async {
     await pumpScreen(tester, {
       'GET /requirements/mine': (_) =>
           [requirementJson('r1', 'Fan request', 'SENT')],
     });
 
-    await tester.tap(find.text('Fan request'));
+    await tester.tap(find.text('View all'));
     await tester.pumpAndSettle();
 
     expect(find.byType(MyRequestsScreen), findsOneWidget);
+  });
+
+  testWidgets('leaves a gap between the two request cards', (tester) async {
+    await pumpScreen(tester, {
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'First request', 'SENT'),
+            requirementJson('r2', 'Second request', 'SENT'),
+          ],
+    });
+
+    final cards = find.ancestor(
+        of: find.textContaining('request'), matching: find.byType(GlowCard));
+    final first = tester.getRect(cards.at(0));
+    final second = tester.getRect(cards.at(1));
+    expect(second.top - first.bottom, 12);
   });
 
   testWidgets('survives the requests failing to load', (tester) async {
