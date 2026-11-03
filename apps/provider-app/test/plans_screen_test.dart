@@ -215,4 +215,28 @@ void main() {
     ));
     expect(find.text('Manage plan'), findsOneWidget);
   });
+
+  group('CurrentPlan', () {
+    test('an empty subscription body is pay per service, no monthly fee', () {
+      final plan = CurrentPlan.fromSubscription(null);
+      expect(plan.option.key, 'PER_SERVICE');
+      expect(plan.badgeLabel, 'PAY PER SERVICE');
+      expect(plan.renewalLabel, 'No monthly fee');
+    });
+
+    test('an unknown plan falls back to pay per service', () {
+      expect(CurrentPlan.fromSubscription({'plan': 'GOLD'}).option.key,
+          'PER_SERVICE');
+    });
+
+    test('a monthly plan shows its renewal date, or nothing without one', () {
+      final renews = CurrentPlan.fromSubscription(
+          {'plan': 'MONTHLY_99', 'renewsAt': '2026-11-12T06:00:00.000Z'});
+      expect(renews.badgeLabel, 'MONTHLY 99');
+      expect(renews.renewalLabel, 'Renews 12 Nov');
+      expect(
+          CurrentPlan.fromSubscription({'plan': 'MONTHLY_299'}).renewalLabel,
+          isNull);
+    });
+  });
 }

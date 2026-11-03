@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../../core/api.dart';
 import '../plans/plans_screen.dart';
 
 // Provider earnings and wallet, opened from the wallet card on the
 // dashboard. Matches the other provider screens (PageGlow, page title in the AppBar, one GlowCard, bordered cards) — no new reference,
 // applied on request.
 //
-// Every figure here is explicit dummy data: there is no earnings, wallet or
-// billing endpoint yet. The four `dummy*` values the dashboard also shows are
-// defined here once, so its wallet card and summary can't disagree with this
-// screen. Replace all of it when those endpoints exist.
+// The plan pill and renewal line are real (GET /providers/me, then
+// /providers/:id/subscription, as on the dashboard wallet card). Every other
+// figure is explicit dummy data: there is no earnings, wallet or billing
+// endpoint yet. The `dummy*` values the dashboard also shows are defined here
+// once, so its wallet card and summary can't disagree with this screen.
+// Replace all of it when those endpoints exist.
 const dummyEarnedToday = '₹1,850';
 const dummyWalletBalance = '₹1,250';
-const dummyPlan = 'PRO PLAN';
-const dummyRenewal = 'Renews 12 Nov';
 
 const _dummyEarnedWeek = '₹6,420';
 const dummyEarnedMonth = '₹21,300';
@@ -41,11 +42,43 @@ const _dummyTransactions = [
       credit: false),
 ];
 
-class EarningsScreen extends StatelessWidget {
-  const EarningsScreen({super.key});
+/// Takes an optional [client], like the other provider screens, so tests can
+/// use a fake API.
+class EarningsScreen extends StatefulWidget {
+  final ApiClient? client;
+  const EarningsScreen({super.key, this.client});
+
+  @override
+  State<EarningsScreen> createState() => _EarningsScreenState();
+}
+
+class _EarningsScreenState extends State<EarningsScreen> {
+  ApiClient get _api => widget.client ?? api;
+
+  // Null until it loads, and if it fails: the pill and renewal line hide.
+  CurrentPlan? _plan;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlan();
+  }
+
+  Future<void> _loadPlan() async {
+    try {
+      final me = await _api.get('/providers/me') as Map<String, dynamic>;
+      final plan = await loadCurrentPlan(_api, me['id'] as String);
+      if (!mounted) return;
+      setState(() => _plan = plan);
+    } catch (_) {
+      // Manage plan below opens the Plans screen, which shows the error.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final plan = _plan;
+    final renewal = plan?.renewalLabel;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
@@ -81,20 +114,23 @@ class EarningsScreen extends StatelessWidget {
                               child: Text('WALLET BALANCE',
                                   style:
                                       OneHubTextStyles.fieldLabel(textMuted))),
-                          TintedBadge(
-                              label: dummyPlan,
-                              color: context.statusSuccess,
-                              pill: true),
+                          if (plan != null)
+                            TintedBadge(
+                                label: plan.badgeLabel,
+                                color: context.statusSuccess,
+                                pill: true),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(dummyWalletBalance,
                           style: OneHubTextStyles.pageHeading(textPrimary)
                               .copyWith(fontSize: 34)),
-                      const SizedBox(height: 6),
-                      Text(dummyRenewal,
-                          style: OneHubTextStyles.fieldLabel(textMuted)
-                              .copyWith(letterSpacing: 0, fontSize: 12)),
+                      if (renewal != null) ...[
+                        const SizedBox(height: 6),
+                        Text(renewal,
+                            style: OneHubTextStyles.fieldLabel(textMuted)
+                                .copyWith(letterSpacing: 0, fontSize: 12)),
+                      ],
                     ],
                   ),
                 ),
@@ -104,8 +140,10 @@ class EarningsScreen extends StatelessWidget {
                 icon: OneHubIcons.wallet,
                 title: 'Manage plan',
                 subtitle: 'Switch between pay per unlock and monthly',
-                onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PlansScreen())),
+                onTap: () => Navigator.of(context)
+                    .push(MaterialPageRoute(
+                        builder: (_) => PlansScreen(client: widget.client)))
+                    .then((_) => mounted ? _loadPlan() : null),
               ),
               const SizedBox(height: 26),
               Text('Earned',

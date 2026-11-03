@@ -162,6 +162,11 @@ void main() {
     expect(relativeTimeLabel(DateTime(2026, 10, 12), now), '12 Oct');
   });
 
+  test('day and month label', () {
+    expect(dayMonthLabel(DateTime(2026, 1, 5)), '5 Jan');
+    expect(dayMonthLabel(DateTime(2026, 12, 31, 23)), '31 Dec');
+  });
+
   test('unknown events get a generic title and icon', () {
     final n = OneHubNotification.fromJson({
       'id': 'x',

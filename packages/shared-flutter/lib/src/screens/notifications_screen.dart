@@ -77,8 +77,11 @@ String relativeTimeLabel(DateTime time, DateTime now) {
   }
   if (age.inDays < 2) return 'Yesterday';
   if (age.inDays < 7) return '${age.inDays} days ago';
-  return '${time.day} ${_months[time.month - 1]}';
+  return dayMonthLabel(time);
 }
+
+/// "12 Oct".
+String dayMonthLabel(DateTime time) => '${time.day} ${_months[time.month - 1]}';
 
 /// Notifications list, identical for the customer and provider apps, so it
 /// lives here and each app passes its own [api]. Matches the other

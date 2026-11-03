@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:onehub_provider/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_provider/features/earnings/earnings_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
@@ -12,11 +16,41 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   }
 
-  Future<void> pumpEarnings(WidgetTester tester) async {
+  // Serves the provider and their subscription; a null [me] makes the
+  // provider lookup fail.
+  ApiClient planClient({Map<String, dynamic>? me = const {'id': 'p1'}}) =>
+      ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((request) async {
+          http.Response json(Object body) => http.Response.bytes(
+              utf8.encode(jsonEncode(body)), 200,
+              headers: {'content-type': 'application/json; charset=utf-8'});
+          switch (request.url.path) {
+            case '/providers/me':
+              return me == null ? http.Response('{}', 500) : json(me);
+            case '/providers/p1/subscription':
+              return json({
+                'plan': 'MONTHLY_299',
+                'renewsAt': '2026-12-01T06:00:00.000Z',
+              });
+          }
+          return http.Response('{}', 404);
+        }),
+      );
+
+  Future<void> pumpEarnings(WidgetTester tester, {ApiClient? client}) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => 'token',
+    );
     tallView(tester);
     await tester.pumpWidget(
-      MaterialApp(theme: OneHubTheme.dark(), home: const EarningsScreen()),
+      MaterialApp(
+          theme: OneHubTheme.dark(),
+          home: EarningsScreen(client: client ?? planClient())),
     );
+    await tester.pumpAndSettle();
   }
 
   testWidgets('shows the heading, wallet balance and plan', (tester) async {
@@ -27,8 +61,16 @@ void main() {
     expect(find.text('Earnings'), findsOneWidget);
     expect(find.text('WALLET BALANCE'), findsOneWidget);
     expect(find.text(dummyWalletBalance), findsOneWidget);
-    expect(find.text(dummyPlan), findsOneWidget);
-    expect(find.text(dummyRenewal), findsOneWidget);
+    expect(find.text('MONTHLY 299'), findsOneWidget);
+    expect(find.text('Renews 1 Dec'), findsOneWidget);
+  });
+
+  testWidgets('hides the plan pill when the plan cannot load', (tester) async {
+    await pumpEarnings(tester, client: planClient(me: null));
+
+    expect(find.text(dummyWalletBalance), findsOneWidget);
+    expect(find.text('MONTHLY 299'), findsNothing);
+    expect(find.textContaining('Renews'), findsNothing);
   });
 
   testWidgets('shows earned today, this week and this month', (tester) async {

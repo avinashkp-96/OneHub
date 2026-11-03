@@ -3,6 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../certification/certification_screen.dart';
 import '../earnings/earnings_screen.dart';
 import '../home/home_shell.dart';
+import '../plans/plans_screen.dart';
 import '../../core/api.dart';
 import '../requirements/active_jobs_screen.dart';
 import '../requirements/job_detail.dart';
@@ -13,16 +14,12 @@ import '../requirements/job_detail.dart';
 // out below it for a 3D look, then Your work as a two-card grid, Wallet and
 // Certification. The card's blue is the PrimaryCta gradient.
 //
-// Most numbers and names on this screen are explicit dummy data, as agreed
-// when the redesign was scoped: earnings, wallet, subscription card,
-// certification and the tile counts have no API behind them yet. The overview
-// card's jobs done and rating are real, and so is Next job (the selected job
-// due soonest), both from one GET /requirements/incoming. The two job cards
-// open the real, API-backed screens. Replace the `_dummy*` constants below
-// with live values as endpoints appear.
-const _dummyProviderName = 'Asha';
-const _dummyNewRequests = 3;
-const _dummyActiveJobs = 2;
+// Real data: the name (GET /providers/me), the plan on the wallet card (GET
+// /providers/:id/subscription), and, from one GET /requirements/incoming, the
+// Your work counts, jobs done and Next job (the selected job due soonest).
+// The rating comes from GET /ratings/mine. Still explicit dummy data, as
+// agreed when the redesign was scoped, because no endpoint exists yet: the
+// earnings, the wallet balance and the certification steps.
 
 //
 // The bottom bar lives in HomeShell, which shows this screen as its Home tab
@@ -48,10 +45,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // Null until GET /requirements/incoming answers, and if it fails.
   List<Requirement>? _incoming;
 
+  // Null while loading; empty (shown as "Provider") if GET /providers/me fails.
+  String? _name;
+
+  // Null until the subscription answers, and if it fails.
+  CurrentPlan? _plan;
+
   @override
   void initState() {
     super.initState();
     _loadIncoming();
+    _loadProvider();
+  }
+
+  Future<void> _loadProvider() async {
+    try {
+      final me = await _api.get('/providers/me') as Map<String, dynamic>;
+      if (!mounted) return;
+      setState(() => _name = me['businessName'] as String? ?? '');
+      final plan = await loadCurrentPlan(_api, me['id'] as String);
+      if (!mounted) return;
+      setState(() => _plan = plan);
+    } catch (_) {
+      // The plan pill stays hidden; Profile and Plans show the error.
+      if (mounted && _name == null) setState(() => _name = '');
+    }
   }
 
   Future<void> _loadIncoming() async {
@@ -73,6 +91,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (incoming == null) return '–';
     return '${incoming.where((r) => incomingStageOf(r) == IncomingStage.completed).length}';
   }
+
+  /// How many of [_incoming] are at [stage]; null until they load. Requests
+  /// this provider rejected are left out, as on Incoming requests.
+  int? _countAt(IncomingStage stage) => _incoming
+      ?.where((r) =>
+          r.myResponse != RequestStatus.rejected && incomingStageOf(r) == stage)
+      .length;
 
   /// The job the customer chose this provider for that is due soonest; jobs
   /// with no preferred date come after dated ones.
@@ -105,18 +130,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final client = widget.client;
     final openTab = widget.onOpenTab;
+    // Pushed screens (no tab handler) can change the counts, so reload on
+    // return.
     void openRequests() => openTab != null
         ? openTab(HomeTab.requests)
-        : Navigator.of(context).pushNamed('/incoming-requests');
+        : Navigator.of(context)
+            .pushNamed('/incoming-requests')
+            .then((_) => mounted ? _loadIncoming() : null);
     void openJobs() => openTab != null
         ? openTab(HomeTab.jobs)
         : Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen()));
+            .push(MaterialPageRoute(builder: (_) => const ActiveJobsScreen()))
+            .then((_) => mounted ? _loadIncoming() : null);
 
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final nextJob = _nextJob;
+    final newCount = _countAt(IncomingStage.newRequest);
+    final activeCount = _countAt(IncomingStage.selected);
     final now = widget.now ?? DateTime.now();
 
     return Scaffold(
@@ -126,7 +158,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             padding: const EdgeInsets.fromLTRB(
                 OneHubTheme.pageMargin, 20, OneHubTheme.pageMargin, 100),
             children: [
-              _TopRow(client: client),
+              _TopRow(client: client, name: _name),
               const SizedBox(height: OneHubTheme.sectionGap),
               _OverviewCard(client: client, jobsDone: _jobsDone),
               // Hidden until the customer has chosen this provider for a job.
@@ -149,7 +181,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: OneHubIcons.work,
                         title: 'Incoming requests',
                         subtitle: 'Accept or reject new jobs',
-                        badge: '$_dummyNewRequests NEW',
+                        badge: newCount == null || newCount == 0
+                            ? null
+                            : '$newCount NEW',
                         onTap: openRequests,
                       ),
                     ),
@@ -159,7 +193,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         icon: OneHubIcons.documentList,
                         title: 'Active jobs',
                         subtitle: 'Track and finish your jobs',
-                        badge: '$_dummyActiveJobs ACTIVE',
+                        badge: activeCount == null || activeCount == 0
+                            ? null
+                            : '$activeCount ACTIVE',
                         onTap: openJobs,
                       ),
                     ),
@@ -169,7 +205,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               const SizedBox(height: 26),
               _SectionTitle('Wallet', color: textPrimary),
               const SizedBox(height: 12),
-              const _WalletCard(),
+              _WalletCard(plan: _plan),
               const SizedBox(height: 26),
               _SectionTitle('Certification', color: textPrimary),
               const SizedBox(height: 12),
@@ -186,7 +222,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 /// toggle and the bell on the right.
 class _TopRow extends StatefulWidget {
   final ApiClient? client;
-  const _TopRow({this.client});
+
+  /// Null while loading: no name and no initial yet. Empty shows "Provider".
+  final String? name;
+  const _TopRow({this.client, this.name});
 
   @override
   State<_TopRow> createState() => _TopRowState();
@@ -204,6 +243,12 @@ class _TopRowState extends State<_TopRow> {
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
+    final loaded = widget.name?.trim();
+    final name = loaded == null
+        ? ''
+        : loaded.isEmpty
+            ? 'Provider'
+            : loaded;
 
     return Row(
       children: [
@@ -219,7 +264,7 @@ class _TopRowState extends State<_TopRow> {
               end: Alignment.bottomRight,
             ),
           ),
-          child: Text(_dummyProviderName[0],
+          child: Text(name.isEmpty ? '' : name[0].toUpperCase(),
               style: OneHubTextStyles.pageHeading(Colors.white)
                   .copyWith(fontSize: 18)),
         ),
@@ -231,7 +276,7 @@ class _TopRowState extends State<_TopRow> {
               Text('Welcome back',
                   style: OneHubTextStyles.bodyText(textSecondary)
                       .copyWith(fontSize: 13)),
-              Text(_dummyProviderName,
+              Text(name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: OneHubTextStyles.pageHeading(textPrimary)
@@ -610,13 +655,14 @@ class _WorkCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
-  final String badge;
+  /// Hidden when null (still loading, or nothing to count).
+  final String? badge;
   final VoidCallback onTap;
   const _WorkCard({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.badge,
+    this.badge,
     required this.onTap,
   });
 
@@ -642,7 +688,8 @@ class _WorkCard extends StatelessWidget {
                 children: [
                   _IconCircle(icon),
                   const Spacer(),
-                  TintedBadge(label: badge, color: context.statusWarning),
+                  if (badge != null)
+                    TintedBadge(label: badge!, color: context.statusWarning),
                 ],
               ),
               const SizedBox(height: 16),
@@ -661,8 +708,11 @@ class _WorkCard extends StatelessWidget {
   }
 }
 
+/// The wallet balance (still dummy) and the real plan, whose pill and renewal
+/// line stay hidden until the subscription loads.
 class _WalletCard extends StatelessWidget {
-  const _WalletCard();
+  final CurrentPlan? plan;
+  const _WalletCard({this.plan});
 
   @override
   Widget build(BuildContext context) {
@@ -697,19 +747,22 @@ class _WalletCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TintedBadge(
-                      label: dummyPlan,
-                      color: context.statusSuccess,
-                      pill: true),
-                  const SizedBox(height: 4),
-                  Text(dummyRenewal,
-                      style: OneHubTextStyles.fieldLabel(textMuted)
-                          .copyWith(letterSpacing: 0, fontSize: 11)),
-                ],
-              ),
+              if (plan != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    TintedBadge(
+                        label: plan!.badgeLabel,
+                        color: context.statusSuccess,
+                        pill: true),
+                    if (plan!.renewalLabel != null) ...[
+                      const SizedBox(height: 4),
+                      Text(plan!.renewalLabel!,
+                          style: OneHubTextStyles.fieldLabel(textMuted)
+                              .copyWith(letterSpacing: 0, fontSize: 11)),
+                    ],
+                  ],
+                ),
               const SizedBox(width: 8),
               Icon(OneHubIcons.chevronRight, size: 18, color: textMuted),
             ],

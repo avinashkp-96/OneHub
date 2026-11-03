@@ -971,6 +971,24 @@ jobs done from it (the overview card used to fetch it separately). The
 placeholder name, Your work counts and plan are unchanged. Tests: provider 170
 (96.8%).
 
+2026-11-03 (provider home: real name, counts and plan): three placeholders on
+the provider home page now show real data. The header name and avatar initial
+come from `GET /providers/me` (business name, else the person's name;
+"Provider" if the call fails, blank while loading). The Your work badges count
+the provider's requests from the `GET /requirements/incoming` the page already
+loads: NEW is requests still waiting for this provider's price, rejected ones
+left out; ACTIVE is jobs the customer chose them for (the Active jobs SELECTED
+rule). A badge hides while loading and at zero. Pushing Incoming requests or
+Active jobs (no tab handler) reloads the counts on return. The wallet card's
+plan pill and renewal line use the provider's subscription (new `CurrentPlan`
+and `loadCurrentPlan` in `plans_screen.dart`: "MONTHLY 99" and "Renews 12 Nov";
+pay per service, also when there is no subscription, reads "No monthly fee"),
+and hide if it cannot load. Earnings shows the same real plan, so the two
+cannot disagree; `dummyPlan` and `dummyRenewal` are gone, and Earnings now
+takes an optional `ApiClient`. The shared package gains `dayMonthLabel`
+("12 Oct"), which `relativeTimeLabel` now uses too. Still dummy: earnings, the
+wallet balance and certification. Tests: provider 182 (96.8%), shared 100.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

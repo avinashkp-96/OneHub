@@ -33,6 +33,42 @@ const planOptions = [
       '10 contact unlocks included each month.', 10),
 ];
 
+/// The provider's current plan and when it renews, shown on the dashboard
+/// wallet card and on Earnings.
+class CurrentPlan {
+  final PlanOption option;
+  final DateTime? renewsAt;
+  const CurrentPlan(this.option, this.renewsAt);
+
+  /// From GET /providers/:id/subscription. An empty body (no subscription
+  /// yet) or an unknown plan counts as pay per service, as on this screen.
+  factory CurrentPlan.fromSubscription(Object? sub) {
+    if (sub is! Map<String, dynamic>) return CurrentPlan(planOptions.first, null);
+    final renews = sub['renewsAt'] as String?;
+    return CurrentPlan(
+      planOptions.firstWhere((p) => p.key == sub['plan'],
+          orElse: () => planOptions.first),
+      renews == null ? null : DateTime.parse(renews).toLocal(),
+    );
+  }
+
+  /// "MONTHLY 99", for the plan pill.
+  String get badgeLabel => option.name.toUpperCase();
+
+  /// "Renews 12 Nov"; "No monthly fee" on pay per service; null for a monthly
+  /// plan with no renewal date on record.
+  String? get renewalLabel {
+    final renews = renewsAt;
+    if (renews != null) return 'Renews ${dayMonthLabel(renews)}';
+    return option.key == 'PER_SERVICE' ? 'No monthly fee' : null;
+  }
+}
+
+/// Loads [providerId]'s current plan.
+Future<CurrentPlan> loadCurrentPlan(ApiClient api, String providerId) async =>
+    CurrentPlan.fromSubscription(
+        await api.get('/providers/$providerId/subscription'));
+
 /// Takes an optional [client], like the other provider screens, so tests can
 /// use a fake API.
 class PlansScreen extends StatefulWidget {

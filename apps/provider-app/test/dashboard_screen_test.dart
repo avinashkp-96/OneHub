@@ -10,8 +10,55 @@ import 'package:onehub_provider/features/home/home_shell.dart';
 import 'package:onehub_provider/features/requirements/active_jobs_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
+/// A fake API for the home page: the provider's own record, their
+/// subscription and their requests. A null [me] makes /providers/me fail; a
+/// null [subscription] is an empty body (no subscription yet). [calls]
+/// collects each path requested.
+ApiClient homeClient({
+  Map<String, dynamic>? me = const {
+    'id': 'p1',
+    'businessName': 'Rajesh Electricals',
+  },
+  Map<String, dynamic>? subscription = const {
+    'plan': 'MONTHLY_99',
+    'renewsAt': '2026-11-12T06:00:00.000Z',
+  },
+  List<Object> Function()? incoming,
+  List<String>? calls,
+}) =>
+    ApiClient(
+      baseUrl: 'https://example.test',
+      httpClient: MockClient((request) async {
+        calls?.add(request.url.path);
+        http.Response json(Object? body) => http.Response.bytes(
+            utf8.encode(jsonEncode(body)), 200,
+            headers: {'content-type': 'application/json; charset=utf-8'});
+        switch (request.url.path) {
+          case '/providers/me':
+            return me == null ? http.Response('{}', 500) : json(me);
+          case '/providers/p1/subscription':
+            return subscription == null
+                ? http.Response('', 200)
+                : json(subscription);
+          case '/requirements/incoming':
+            return json(incoming?.call() ?? []);
+          case '/ratings/mine':
+            return json({'averageRating': 0, 'ratingCount': 0});
+        }
+        return json([]);
+      }),
+    );
+
+void mockSecureStorage() =>
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+      (call) async => 'token',
+    );
+
 void main() {
-  Future<void> pumpScreen(WidgetTester tester) async {
+  Future<void> pumpScreen(WidgetTester tester, {ApiClient? client}) async {
+    mockSecureStorage();
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -24,9 +71,10 @@ void main() {
           '/incoming-requests': (_) =>
               const Scaffold(body: Text('incoming requests stub'))
         },
-        home: const DashboardScreen(),
+        home: DashboardScreen(client: client ?? homeClient()),
       ),
     );
+    await tester.pumpAndSettle();
   }
 
   testWidgets(
@@ -36,7 +84,7 @@ void main() {
 
     expect(find.byType(PageGlow), findsOneWidget);
     expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Asha'), findsOneWidget);
+    expect(find.text('Rajesh Electricals'), findsOneWidget);
     expect(find.text('Online'), findsOneWidget);
     expect(find.text('Earned this month'), findsOneWidget);
     expect(find.text(dummyEarnedMonth), findsOneWidget);
@@ -69,7 +117,7 @@ void main() {
       expect(find.descendant(of: card, matching: inside), findsOneWidget);
     }
     for (final outside in [
-      find.text('Asha'),
+      find.text('Rajesh Electricals'),
       find.text('Online'),
       find.byType(NotificationBell),
     ]) {
@@ -152,8 +200,6 @@ void main() {
     final jobs = tester.getRect(find.text('Active jobs'));
     expect(requests.top, jobs.top);
     expect(requests.left, lessThan(jobs.left));
-    expect(find.text('3 NEW'), findsOneWidget);
-    expect(find.text('2 ACTIVE'), findsOneWidget);
   });
 
   testWidgets('section cards clip their ink ripple to the theme card radius',
@@ -521,6 +567,123 @@ void main() {
 
       expect(find.text('Job undated'), findsOneWidget);
       expect(find.text('No date set'), findsOneWidget);
+    });
+  });
+
+  group('Real name, counts and plan', () {
+    Map<String, dynamic> request(String id,
+            {String status = 'SENT',
+            String myResponse = 'SENT',
+            bool bid = false,
+            bool confirmed = false}) =>
+        {
+          'id': id,
+          'subServiceId': 's1',
+          'title': 'Job $id',
+          'description': 'Details',
+          'photoUrls': [],
+          'status': status,
+          'myResponse': myResponse,
+          'bids': [
+            if (bid)
+              {
+                'id': 'b-$id',
+                'providerId': 'p1',
+                'initialMinPrice': 350,
+                'initialMaxPrice': 600,
+                'contactUnlocked': false,
+                'confirmed': confirmed,
+              }
+          ],
+        };
+
+    Map<String, dynamic> selected(String id) => request(id,
+        status: 'CONFIRMED', myResponse: 'ACCEPTED', bid: true, confirmed: true);
+
+    testWidgets('shows the business name and its initial', (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.text('Rajesh Electricals'), findsOneWidget);
+      expect(find.text('R'), findsOneWidget);
+      expect(find.text('Asha'), findsNothing);
+    });
+
+    testWidgets('falls back to Provider when the name cannot load',
+        (tester) async {
+      await pumpScreen(tester, client: homeClient(me: null));
+
+      expect(find.text('Provider'), findsOneWidget);
+      expect(find.text('P'), findsOneWidget);
+    });
+
+    testWidgets(
+        'counts new requests and selected jobs, leaving out rejected and priced ones',
+        (tester) async {
+      await pumpScreen(tester,
+          client: homeClient(
+              incoming: () => [
+                    request('new-1'),
+                    request('new-2'),
+                    request('rejected', myResponse: 'REJECTED'),
+                    request('priced', myResponse: 'ACCEPTED', bid: true),
+                    selected('won'),
+                    request('done',
+                        status: 'COMPLETED',
+                        myResponse: 'ACCEPTED',
+                        bid: true,
+                        confirmed: true),
+                  ]));
+
+      expect(find.text('2 NEW'), findsOneWidget);
+      expect(find.text('1 ACTIVE'), findsOneWidget);
+    });
+
+    testWidgets('hides a badge with nothing to count', (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.textContaining(' NEW'), findsNothing);
+      expect(find.textContaining(' ACTIVE'), findsNothing);
+    });
+
+    testWidgets('a pushed Incoming requests page reloads the counts on return',
+        (tester) async {
+      var requests = <Object>[request('a'), request('b')];
+      await pumpScreen(tester, client: homeClient(incoming: () => requests));
+      expect(find.text('2 NEW'), findsOneWidget);
+
+      await tester.tap(find.text('Incoming requests'));
+      await tester.pumpAndSettle();
+      requests = [request('a')];
+      Navigator.of(tester.element(find.text('incoming requests stub'))).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 NEW'), findsOneWidget);
+    });
+
+    testWidgets('the wallet card shows the real plan and renewal date',
+        (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.text('MONTHLY 99'), findsOneWidget);
+      expect(find.text('Renews 12 Nov'), findsOneWidget);
+      expect(find.text('PRO PLAN'), findsNothing);
+    });
+
+    testWidgets('no subscription yet reads as pay per service',
+        (tester) async {
+      await pumpScreen(tester, client: homeClient(subscription: null));
+
+      expect(find.text('PAY PER SERVICE'), findsOneWidget);
+      expect(find.text('No monthly fee'), findsOneWidget);
+    });
+
+    testWidgets('the plan pill stays hidden when the provider cannot load',
+        (tester) async {
+      await pumpScreen(tester, client: homeClient(me: null));
+
+      expect(find.text('Wallet balance'), findsOneWidget);
+      expect(find.text('MONTHLY 99'), findsNothing);
+      expect(find.textContaining('Renews'), findsNothing);
     });
   });
 }
