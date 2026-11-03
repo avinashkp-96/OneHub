@@ -5,6 +5,7 @@ import '../earnings/earnings_screen.dart';
 import '../home/home_shell.dart';
 import '../../core/api.dart';
 import '../requirements/active_jobs_screen.dart';
+import '../requirements/job_detail.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen). Restyled on request: a header
 // row on the page background (welcome and name on the left, online toggle and
@@ -15,9 +16,10 @@ import '../requirements/active_jobs_screen.dart';
 // Most numbers and names on this screen are explicit dummy data, as agreed
 // when the redesign was scoped: earnings, wallet, subscription card,
 // certification and the tile counts have no API behind them yet. The overview
-// card's jobs done and rating are real. The two job cards open the real,
-// API-backed screens. Replace the `_dummy*` constants below with live values
-// as endpoints appear.
+// card's jobs done and rating are real, and so is Next job (the selected job
+// due soonest), both from one GET /requirements/incoming. The two job cards
+// open the real, API-backed screens. Replace the `_dummy*` constants below
+// with live values as endpoints appear.
 const _dummyProviderName = 'Asha';
 const _dummyNewRequests = 3;
 const _dummyActiveJobs = 2;
@@ -26,16 +28,83 @@ const _dummyActiveJobs = 2;
 // The bottom bar lives in HomeShell, which shows this screen as its Home tab
 // and passes [onOpenTab] so the Incoming requests and Active jobs cards switch
 // tabs. Without it (e.g. in a test), they push the screen instead.
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   final ValueChanged<int>? onOpenTab;
 
   /// Optional, like the other provider screens, so tests can use a fake API.
   final ApiClient? client;
-  const DashboardScreen({super.key, this.onOpenTab, this.client});
+
+  /// Fixes "now" for the Next job due date in tests.
+  final DateTime? now;
+  const DashboardScreen({super.key, this.onOpenTab, this.client, this.now});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  ApiClient get _api => widget.client ?? api;
+
+  // Null until GET /requirements/incoming answers, and if it fails.
+  List<Requirement>? _incoming;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadIncoming();
+  }
+
+  Future<void> _loadIncoming() async {
+    try {
+      final json = await _api.get('/requirements/incoming') as List;
+      if (!mounted) return;
+      setState(() => _incoming = json
+          .map((r) => Requirement.fromJson(r as Map<String, dynamic>))
+          .toList());
+    } catch (_) {
+      // Keep the placeholders; Incoming requests and Active jobs show the error.
+    }
+  }
+
+  // A job is done when the request is completed and this provider's bid was
+  // the one confirmed; the same rule Active jobs uses for its COMPLETED badge.
+  String get _jobsDone {
+    final incoming = _incoming;
+    if (incoming == null) return '–';
+    return '${incoming.where((r) => incomingStageOf(r) == IncomingStage.completed).length}';
+  }
+
+  /// The job the customer chose this provider for that is due soonest; jobs
+  /// with no preferred date come after dated ones.
+  Requirement? get _nextJob {
+    final selected = (_incoming ?? const <Requirement>[])
+        .where((r) => incomingStageOf(r) == IncomingStage.selected)
+        .toList();
+    if (selected.isEmpty) return null;
+    final never = DateTime(9999);
+    selected.sort((a, b) =>
+        (a.preferredAt ?? never).compareTo(b.preferredAt ?? never));
+    return selected.first;
+  }
+
+  Future<void> _openNextJob(Requirement r) async {
+    final stage = incomingStageOf(r);
+    await openJobDetail(
+      context,
+      r,
+      statusLabel: incomingStageLabel(stage),
+      statusColor: incomingStageColor(context, stage),
+      steps: jobTimeline(stage),
+    );
+    // Marking it completed happens on Active jobs, which may be opened from
+    // here; reload so the card reflects it.
+    if (mounted) _loadIncoming();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final openTab = onOpenTab;
+    final client = widget.client;
+    final openTab = widget.onOpenTab;
     void openRequests() => openTab != null
         ? openTab(HomeTab.requests)
         : Navigator.of(context).pushNamed('/incoming-requests');
@@ -47,6 +116,8 @@ class DashboardScreen extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final nextJob = _nextJob;
+    final now = widget.now ?? DateTime.now();
 
     return Scaffold(
       body: PageGlow(
@@ -57,7 +128,15 @@ class DashboardScreen extends StatelessWidget {
             children: [
               _TopRow(client: client),
               const SizedBox(height: OneHubTheme.sectionGap),
-              _OverviewCard(client: client),
+              _OverviewCard(client: client, jobsDone: _jobsDone),
+              // Hidden until the customer has chosen this provider for a job.
+              if (nextJob != null) ...[
+                const SizedBox(height: 26),
+                _SectionTitle('Next job', color: textPrimary),
+                const SizedBox(height: 12),
+                _NextJobCard(
+                    job: nextJob, now: now, onOpen: () => _openNextJob(nextJob)),
+              ],
               const SizedBox(height: 26),
               _SectionTitle('Your work', color: textPrimary),
               const SizedBox(height: 12),
@@ -236,13 +315,14 @@ class _StatusToggle extends StatelessWidget {
 /// The blue card under the header, with two lighter layers stacked behind it
 /// for depth. Top: earned this month (still dummy, shared with the Earnings
 /// screen; no earnings endpoint) and a wallet button that opens Earnings.
-/// Bottom strip: jobs done (counted from GET /requirements/incoming) and
-/// rating (GET /ratings/mine). Each real figure loads on its own and shows
-/// "–" until it arrives or if it fails, so one slow or broken call never
-/// blanks the card.
+/// Bottom strip: jobs done (counted by the dashboard from GET
+/// /requirements/incoming) and rating (GET /ratings/mine). Each real figure
+/// loads on its own and shows "–" until it arrives or if it fails, so one slow
+/// or broken call never blanks the card.
 class _OverviewCard extends StatefulWidget {
   final ApiClient? client;
-  const _OverviewCard({this.client});
+  final String jobsDone;
+  const _OverviewCard({this.client, required this.jobsDone});
 
   @override
   State<_OverviewCard> createState() => _OverviewCardState();
@@ -252,13 +332,11 @@ class _OverviewCardState extends State<_OverviewCard> {
   ApiClient get _api => widget.client ?? api;
 
   String _rating = '–';
-  String _jobsDone = '–';
 
   @override
   void initState() {
     super.initState();
     _loadRating();
-    _loadJobsDone();
   }
 
   Future<void> _loadRating() async {
@@ -270,25 +348,6 @@ class _OverviewCardState extends State<_OverviewCard> {
       setState(() => _rating = count == 0 ? 'New' : average.toStringAsFixed(1));
     } catch (_) {
       // Keep the placeholder; the Ratings screen shows the error.
-    }
-  }
-
-  // A job is done when the request is completed and this provider's bid was
-  // the one confirmed; the same rule Active jobs uses for its COMPLETED badge.
-  Future<void> _loadJobsDone() async {
-    try {
-      final json = await _api.get('/requirements/incoming') as List;
-      final done = json
-          .map((r) => Requirement.fromJson(r as Map<String, dynamic>))
-          .where((r) =>
-              r.status == RequestStatus.completed &&
-              r.bids.isNotEmpty &&
-              r.bids.first.confirmed)
-          .length;
-      if (!mounted) return;
-      setState(() => _jobsDone = '$done');
-    } catch (_) {
-      // Keep the placeholder; Active jobs shows the error.
     }
   }
 
@@ -371,7 +430,7 @@ class _OverviewCardState extends State<_OverviewCard> {
             child: IntrinsicHeight(
               child: Row(
                 children: [
-                  stat(OneHubIcons.work, _jobsDone, 'Jobs done'),
+                  stat(OneHubIcons.work, widget.jobsDone, 'Jobs done'),
                   VerticalDivider(
                       width: 1, color: Colors.white.withValues(alpha: 0.3)),
                   stat(rated ? OneHubIcons.starFilled : OneHubIcons.starOutline,
@@ -479,6 +538,46 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(text,
       style: OneHubTextStyles.pageHeading(color).copyWith(fontSize: 18));
+}
+
+/// Where the customer is and how far: "Kochi · 6.7 km". Empty when neither
+/// is known.
+String _placeLabel(Requirement r) {
+  final distance = r.distanceKm;
+  return [
+    if (r.customerPlace != null) r.customerPlace!,
+    if (distance != null) '${distance.toStringAsFixed(1)} km',
+  ].join(' · ');
+}
+
+/// The selected job due soonest: when, where and this provider's price.
+/// Tapping it opens the job detail; Mark as Completed stays on Active jobs.
+class _NextJobCard extends StatelessWidget {
+  final Requirement job;
+  final DateTime now;
+  final VoidCallback onOpen;
+  const _NextJobCard(
+      {required this.job, required this.now, required this.onOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    final place = _placeLabel(job);
+    final bid = bidRangeLabel(job);
+    return RequestCard(
+      statusLabel: incomingStageLabel(IncomingStage.selected),
+      statusColor: incomingStageColor(context, IncomingStage.selected),
+      title: job.heading,
+      facts: [
+        RequestCardFact(
+            'WHEN', preferredDateLabel(job.preferredAt, now) ?? 'No date set'),
+        if (job.customerName != null)
+          RequestCardFact('CUSTOMER', job.customerName!),
+        if (place.isNotEmpty) RequestCardFact('LOCATION', place),
+        if (bid != null) RequestCardFact('YOUR BID', bid),
+      ],
+      onTap: onOpen,
+    );
+  }
 }
 
 class _IconCircle extends StatelessWidget {

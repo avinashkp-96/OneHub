@@ -123,6 +123,17 @@ const _months = [
   'Dec',
 ];
 
+/// When a job is due, for the home page's Next job card: "Today",
+/// "Tomorrow", else "5 Nov". Null when the customer picked no date.
+String? preferredDateLabel(DateTime? preferred, DateTime now) {
+  if (preferred == null) return null;
+  final day = DateTime(preferred.year, preferred.month, preferred.day);
+  final days = day.difference(DateTime(now.year, now.month, now.day)).inDays;
+  if (days == 0) return 'Today';
+  if (days == 1) return 'Tomorrow';
+  return '${preferred.day} ${_months[preferred.month - 1]}';
+}
+
 /// Opens the job detail for [job]. [statusLabel] and [statusColor] come from
 /// the calling list so the badge matches its card; [action] is the button
 /// row at the bottom, if any.

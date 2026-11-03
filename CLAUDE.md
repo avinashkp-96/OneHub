@@ -958,6 +958,19 @@ main. `android_manifest_test.dart` in each app guards the three manifest
 settings. There is still no Android SDK on the dev machine, and nothing is
 signed for release.
 
+2026-11-03 (provider home: next job): the provider home page gains a Next
+job section under the overview card, hidden until a customer has chosen this
+provider for a job. It shows the selected job due soonest by preferred date
+(undated jobs after dated ones) as a `RequestCard` with WHEN
+(`preferredDateLabel`: Today, Tomorrow, else "5 Nov"; "No date set" without
+one), customer, location and the provider's price; tapping it opens the
+read-only job detail, and Mark as Completed stays on Active jobs. A New
+requests preview with Send price was built alongside it and removed on
+request. The dashboard now loads `GET /requirements/incoming` once and counts
+jobs done from it (the overview card used to fetch it separately). The
+placeholder name, Your work counts and plan are unchanged. Tests: provider 170
+(96.8%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

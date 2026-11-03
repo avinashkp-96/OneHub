@@ -4,6 +4,24 @@ import 'package:onehub_provider/features/requirements/job_detail.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 void main() {
+  group('preferredDateLabel', () {
+    final now = DateTime(2026, 11, 3, 22);
+
+    test('is null with no date', () {
+      expect(preferredDateLabel(null, now), isNull);
+    });
+
+    test('says Today and Tomorrow by calendar day, not 24 hours', () {
+      expect(preferredDateLabel(DateTime(2026, 11, 3, 8), now), 'Today');
+      expect(preferredDateLabel(DateTime(2026, 11, 4, 1), now), 'Tomorrow');
+    });
+
+    test('shows the day and month otherwise, past dates included', () {
+      expect(preferredDateLabel(DateTime(2026, 11, 9), now), '9 Nov');
+      expect(preferredDateLabel(DateTime(2026, 11, 1), now), '1 Nov');
+    });
+  });
+
   Requirement withBid(Map<String, dynamic> bid) => Requirement.fromJson({
         'id': 'r',
         'subServiceId': 's',

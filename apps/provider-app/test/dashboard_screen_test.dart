@@ -402,4 +402,125 @@ void main() {
       expect(find.text('Jobs done'), findsOneWidget);
     });
   });
+
+  group('Next job', () {
+    final now = DateTime(2026, 11, 3, 10);
+
+    Map<String, dynamic> request(
+      String id, {
+      String status = 'SENT',
+      String myResponse = 'SENT',
+      bool bid = false,
+      bool confirmed = false,
+      int postedHoursAgo = 1,
+      DateTime? preferredAt,
+    }) =>
+        {
+          'id': id,
+          'subServiceId': 's1',
+          'title': 'Job $id',
+          'description': 'Details for $id',
+          'photoUrls': [],
+          'status': status,
+          'myResponse': myResponse,
+          'customerName': 'Meera Nair',
+          'customerPlace': 'Kochi',
+          'distanceKm': 6.7,
+          'createdAt': now
+              .subtract(Duration(hours: postedHoursAgo))
+              .toUtc()
+              .toIso8601String(),
+          if (preferredAt != null)
+            'preferredAt': preferredAt.toUtc().toIso8601String(),
+          'bids': [
+            if (bid)
+              {
+                'id': 'b-$id',
+                'providerId': 'p1',
+                'initialMinPrice': 350,
+                'initialMaxPrice': 600,
+                'contactUnlocked': false,
+                'confirmed': confirmed,
+              }
+          ],
+        };
+
+    Map<String, dynamic> selected(String id, DateTime? at) => request(id,
+        status: 'CONFIRMED',
+        myResponse: 'ACCEPTED',
+        bid: true,
+        confirmed: true,
+        preferredAt: at);
+
+    Future<void> pumpWith(WidgetTester tester, List<Object> requests) async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (call) async => 'token',
+      );
+      tester.view.physicalSize = const Size(800, 4000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final client = ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((r) async => http.Response.bytes(
+            utf8.encode(jsonEncode(
+                r.url.path == '/requirements/incoming' ? requests : {})),
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'})),
+      );
+      await tester.pumpWidget(MaterialApp(
+          theme: OneHubTheme.dark(),
+          routes: {
+            '/incoming-requests': (_) =>
+                const Scaffold(body: Text('incoming requests stub'))
+          },
+          home: DashboardScreen(client: client, now: now)));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+        'stays hidden until the customer chooses this provider, and new requests get no card',
+        (tester) async {
+      await pumpWith(tester, [
+        request('new'),
+        request('priced', myResponse: 'ACCEPTED', bid: true),
+        request('lost', status: 'CONFIRMED', myResponse: 'ACCEPTED', bid: true),
+      ]);
+
+      expect(find.text('Next job'), findsNothing);
+      expect(find.text('New requests'), findsNothing);
+      expect(find.text('Job new'), findsNothing);
+      expect(find.text('Send price'), findsNothing);
+    });
+
+    testWidgets('Next job is the selected job due soonest, undated ones last',
+        (tester) async {
+      await pumpWith(tester, [
+        selected('undated', null),
+        selected('later', DateTime(2026, 11, 9, 9)),
+        selected('soon', DateTime(2026, 11, 4, 9)),
+      ]);
+
+      expect(find.text('Next job'), findsOneWidget);
+      expect(find.text('Job soon'), findsOneWidget);
+      expect(find.text('Job later'), findsNothing);
+      expect(find.text('Job undated'), findsNothing);
+      expect(find.text('Tomorrow'), findsOneWidget);
+      expect(find.text('₹350 – ₹600'), findsOneWidget);
+
+      await tester.tap(find.text('Job soon'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RequestDetailScreen), findsOneWidget);
+      expect(find.text('Mark as Completed'), findsNothing);
+    });
+
+    testWidgets('a selected job with no date says so', (tester) async {
+      await pumpWith(tester, [selected('undated', null)]);
+
+      expect(find.text('Job undated'), findsOneWidget);
+      expect(find.text('No date set'), findsOneWidget);
+    });
+  });
 }
