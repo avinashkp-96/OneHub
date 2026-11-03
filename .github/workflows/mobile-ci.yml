@@ -7,6 +7,13 @@ on:
   pull_request:
     branches: [main, develop]
     paths: ['apps/customer-app/**', 'apps/provider-app/**', 'packages/shared-flutter/**']
+  # Manual builds for installing on a phone. Only offered in the Actions tab
+  # once this file is on the default branch (main).
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'API the APKs call, e.g. http://192.168.1.10:3000/api/v1'
+        required: false
 
 jobs:
   analyze-and-test:
@@ -54,7 +61,24 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable }
       - run: flutter pub get
-      - run: flutter build apk --debug
+      # The API address is baked in at build time: the run input, else the
+      # DEV_API_BASE_URL repository variable, else the app's emulator default.
+      - name: Build debug APK
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url || vars.DEV_API_BASE_URL }}
+        run: |
+          if [ -n "$API_BASE_URL" ]; then
+            flutter build apk --debug --dart-define=API_BASE_URL="$API_BASE_URL"
+          else
+            flutter build apk --debug
+          fi
+      - name: Name the APK artifact
+        run: echo "APP_NAME=$(basename '${{ matrix.app }}')" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: onehub-${{ env.APP_NAME }}-debug-apk
+          path: ${{ matrix.app }}/build/app/outputs/flutter-apk/app-debug.apk
+          retention-days: 14
 
   auto-issue-on-failure:
     if: failure() && github.ref == 'refs/heads/main'

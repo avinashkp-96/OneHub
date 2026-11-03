@@ -945,6 +945,19 @@ so a plain black strip showed behind the bar and the page glow ended above
 it. Each tab's own SafeArea keeps its content clear of the bar. Tests:
 customer 138, provider 161.
 
+2026-11-03 (Android APKs from CI): both apps can now be installed on an Android
+phone from a CI build. The main manifests gain the INTERNET permission (only
+the debug and profile manifests had it, so a release build could not reach the
+API), and the debug manifests allow plain http (`usesCleartextTraffic`) for a
+dev API on the local network; release builds keep Android's block. Mobile CI's
+build job uploads each debug APK as an artifact (`onehub-<app>-debug-apk`, kept
+14 days) and bakes in `API_BASE_URL` from a manual run's `api_base_url` input
+or the `DEV_API_BASE_URL` repository variable, else the emulator default
+`10.0.2.2`. The manual run only shows in the Actions tab once the workflow is on
+main. `android_manifest_test.dart` in each app guards the three manifest
+settings. There is still no Android SDK on the dev machine, and nothing is
+signed for release.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

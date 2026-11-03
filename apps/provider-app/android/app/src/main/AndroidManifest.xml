@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Every screen calls the OneHub API. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="OneHub Provider"
         android:name="${applicationName}"
