@@ -989,6 +989,15 @@ takes an optional `ApiClient`. The shared package gains `dayMonthLabel`
 ("12 Oct"), which `relativeTimeLabel` now uses too. Still dummy: earnings, the
 wallet balance and certification. Tests: provider 182 (96.8%), shared 100.
 
+2026-11-06 (provider home: add more services ad): the provider home page gains
+a banner between Your work and Wallet: "Get found in more searches", "Add every
+service you offer." Search matches on service names, so the message is true of
+the app today. A first pass used the overview card's gradient and rings and
+competed with it, so per the user it is now a plain bordered card with a small
+tinted icon. The whole card opens Business details. The copy is fixed in the screen and
+shows to every provider; there is no ads endpoint. A similar ad on the customer
+home page was built and removed on request. Tests: provider 185 (96.9%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

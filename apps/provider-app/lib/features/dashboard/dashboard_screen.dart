@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../business/business_details_screen.dart';
 import '../certification/certification_screen.dart';
 import '../earnings/earnings_screen.dart';
 import '../home/home_shell.dart';
@@ -17,6 +18,7 @@ import '../requirements/job_detail.dart';
 // Real data: the name (GET /providers/me), the plan on the wallet card (GET
 // /providers/:id/subscription), and, from one GET /requirements/incoming, the
 // Your work counts, jobs done and Next job (the selected job due soonest).
+// The Add more services banner is a fixed message that opens Business details.
 // The rating comes from GET /ratings/mine. Still explicit dummy data, as
 // agreed when the redesign was scoped, because no endpoint exists yet: the
 // earnings, the wallet balance and the certification steps.
@@ -202,6 +204,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: OneHubTheme.sectionGap),
+              _AddServicesBanner(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => BusinessDetailsScreen(client: client)))),
               const SizedBox(height: 26),
               _SectionTitle('Wallet', color: textPrimary),
               const SizedBox(height: 12),
@@ -573,6 +579,63 @@ class _CardPattern extends CustomPainter {
 
   @override
   bool shouldRepaint(_CardPattern oldDelegate) => false;
+}
+
+/// Prompts the provider to list every service they offer, since search matches
+/// on service names. A plain bordered card, so it stays quieter than the blue
+/// overview card.
+class _AddServicesBanner extends StatelessWidget {
+  final VoidCallback onTap;
+  const _AddServicesBanner({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary =
+        dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
+    final textMuted =
+        dark ? OneHubColors.textMutedDark : OneHubColors.textMutedLight;
+
+    return Card(
+      key: const Key('add-services-banner'),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: OneHubColors.primary.withValues(alpha: 0.14)),
+                child: const Icon(OneHubIcons.plus,
+                    color: OneHubColors.primary, size: 18),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Get found in more searches',
+                        style: OneHubTextStyles.bodyText(textPrimary)
+                            .copyWith(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text('Add every service you offer.',
+                        style: OneHubTextStyles.fieldLabel(textMuted)
+                            .copyWith(letterSpacing: 0)),
+                  ],
+                ),
+              ),
+              Icon(OneHubIcons.chevronRight, color: textMuted, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {

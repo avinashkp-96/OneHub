@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:onehub_provider/features/business/business_details_screen.dart';
 import 'package:onehub_provider/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_provider/features/earnings/earnings_screen.dart';
 import 'package:onehub_provider/features/home/home_shell.dart';
@@ -684,6 +685,38 @@ void main() {
       expect(find.text('Wallet balance'), findsOneWidget);
       expect(find.text('MONTHLY 99'), findsNothing);
       expect(find.textContaining('Renews'), findsNothing);
+    });
+  });
+
+  group('Add more services banner', () {
+    testWidgets('shows its message on a plain card, quieter than the overview',
+        (tester) async {
+      await pumpScreen(tester);
+
+      expect(find.text('Get found in more searches'), findsOneWidget);
+      expect(find.text('Add every service you offer.'), findsOneWidget);
+      expect(tester.widget(find.byKey(const Key('add-services-banner'))),
+          isA<Card>());
+    });
+
+    testWidgets('sits between Your work and Wallet', (tester) async {
+      await pumpScreen(tester);
+
+      final banner =
+          tester.getRect(find.byKey(const Key('add-services-banner')));
+      expect(tester.getBottomLeft(find.text('Active jobs')).dy,
+          lessThan(banner.top));
+      expect(
+          banner.bottom, lessThan(tester.getTopLeft(find.text('Wallet')).dy));
+    });
+
+    testWidgets('tapping it opens Business details', (tester) async {
+      await pumpScreen(tester);
+
+      await tester.tap(find.text('Get found in more searches'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(BusinessDetailsScreen), findsOneWidget);
     });
   });
 }
