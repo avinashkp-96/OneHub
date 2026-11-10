@@ -21,10 +21,9 @@ void main() {
     },
   ];
 
-  // Opens the screen from a button so a successful submit can be seen popping
-  // back with `true`.
-  Future<void> pumpScreen(WidgetTester tester,
-      {bool? Function(bool?)? onResult}) async {
+  // Opens the screen from a button, with a stand-in '/dashboard' route, so a
+  // successful submit can be seen landing on Home with the stack cleared.
+  Future<void> pumpScreen(WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
@@ -33,18 +32,18 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: OneHubTheme.dark(),
+        routes: {
+          '/dashboard': (_) => const Scaffold(body: Text('HOME TAB')),
+        },
         home: Builder(
           builder: (context) => Scaffold(
             body: Center(
               child: TextButton(
-                onPressed: () async {
-                  final result = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(
-                        builder: (_) =>
-                            const PostRequirementScreen(subServiceId: 'sub-1')),
-                  );
-                  onResult?.call(result);
-                },
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          const PostRequirementScreen(subServiceId: 'sub-1')),
+                ),
                 child: const Text('open'),
               ),
             ),
@@ -176,17 +175,13 @@ void main() {
     expect(find.textContaining('TITLE', findRichText: true), findsOneWidget);
   });
 
-  testWidgets('sends the request and returns true to the previous screen',
+  testWidgets('sends the request and goes to Home with nothing to go back to',
       (tester) async {
-    bool? result;
     final fake = installFakeApi({
       'GET /providers': (_) => providers,
       'POST /requirements': (_) => {'id': 'r1'},
     });
-    await pumpScreen(tester, onResult: (r) {
-      result = r;
-      return r;
-    });
+    await pumpScreen(tester);
     await describe(tester);
     await tester.tap(find.text('Asha Electricals'));
     await tester.tap(find.text('Ravi Kumar'));
@@ -197,8 +192,11 @@ void main() {
     expect(fake.bodies.single['description'], 'Fan is noisy');
     expect(fake.bodies.single['providerIds'], ['p1', 'p2']);
     expect(fake.bodies.single.containsKey('preferredAt'), isFalse);
-    expect(result, isTrue);
+    expect(find.text('HOME TAB'), findsOneWidget);
     expect(find.byType(PostRequirementScreen), findsNothing);
+    expect(find.text('open'), findsNothing);
+    final home = tester.element(find.text('HOME TAB'));
+    expect(Navigator.of(home).canPop(), isFalse);
     expect(find.text('Request sent. Providers will reply with their prices.'),
         findsOneWidget);
   });

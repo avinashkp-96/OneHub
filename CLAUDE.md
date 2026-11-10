@@ -1025,6 +1025,12 @@ all still opens the list. If the list cannot load, the grid shows nothing.
 The demo database has two categories, so the grid shows two cards. Tests:
 API 264, customer 150 (99.2%), shared 100, provider 185.
 
+2026-11-10 (post request: back to Home): after Send Request the customer
+landed back on the service list they picked from. The form now replaces the
+whole stack with `/dashboard`, a fresh Home tab whose Active requests list
+loads with the new request on top, and the "Request sent" message shows
+there. Back from Home cannot reopen the sent form. Tests: customer 150.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

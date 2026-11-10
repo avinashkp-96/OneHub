@@ -103,7 +103,10 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
         final messenger = ScaffoldMessenger.of(context);
         final bar = successSnackBar(
             context, 'Request sent. Providers will reply with their prices.');
-        Navigator.of(context).pop(true);
+        // Back to a fresh Home tab, which reloads Active requests so the new
+        // one shows. Clearing the stack keeps Back from reopening the
+        // category, service list or this sent form.
+        Navigator.of(context).pushNamedAndRemoveUntil('/dashboard', (_) => false);
         messenger
           ..hideCurrentSnackBar()
           ..showSnackBar(bar);
