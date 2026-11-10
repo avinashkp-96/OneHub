@@ -12,6 +12,7 @@ export 'src/screens/notifications_screen.dart';
 export 'src/screens/request_detail_screen.dart';
 export 'src/screens/settings_screen.dart';
 export 'src/screens/reset_password_screen.dart';
+export 'src/session_expiry.dart';
 export 'src/theme/curved_nav_bar.dart';
 export 'src/widgets/link_tile.dart';
 export 'src/widgets/notification_bell.dart';

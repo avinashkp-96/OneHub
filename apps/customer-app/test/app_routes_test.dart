@@ -6,6 +6,7 @@ import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_customer/features/requirements/bid_list_screen.dart';
 import 'package:onehub_customer/features/requirements/post_requirement_screen.dart';
 import 'package:onehub_customer/main.dart';
+import 'package:onehub_shared/onehub_shared.dart';
 
 import 'support/fake_api.dart';
 
@@ -30,6 +31,25 @@ void main() {
     await pumpApp(tester);
 
     expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('an expired session on Home goes back to login', (tester) async {
+    installFakeApi({
+      'GET /requirements/mine': (_) => const FakeError(401, 'Unauthorized'),
+    });
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const OneHubCustomerApp());
+    await tester.pumpAndSettle();
+
+    tester.state<NavigatorState>(find.byType(Navigator)).pushNamed('/dashboard');
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DashboardScreen), findsNothing);
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text(sessionExpiredMessage), findsOneWidget);
   });
 
   testWidgets('the /signup and /dashboard routes are registered',

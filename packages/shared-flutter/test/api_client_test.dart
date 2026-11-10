@@ -89,6 +89,79 @@ void main() {
     expect(await api.token, isNull);
   });
 
+  group('expired session', () {
+    // Answers 401 to everything but login, which hands out a fresh token.
+    ApiClient expiring(void Function() onExpired) => ApiClient(
+          baseUrl: 'https://example.test',
+          httpClient: MockClient((request) async {
+            if (request.url.path == '/auth/login') {
+              return http.Response(jsonEncode({'accessToken': 'new'}), 200);
+            }
+            return http.Response(jsonEncode({'message': 'Unauthorized'}), 401);
+          }),
+        )..onSessionExpired = onExpired;
+
+    test('a 401 on a signed-in call forgets the token and reports it once',
+        () async {
+      stored['access_token'] = 'old';
+      var reports = 0;
+      final api = expiring(() => reports++);
+
+      await expectLater(api.get('/requirements/incoming'),
+          throwsA(isA<ApiException>()));
+      await expectLater(api.get('/providers/me'), throwsA(isA<ApiException>()));
+      await expectLater(api.patch('/users/me', {}, auth: true),
+          throwsA(isA<ApiException>()));
+
+      expect(reports, 1);
+      expect(await api.token, isNull);
+    });
+
+    test('reports again after the next login', () async {
+      stored['access_token'] = 'old';
+      var reports = 0;
+      final api = expiring(() => reports++);
+
+      await expectLater(api.get('/a'), throwsA(isA<ApiException>()));
+      await api.post('/auth/login', {});
+      await expectLater(api.get('/b'), throwsA(isA<ApiException>()));
+
+      expect(reports, 2);
+    });
+
+    test('a 401 from a call made without auth, such as a wrong password, '
+        'is not an expired session', () async {
+      stored['access_token'] = 'old';
+      var reports = 0;
+      final api = ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((_) async =>
+            http.Response(jsonEncode({'message': 'invalid credentials'}), 401)),
+      )..onSessionExpired = () => reports++;
+
+      await expectLater(
+          api.post('/auth/customer/login', {}), throwsA(isA<ApiException>()));
+
+      expect(reports, 0);
+      expect(await api.token, 'old');
+    });
+
+    test('other errors leave the session alone', () async {
+      stored['access_token'] = 'old';
+      var reports = 0;
+      final api = ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((_) async =>
+            http.Response(jsonEncode({'message': 'not yours'}), 403)),
+      )..onSessionExpired = () => reports++;
+
+      await expectLater(api.get('/x'), throwsA(isA<ApiException>()));
+
+      expect(reports, 0);
+      expect(await api.token, 'old');
+    });
+  });
+
   group('response bodies', () {
     ApiClient respondWith(int status, String body) => ApiClient(
           baseUrl: 'https://example.test',

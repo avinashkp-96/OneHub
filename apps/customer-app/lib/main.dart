@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import 'core/api.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/signup_screen.dart';
 import 'features/home/home_shell.dart';
@@ -8,12 +9,18 @@ import 'features/requirements/post_requirement_screen.dart';
 
 void main() => runApp(const OneHubCustomerApp());
 
+final _navigator = GlobalKey<NavigatorState>();
+final _messenger = GlobalKey<ScaffoldMessengerState>();
+
 class OneHubCustomerApp extends StatelessWidget {
   const OneHubCustomerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
+    sendToLoginOnSessionExpiry(api, _navigator, _messenger);
     return MaterialApp(
+      navigatorKey: _navigator,
+      scaffoldMessengerKey: _messenger,
       title: 'OneHub',
       debugShowCheckedModeBanner: false,
       theme: OneHubTheme.light(),

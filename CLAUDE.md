@@ -1031,6 +1031,20 @@ whole stack with `/dashboard`, a fresh Home tab whose Active requests list
 loads with the new request on top, and the "Request sent" message shows
 there. Back from Home cannot reopen the sent form. Tests: customer 150.
 
+2026-11-10 (expired session goes to login): the provider app showed no new
+requests, although the API returned them. Its saved token no longer worked,
+every call got 401, and the app stayed on a blank Home ("Provider", dashes,
+no counts) with no hint why. `ApiClient` now treats a 401 on a signed-in call
+(every GET; POST, PUT and PATCH with `auth: true`) as an ended session: it
+deletes the token and calls `onSessionExpired` once, until the next login
+saves a new token. A 401 from login itself is a wrong password and is left
+alone. Both apps wire it in `main.dart` through the shared
+`sendToLoginOnSessionExpiry` (global navigator and messenger keys): the stack
+is cleared to `/login` with "Your session expired. Please log in again." The
+provider app now takes an optional `client` for tests. Tokens last
+`JWT_EXPIRES_IN` (7 days); there is still no refresh token. Tests: shared
+105, customer 151, provider 186.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
