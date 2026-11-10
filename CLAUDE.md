@@ -998,6 +998,19 @@ tinted icon. The whole card opens Business details. The copy is fixed in the scr
 shows to every provider; there is no ads endpoint. A similar ad on the customer
 home page was built and removed on request. Tests: provider 185 (96.9%).
 
+2026-11-10 (customer profile: real account): the customer app's dummy "Meera
+Nair" is gone. `customerProfile` is now null until GET /users/me loads it;
+the Profile screen reloads it on open and on pull to refresh, with a spinner
+or "Could not load your profile" in the card. Edit profile saves through PATCH
+/users/me (an emptied email is sent as null and clears it) and shows the API's
+message if refused. The dashboard greets by first name ("What needs fixing
+today, Meera?") and leaves the name out if the profile cannot load. Logging
+out clears the profile so the next account never sees the last one's details.
+API: PATCH /users/me trims the name and refuses a blank one (400), and refuses
+an email another account uses (409 "email already in use") instead of a 500
+from the unique index. Settings toggles are still in memory only. Tests: API
+262, customer 146 (99.4%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

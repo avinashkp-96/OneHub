@@ -1,9 +1,49 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
+import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
+import 'support/fake_api.dart';
+
 void main() {
+  group('greeting', () {
+    Future<FakeApi> pumpWith(
+        WidgetTester tester, Object? Function(dynamic) me) async {
+      customerProfile.value = null;
+      addTearDown(() => customerProfile.value = null);
+      final fake = installFakeApi({
+        'GET /requirements/mine': (_) => [],
+        'GET /users/me': me,
+      });
+      tester.view.physicalSize = const Size(800, 3000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
+      );
+      await tester.pumpAndSettle();
+      return fake;
+    }
+
+    testWidgets('greets the signed-in customer by first name', (tester) async {
+      final fake = await pumpWith(tester,
+          (_) => {'fullName': 'Anil Kumar', 'mobile': '9000000009'});
+
+      expect(fake.calls, contains('GET /users/me'));
+      expect(find.text('What needs fixing today, Anil?'), findsOneWidget);
+      expect(find.textContaining('Meera'), findsNothing);
+    });
+
+    testWidgets('leaves the name out when the profile cannot load',
+        (tester) async {
+      await pumpWith(tester, (_) => const FakeError(500));
+
+      expect(find.text('What needs fixing today?'), findsOneWidget);
+    });
+  });
+
   testWidgets('section cards clip their ink ripple to the theme card radius',
       (tester) async {
     // The dashboard is much taller than the default test viewport now (header,

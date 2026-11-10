@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -49,12 +49,25 @@ export class UsersService {
     });
   }
 
-  updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const fullName = dto.fullName?.trim();
+    if (fullName === '') throw new BadRequestException('name cannot be empty');
+    // null (or blank) clears the email; leaving it out keeps what is on file.
+    const email = dto.email === undefined ? undefined : dto.email?.trim() || null;
+    if (email) {
+      // email is unique, so a clash would otherwise surface as a 500 from the
+      // database instead of a message the app can show.
+      const taken = await this.prisma.user.findFirst({
+        where: { email, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (taken) throw new ConflictException('email already in use');
+    }
     // Pick the allowed fields explicitly so a caller can never pass more, even
     // if the validation pipe is bypassed.
     const data = {
-      fullName: dto.fullName,
-      email: dto.email,
+      fullName,
+      email,
       profilePhotoUrl: dto.profilePhotoUrl,
     };
     return this.prisma.user.update({ where: { id: userId }, data, select: SELF_SELECT });

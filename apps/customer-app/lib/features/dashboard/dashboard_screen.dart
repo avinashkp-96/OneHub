@@ -3,6 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
 import '../home/home_shell.dart';
+import '../profile/profile_state.dart';
 import '../requirements/my_requests_screen.dart';
 import '../search/search_screen.dart';
 
@@ -42,6 +43,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _load();
+    // The greeting uses the name; if this fails it just leaves the name out.
+    loadCustomerProfile().catchError((_) {});
   }
 
   Future<void> _load() async {
@@ -238,11 +241,19 @@ class _Headline extends StatelessWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary =
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
-    // "Meera" is dummy placeholder content per the reference screenshot —
-    // no real user name is plumbed through to this screen yet.
-    return Text('What needs fixing today, Meera?',
-        style:
-            OneHubTextStyles.pageHeading(textPrimary).copyWith(fontSize: 28));
+    // The first name from GET /users/me; left out until it loads.
+    return ValueListenableBuilder<ProfileDetails?>(
+      valueListenable: customerProfile,
+      builder: (context, profile, _) {
+        final first = profile?.name.trim().split(RegExp(r'\s+')).first ?? '';
+        return Text(
+            first.isEmpty
+                ? 'What needs fixing today?'
+                : 'What needs fixing today, $first?',
+            style: OneHubTextStyles.pageHeading(textPrimary)
+                .copyWith(fontSize: 28));
+      },
+    );
   }
 }
 

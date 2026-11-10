@@ -10,11 +10,27 @@ import 'support/fake_api.dart';
 
 void main() {
   late List<String> storageCalls;
+  late FakeApi fake;
+
+  Map<String, dynamic> meJson({String? email = 'meera@example.com'}) => {
+        'id': 'u1',
+        'role': 'CUSTOMER',
+        'fullName': 'Meera Nair',
+        'mobile': '9000000001',
+        'email': email,
+      };
 
   // Opens Profile on top of a stand-in home screen so that logging out has a
   // stack to clear, and records what the secure-storage plugin is asked to do.
-  Future<void> pumpScreen(WidgetTester tester) async {
-    installFakeApi({'GET /requirements/mine': (_) => []});
+  Future<void> pumpScreen(WidgetTester tester,
+      {Map<String, Object? Function(dynamic)> routes = const {}}) async {
+    customerProfile.value = null;
+    addTearDown(() => customerProfile.value = null);
+    fake = installFakeApi({
+      'GET /requirements/mine': (_) => [],
+      'GET /users/me': (_) => meJson(),
+      ...routes,
+    });
     storageCalls = [];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -50,17 +66,44 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('shows the account details in a single GlowCard', (tester) async {
+  testWidgets('shows the account from GET /users/me in a single GlowCard',
+      (tester) async {
     await pumpScreen(tester);
 
+    expect(fake.calls, contains('GET /users/me'));
     expect(find.byType(PageGlow), findsOneWidget);
     expect(find.byType(GlowCard), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);
     expect(find.text('Meera Nair'), findsOneWidget);
-    expect(find.text('+91 98765 43210'), findsOneWidget);
+    expect(find.text('+91 90000 00001'), findsOneWidget);
     expect(find.text('meera@example.com'), findsOneWidget);
     expect(find.text('M'), findsOneWidget,
         reason: 'the avatar shows the initial');
+  });
+
+  testWidgets('an account with no email shows no email row', (tester) async {
+    await pumpScreen(tester,
+        routes: {'GET /users/me': (_) => meJson(email: null)});
+
+    expect(find.text('Meera Nair'), findsOneWidget);
+    expect(find.byIcon(OneHubIcons.email), findsNothing);
+  });
+
+  testWidgets('a failed load says so, and pulling down retries',
+      (tester) async {
+    var fail = true;
+    await pumpScreen(tester, routes: {
+      'GET /users/me': (_) => fail ? const FakeError(500) : meJson(),
+    });
+
+    expect(find.text('Could not load your profile. Pull down to retry.'),
+        findsOneWidget);
+
+    fail = false;
+    await tester.drag(find.byType(ListView), const Offset(0, 1500));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Meera Nair'), findsOneWidget);
   });
 
   testWidgets('My requests opens the requests screen', (tester) async {
@@ -116,21 +159,27 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(storageCalls, contains('delete access_token'));
+    expect(customerProfile.value, isNull,
+        reason: 'the next account must not see this one\'s details');
     expect(find.text('login stub'), findsOneWidget);
     expect(find.byType(ProfileScreen), findsNothing);
     expect(find.text('open'), findsNothing,
         reason: 'the whole stack was cleared');
   });
 
-  testWidgets('Edit profile saves a new name and the profile shows it',
+  testWidgets('Edit profile saves through PATCH /users/me and shows the result',
       (tester) async {
-    final original = customerProfile.value;
-    addTearDown(() => customerProfile.value = original);
-    await pumpScreen(tester);
+    await pumpScreen(tester, routes: {
+      'PATCH /users/me': (_) => {
+            ...meJson(email: null),
+            'fullName': 'New Name',
+          },
+    });
 
     await tester.tap(find.text('Edit profile'));
     await tester.pumpAndSettle();
     expect(find.byType(EditProfileScreen), findsOneWidget);
+    expect(find.text('Saved on this device only for now.'), findsNothing);
     await tester.enterText(
         find.widgetWithText(TextField, 'Meera Nair'), 'New Name');
     await tester.enterText(
@@ -138,10 +187,32 @@ void main() {
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
+    expect(fake.calls, contains('PATCH /users/me'));
+    expect(fake.bodies.last, {'fullName': 'New Name', 'email': null},
+        reason: 'an emptied email is sent as null, which clears it');
     expect(find.byType(EditProfileScreen), findsNothing);
     expect(find.text('New Name'), findsOneWidget);
     expect(find.text('meera@example.com'), findsNothing);
     expect(find.text('Profile updated.'), findsOneWidget);
+  });
+
+  testWidgets('a refused save keeps Edit profile open with the API message',
+      (tester) async {
+    await pumpScreen(tester, routes: {
+      'PATCH /users/me': (_) => const FakeError(409, 'email already in use'),
+    });
+
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextField, 'meera@example.com'),
+        'taken@example.com');
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(EditProfileScreen), findsOneWidget);
+    expect(find.text('Could not save your profile: email already in use'),
+        findsOneWidget);
+    expect(customerProfile.value?.email, 'meera@example.com');
   });
 
   testWidgets('Settings opens with this app\'s toggles and remembers a change',

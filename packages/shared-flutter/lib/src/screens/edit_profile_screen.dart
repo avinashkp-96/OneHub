@@ -5,9 +5,8 @@ import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
 import '../theme/onehub_theme.dart';
 
-/// The account details both apps show on their Profile screen. Each app keeps
-/// its own `ValueNotifier<ProfileDetails>` seeded with dummy values, since
-/// there is no profile endpoint yet; edits live in memory until restart.
+/// The account details both apps show on their Profile screen, loaded from
+/// the API (GET /users/me for customers, GET /providers/me for providers).
 class ProfileDetails {
   final String name;
   final String phone;

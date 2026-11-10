@@ -8,9 +8,10 @@ export class UpdateProfileDto {
   @IsString()
   fullName?: string;
 
+  // null clears the email on file.
   @IsOptional()
   @IsEmail()
-  email?: string;
+  email?: string | null;
 
   @IsOptional()
   @IsString()
