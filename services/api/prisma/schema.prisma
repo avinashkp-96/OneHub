@@ -211,6 +211,8 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
   event     String
   message   String
+  // The request this is about, when there is one; the apps open it on tap.
+  requirementId String?
   channel   String   // "PUSH" | "IN_APP" | "SMS"
   readAt    DateTime?
   createdAt DateTime @default(now())

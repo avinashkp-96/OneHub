@@ -7,6 +7,7 @@ import '../home/home_shell.dart';
 import '../plans/plans_screen.dart';
 import '../../core/api.dart';
 import '../requirements/active_jobs_screen.dart';
+import '../requirements/incoming_requests_screen.dart';
 import '../requirements/job_detail.dart';
 
 // docx 5.1 — Provider Dashboard (Home Screen). Restyled on request: a header
@@ -293,7 +294,11 @@ class _TopRowState extends State<_TopRow> {
         _StatusToggle(
             online: _online, onTap: () => setState(() => _online = !_online)),
         const SizedBox(width: 8),
-        NotificationBell(api: widget.client ?? api, iconColor: textPrimary),
+        NotificationBell(
+            api: widget.client ?? api,
+            iconColor: textPrimary,
+            onOpenRequest: (context, id) =>
+                openIncomingById(context, id, client: widget.client)),
       ],
     );
   }

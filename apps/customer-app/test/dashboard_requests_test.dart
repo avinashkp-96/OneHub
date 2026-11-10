@@ -354,6 +354,35 @@ void main() {
     expect(find.text('1 unread'), findsOneWidget);
   });
 
+  testWidgets('tapping a request notification opens that request',
+      (tester) async {
+    await pumpScreen(tester, {
+      'GET /notifications': (_) => [
+            {
+              'id': 'n1',
+              'event': 'BID_RECEIVED',
+              'message': 'New bid received from Rajesh Electricals',
+              'createdAt': DateTime.now().toUtc().toIso8601String(),
+              'readAt': null,
+              'requirementId': 'r1',
+            }
+          ],
+      'PATCH /notifications/n1/read': (_) => {'id': 'n1', 'read': true},
+      'GET /requirements/mine': (_) => [
+            requirementJson('r1', 'Fan rattles', 'BID_RECEIVED',
+                title: 'Fan repair', bids: [bidJson('b1')]),
+          ],
+    });
+
+    await tester.tap(find.byIcon(OneHubIcons.notification));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New bid'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(RequestDetailScreen), findsOneWidget);
+    expect(find.text('View bids'), findsOneWidget);
+  });
+
   testWidgets('the bell has no dot when nothing is unread', (tester) async {
     await pumpScreen(tester, {'GET /notifications': (_) => []});
     expect(find.byKey(const Key('bell-unread-dot')), findsNothing);

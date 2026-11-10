@@ -419,4 +419,122 @@ void main() {
       expect(incomingStageOf(r('EXPIRED')), IncomingStage.closed);
     });
   });
+
+  group('openIncomingById (notification tap)', () {
+    Future<void> pumpOpener(
+        WidgetTester tester, ApiClient client, String id) async {
+      tester.view.physicalSize = const Size(800, 2000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+                onPressed: () => openIncomingById(context, id, client: client),
+                child: const Text('open')),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    final detailActions = find.descendant(
+        of: find.byType(RequestDetailScreen),
+        matching: find.widgetWithText(PrimaryCta, 'Send price'));
+
+    testWidgets('opens the detail with Reject and Send price on a new request',
+        (tester) async {
+      await pumpOpener(tester, fakeClient(), 'r2');
+
+      expect(find.byType(RequestDetailScreen), findsOneWidget);
+      expect(find.text('Fix a leaking tap'), findsWidgets);
+      expect(detailActions, findsOneWidget);
+    });
+
+    testWidgets('Send price closes the detail and opens the price screen',
+        (tester) async {
+      await pumpOpener(tester, fakeClient(), 'r1');
+
+      await tester.tap(detailActions);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(find.byType(PriceRangeScreen), findsOneWidget);
+    });
+
+    testWidgets('Reject closes the detail and rejects through the API',
+        (tester) async {
+      await pumpOpener(tester, fakeClient(), 'r1');
+
+      await tester.tap(find.descendant(
+          of: find.byType(RequestDetailScreen),
+          matching: find.widgetWithText(OutlinedButton, 'Reject')));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(calls, contains('PATCH /requirements/r1/reject'));
+      expect(find.text('Request rejected.'), findsOneWidget);
+    });
+
+    testWidgets('a failed reject says so', (tester) async {
+      final client = ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((request) async => request.method == 'GET'
+            ? http.Response(
+                jsonEncode([
+                  {
+                    'id': 'r1',
+                    'subServiceId': 's1',
+                    'description': 'Fan noise',
+                    'photoUrls': [],
+                    'status': 'SENT'
+                  }
+                ]),
+                200)
+            : http.Response(jsonEncode({'message': 'down'}), 500)),
+      );
+      await pumpOpener(tester, client, 'r1');
+
+      await tester.tap(find.descendant(
+          of: find.byType(RequestDetailScreen),
+          matching: find.widgetWithText(OutlinedButton, 'Reject')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Could not reject'), findsOneWidget);
+    });
+
+    testWidgets('a request this provider rejected counts as gone',
+        (tester) async {
+      await pumpOpener(
+          tester,
+          fakeClient(requests: [
+            {
+              'id': 'r1',
+              'subServiceId': 's1',
+              'description': 'Fan noise',
+              'photoUrls': [],
+              'status': 'SENT',
+              'myResponse': 'REJECTED',
+            }
+          ]),
+          'r1');
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(find.text('This request is no longer available.'), findsOneWidget);
+    });
+
+    testWidgets('says so when the requests cannot load', (tester) async {
+      final client = ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient(
+            (_) async => http.Response(jsonEncode({'message': 'down'}), 500)),
+      );
+      await pumpOpener(tester, client, 'r1');
+
+      expect(find.textContaining('Could not open this request'), findsOneWidget);
+    });
+  });
 }

@@ -404,4 +404,57 @@ void main() {
     expect(requestTimeline(RequestStatus.rejected).last.label, 'Rejected');
     expect(requestTimeline(RequestStatus.cancelled).last.label, 'Cancelled');
   });
+
+  group('openRequestById (notification tap)', () {
+    Future<void> pumpOpener(WidgetTester tester, String id) async {
+      tester.view.physicalSize = const Size(800, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+                onPressed: () => openRequestById(context, id),
+                child: const Text('open')),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('opens the detail of that request', (tester) async {
+      installFakeApi({
+        'GET /requirements/mine': (_) => [
+              requirementJson('r1', 'Other job', 'SENT', title: 'Other'),
+              requirementJson('r2', 'Fan rattles', 'BID_RECEIVED',
+                  title: 'Fan repair', bids: [bidJson('b1')]),
+            ],
+      });
+      await pumpOpener(tester, 'r2');
+
+      expect(find.byType(RequestDetailScreen), findsOneWidget);
+      expect(find.text('Fan repair'), findsOneWidget);
+      expect(find.text('View bids'), findsOneWidget);
+    });
+
+    testWidgets('says so when the request is no longer there', (tester) async {
+      installFakeApi({'GET /requirements/mine': (_) => []});
+      await pumpOpener(tester, 'gone');
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(find.text('This request is no longer available.'), findsOneWidget);
+    });
+
+    testWidgets('says so when the requests cannot load', (tester) async {
+      installFakeApi(
+          {'GET /requirements/mine': (_) => const FakeError(500, 'down')});
+      await pumpOpener(tester, 'r1');
+
+      expect(find.byType(RequestDetailScreen), findsNothing);
+      expect(find.textContaining('Could not open this request'), findsOneWidget);
+    });
+  });
 }

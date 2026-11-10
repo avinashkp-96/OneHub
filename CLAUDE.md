@@ -1045,6 +1045,25 @@ provider app now takes an optional `client` for tests. Tokens last
 `JWT_EXPIRES_IN` (7 days); there is still no refresh token. Tests: shared
 105, customer 151, provider 186.
 
+2026-11-10 (notification opens its request): tapping a notification about a
+request only marked it read. Notifications now record the request they are
+about: new column `Notification.requirementId` (nullable, migration
+`20261110120000_notification_requirement`), set by every request event (new
+request, bid received and updated, contact unlocked, selected and not
+selected, job completed); rating and certified notifications have none.
+Older rows stay null, since nothing reliable links them, and open nothing.
+The shared `NotificationsScreen` and `NotificationBell` take an optional
+`onOpenRequest(context, requirementId)`; a tile that can open shows a
+chevron, and tapping it marks it read, opens the request and reloads the list
+on return. Customer: `openRequestById` finds the request in
+`/requirements/mine` and opens the same detail as My requests (View bids /
+Rate provider). Provider: `openIncomingById` finds it in
+`/requirements/incoming` and opens the same detail as Incoming requests, now
+the shared `openIncomingDetail`, so a new request keeps Reject and Send price.
+A request that is gone (or this provider rejected) says "This request is no
+longer available." Tests: API 266 (100% lines), shared 110, customer 155,
+provider 192 (96.8%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

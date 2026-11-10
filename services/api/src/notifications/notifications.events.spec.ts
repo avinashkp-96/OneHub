@@ -49,8 +49,8 @@ describe('Notification Matrix events', () => {
     const { service, sent } = build();
     await service.requestSent('r1');
     expect(sent()).toEqual([
-      { userId: 'u-p1', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', channel: 'IN_APP' },
-      { userId: 'u-p2', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', channel: 'IN_APP' },
+      { userId: 'u-p1', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', requirementId: 'r1', channel: 'IN_APP' },
+      { userId: 'u-p2', event: NotificationEvent.NEW_REQUEST, message: 'New job request: Kitchen switchboard sparking', requirementId: 'r1', channel: 'IN_APP' },
     ]);
   });
 
@@ -136,6 +136,25 @@ describe('Notification Matrix events', () => {
     const { service, sent } = build();
     await service.ratingReceived('p1', 5, true);
     expect(sent().map((n: { event: string }) => n.event)).toEqual([NotificationEvent.NEW_RATING, NotificationEvent.CERTIFIED]);
+  });
+
+  it('every request event names its request, so the apps can open it', async () => {
+    const { service, sent } = build();
+    await service.bidSubmitted('b1');
+    await service.contactUnlocked('b1');
+    await service.bidRefined('b1');
+    await service.providerConfirmed('b1');
+    await service.jobCompleted('r1');
+
+    const notes = sent() as { event: string; requirementId?: string }[];
+    expect(notes).toHaveLength(7);
+    expect(notes.every((n) => n.requirementId === 'r1')).toBe(true);
+  });
+
+  it('rating events are about the provider, not a request', async () => {
+    const { service, sent } = build();
+    await service.ratingReceived('p1', 5, true);
+    expect(sent().map((n: { requirementId?: string }) => n.requirementId)).toEqual([undefined, undefined]);
   });
 
   it('a failure is logged and never thrown to the caller', async () => {

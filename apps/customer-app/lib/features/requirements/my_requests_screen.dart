@@ -263,6 +263,34 @@ Future<void> openRequestDetail(BuildContext context, Requirement r) {
   ));
 }
 
+/// Opens the detail for the request with [requirementId], as tapping one of
+/// its notifications does. It loads the customer's requests to find it, and
+/// says so instead when the request is gone or the list cannot load.
+Future<void> openRequestById(BuildContext context, String requirementId) async {
+  Requirement? found;
+  var problem = 'This request is no longer available.';
+  try {
+    final json = await api.get('/requirements/mine') as List;
+    for (final item in json) {
+      final r = item as Map<String, dynamic>;
+      if (r['id'] == requirementId) {
+        found = Requirement.fromJson(r);
+        break;
+      }
+    }
+  } catch (_) {
+    problem = 'Could not open this request. Pull down and try again.';
+  }
+  if (!context.mounted) return;
+  if (found == null) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(problem)));
+    return;
+  }
+  await openRequestDetail(context, found);
+}
+
 // The detail's action: the bid list, or the rating screen for a completed
 // job that has not been rated yet.
 Future<void> _openRequestAction(BuildContext context, Requirement r) async {

@@ -28,7 +28,8 @@ export const NotificationEvent = {
 } as const;
 export type NotificationEventName = (typeof NotificationEvent)[keyof typeof NotificationEvent];
 
-type Note = { userId: string; event: NotificationEventName; message: string };
+// requirementId names the request a note is about, so the apps can open it.
+type Note = { userId: string; event: NotificationEventName; message: string; requirementId?: string };
 
 @Injectable()
 export class NotificationsService {
@@ -79,6 +80,7 @@ export class NotificationsService {
         userId: u.userId,
         event: NotificationEvent.NEW_REQUEST,
         message: `New job request: ${r.title}`,
+        requirementId,
       }));
     });
   }
@@ -92,6 +94,7 @@ export class NotificationsService {
           userId: b.customerId,
           event: NotificationEvent.BID_RECEIVED,
           message: `New bid received from ${b.providerName}: ${rupees(b.initialMinPrice)}–${rupees(b.initialMaxPrice)}`,
+          requirementId: b.requirementId,
         },
       ];
     });
@@ -106,6 +109,7 @@ export class NotificationsService {
           userId: b.providerUserId,
           event: NotificationEvent.CONTACT_UNLOCKED,
           message: 'Payment successful. You can now contact the customer.',
+          requirementId: b.requirementId,
         },
       ];
     });
@@ -116,7 +120,12 @@ export class NotificationsService {
     return this.send(`bidRefined ${bidId}`, async () => {
       const b = await this.bid(bidId);
       return [
-        { userId: b.customerId, event: NotificationEvent.BID_UPDATED, message: `${b.providerName} updated their price range` },
+        {
+          userId: b.customerId,
+          event: NotificationEvent.BID_UPDATED,
+          message: `${b.providerName} updated their price range`,
+          requirementId: b.requirementId,
+        },
       ];
     });
   }
@@ -136,8 +145,18 @@ export class NotificationsService {
       const users = await this.providerUsers([bid.providerId, ...others.map((o) => o.providerId)]);
       return users.map((u) =>
         u.providerId === bid.providerId
-          ? { userId: u.userId, event: NotificationEvent.SELECTED, message: "You've been selected for the job! Tap to view details." }
-          : { userId: u.userId, event: NotificationEvent.NOT_SELECTED, message: 'This job has been assigned to another provider' },
+          ? {
+              userId: u.userId,
+              event: NotificationEvent.SELECTED,
+              message: "You've been selected for the job! Tap to view details.",
+              requirementId: bid.requirementId,
+            }
+          : {
+              userId: u.userId,
+              event: NotificationEvent.NOT_SELECTED,
+              message: 'This job has been assigned to another provider',
+              requirementId: bid.requirementId,
+            },
       );
     });
   }
@@ -147,7 +166,12 @@ export class NotificationsService {
     return this.send(`jobCompleted ${requirementId}`, async () => {
       const r = await this.prisma.requirement.findUniqueOrThrow({ where: { id: requirementId }, select: { customerId: true } });
       return [
-        { userId: r.customerId, event: NotificationEvent.JOB_COMPLETED, message: 'Job completed. Rate your service provider.' },
+        {
+          userId: r.customerId,
+          event: NotificationEvent.JOB_COMPLETED,
+          message: 'Job completed. Rate your service provider.',
+          requirementId,
+        },
       ];
     });
   }
@@ -204,6 +228,7 @@ export class NotificationsService {
     const b = await this.prisma.bid.findUniqueOrThrow({
       where: { id: bidId },
       select: {
+        requirementId: true,
         initialMinPrice: true,
         initialMaxPrice: true,
         requirement: { select: { customerId: true } },
@@ -211,6 +236,7 @@ export class NotificationsService {
       },
     });
     return {
+      requirementId: b.requirementId,
       customerId: b.requirement.customerId,
       providerUserId: b.provider.userId,
       providerName: b.provider.businessName ?? b.provider.user.fullName,

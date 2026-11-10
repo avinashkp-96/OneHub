@@ -244,7 +244,7 @@ class _TopRowState extends State<_TopRow> {
           ),
         ),
         const Spacer(),
-        NotificationBell(api: api),
+        NotificationBell(api: api, onOpenRequest: openRequestById),
       ],
     );
   }

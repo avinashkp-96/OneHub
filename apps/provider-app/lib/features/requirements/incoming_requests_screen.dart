@@ -73,33 +73,8 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
     if (mounted) _load();
   }
 
-  // The full request: whole description, timeline, the provider's own
-  // price once sent, the preferred date and photo count. A new request keeps
-  // Reject and Send price at the bottom; they close the detail first.
-  Future<void> _openDetail(Requirement r) {
-    final stage = incomingStageOf(r);
-    return openJobDetail(
-      context,
-      r,
-      statusLabel: incomingStageLabel(stage),
-      statusColor: incomingStageColor(context, stage),
-      steps: jobTimeline(stage),
-      action: stage == IncomingStage.newRequest
-          ? Builder(
-              builder: (ctx) => _NewRequestActions(
-                onReject: () {
-                  Navigator.of(ctx).pop();
-                  _reject(r);
-                },
-                onSendPrice: () {
-                  Navigator.of(ctx).pop();
-                  _sendPrice(r);
-                },
-              ),
-            )
-          : null,
-    );
-  }
+  Future<void> _openDetail(Requirement r) => openIncomingDetail(context, r,
+      onReject: () => _reject(r), onSendPrice: () => _sendPrice(r));
 
   Future<void> _reject(Requirement r) async {
     try {
@@ -226,6 +201,89 @@ class _RequestCard extends StatelessWidget {
 }
 
 /// Reject and Send price, on a new request's card and its detail page.
+/// The full request: whole description, timeline, the provider's own price
+/// once sent, the preferred date and photo count. A new request keeps Reject
+/// and Send price at the bottom; they close the detail first, then call
+/// [onReject] or [onSendPrice]. Opened from Incoming requests and from a
+/// notification about the request.
+Future<void> openIncomingDetail(
+  BuildContext context,
+  Requirement r, {
+  required VoidCallback onReject,
+  required VoidCallback onSendPrice,
+}) {
+  final stage = incomingStageOf(r);
+  return openJobDetail(
+    context,
+    r,
+    statusLabel: incomingStageLabel(stage),
+    statusColor: incomingStageColor(context, stage),
+    steps: jobTimeline(stage),
+    action: stage == IncomingStage.newRequest
+        ? Builder(
+            builder: (ctx) => _NewRequestActions(
+              onReject: () {
+                Navigator.of(ctx).pop();
+                onReject();
+              },
+              onSendPrice: () {
+                Navigator.of(ctx).pop();
+                onSendPrice();
+              },
+            ),
+          )
+        : null,
+  );
+}
+
+/// Opens the request with [requirementId], as tapping one of its
+/// notifications does: the same detail as Incoming requests, with Reject and
+/// Send price on a new one. It loads this provider's requests to find it, and
+/// says so instead when the request is gone (rejected by this provider) or
+/// the list cannot load. Takes an optional [client] like the screens do.
+Future<void> openIncomingById(BuildContext context, String requirementId,
+    {ApiClient? client}) async {
+  final ApiClient api_ = client ?? api;
+  void say(String message) => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(SnackBar(content: Text(message)));
+
+  Requirement? found;
+  var problem = 'This request is no longer available.';
+  try {
+    final json = await api_.get('/requirements/incoming') as List;
+    for (final item in json) {
+      final r = Requirement.fromJson(item as Map<String, dynamic>);
+      if (r.id == requirementId && r.myResponse != RequestStatus.rejected) {
+        found = r;
+        break;
+      }
+    }
+  } catch (_) {
+    problem = 'Could not open this request. Pull down and try again.';
+  }
+  if (!context.mounted) return;
+  final r = found;
+  if (r == null) {
+    say(problem);
+    return;
+  }
+  await openIncomingDetail(
+    context,
+    r,
+    onReject: () async {
+      try {
+        await api_.patch('/requirements/${r.id}/reject', {}, auth: true);
+        if (context.mounted) showSuccessMessage(context, 'Request rejected.');
+      } catch (e) {
+        if (context.mounted) say('Could not reject: $e');
+      }
+    },
+    onSendPrice: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => PriceRangeScreen(requirementId: r.id, client: client))),
+  );
+}
+
 class _NewRequestActions extends StatelessWidget {
   final VoidCallback onReject;
   final VoidCallback onSendPrice;

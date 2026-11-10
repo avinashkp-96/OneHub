@@ -37,6 +37,7 @@ void main() {
                 'message': 'New job request: Switchboard Repair',
                 'createdAt': DateTime.now().toUtc().toIso8601String(),
                 'readAt': isUnread ? null : DateTime.now().toIso8601String(),
+                'requirementId': 'r1',
               }
             ]),
             200);
@@ -103,5 +104,25 @@ void main() {
 
     expect(find.byType(NotificationsScreen), findsNothing);
     expect(dot, findsNothing);
+  });
+
+  testWidgets('passes onOpenRequest on to the list', (tester) async {
+    final opened = <String>[];
+    await tester.pumpWidget(MaterialApp(
+      theme: OneHubTheme.dark(),
+      home: Scaffold(
+          body: Center(
+              child: NotificationBell(
+                  api: fakeApi(),
+                  onOpenRequest: (context, id) async => opened.add(id)))),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(OneHubIcons.notification));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New job request'));
+    await tester.pumpAndSettle();
+
+    expect(opened, ['r1']);
   });
 }

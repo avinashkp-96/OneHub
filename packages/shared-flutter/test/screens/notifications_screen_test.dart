@@ -27,6 +27,7 @@ void main() {
           'message': 'New bid received from Rajesh Electricals: ₹300–₹450',
           'createdAt': ago(const Duration(minutes: 10)),
           'readAt': null,
+          'requirementId': 'r1',
         },
         {
           'id': 'n2',
@@ -64,14 +65,16 @@ void main() {
     );
   }
 
-  Future<void> pumpScreen(WidgetTester tester, ApiClient api) async {
+  Future<void> pumpScreen(WidgetTester tester, ApiClient api,
+      {OpenRequest? onOpenRequest}) async {
     tester.view.physicalSize = const Size(800, 2400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MaterialApp(
       theme: OneHubTheme.dark(),
-      home: NotificationsScreen(api: api, clock: () => now),
+      home: NotificationsScreen(
+          api: api, clock: () => now, onOpenRequest: onOpenRequest),
     ));
     await tester.pumpAndSettle();
   }
@@ -178,5 +181,64 @@ void main() {
     expect(n.title, 'Notification');
     expect(n.icon, OneHubIcons.notification);
     expect(n.unread, isTrue);
+  });
+
+  group('opening the request', () {
+    testWidgets('a notification about a request opens it, marked read',
+        (tester) async {
+      final opened = <String>[];
+      await pumpScreen(tester, fakeApi(), onOpenRequest: (context, id) async {
+        opened.add(id);
+      });
+
+      expect(find.byKey(const Key('notification-opens')), findsOneWidget,
+          reason: 'only the bid notification names a request');
+
+      await tester.tap(find.text('New bid'));
+      await tester.pumpAndSettle();
+
+      expect(opened, ['r1']);
+      expect(calls, contains('PATCH /notifications/n1/read'));
+      expect(calls.where((c) => c == 'GET /notifications'), hasLength(2),
+          reason: 'the list reloads on return');
+    });
+
+    testWidgets('a notification with no request only marks itself read',
+        (tester) async {
+      final opened = <String>[];
+      await pumpScreen(tester, fakeApi(), onOpenRequest: (context, id) async {
+        opened.add(id);
+      });
+
+      await tester.tap(find.text('Request accepted'));
+      await tester.pumpAndSettle();
+
+      expect(opened, isEmpty);
+      expect(calls, contains('PATCH /notifications/n2/read'));
+    });
+
+    testWidgets('without a handler nothing opens and no chevron shows',
+        (tester) async {
+      await pumpScreen(tester, fakeApi());
+
+      expect(find.byKey(const Key('notification-opens')), findsNothing);
+      await tester.tap(find.text('New bid'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NotificationsScreen), findsOneWidget);
+    });
+
+    test('parses requirementId, null when absent', () {
+      final base = {
+        'id': 'n',
+        'event': 'NEW_REQUEST',
+        'message': 'm',
+        'createdAt': '2026-11-10T10:00:00Z',
+      };
+      expect(
+          OneHubNotification.fromJson({...base, 'requirementId': 'r9'})
+              .requirementId,
+          'r9');
+      expect(OneHubNotification.fromJson(base).requirementId, isNull);
+    });
   });
 }

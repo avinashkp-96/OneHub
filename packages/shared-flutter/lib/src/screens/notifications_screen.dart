@@ -14,12 +14,17 @@ class OneHubNotification {
   final String body;
   final DateTime createdAt;
   final bool unread;
+
+  /// The request this is about, if any. Null for rating and certification
+  /// notifications, and for ones stored before requests were recorded.
+  final String? requirementId;
   const OneHubNotification({
     required this.id,
     required this.event,
     required this.body,
     required this.createdAt,
     this.unread = false,
+    this.requirementId,
   });
 
   factory OneHubNotification.fromJson(Map<String, dynamic> json) =>
@@ -29,6 +34,7 @@ class OneHubNotification {
         body: json['message'] as String,
         createdAt: DateTime.parse(json['createdAt'] as String).toLocal(),
         unread: json['readAt'] == null,
+        requirementId: json['requirementId'] as String?,
       );
 
   String get title => _titles[event] ?? 'Notification';
@@ -83,19 +89,31 @@ String relativeTimeLabel(DateTime time, DateTime now) {
 /// "12 Oct".
 String dayMonthLabel(DateTime time) => '${time.day} ${_months[time.month - 1]}';
 
+/// Opens one request from its id; see [NotificationsScreen.onOpenRequest].
+typedef OpenRequest = Future<void> Function(
+    BuildContext context, String requirementId);
+
 /// Notifications list, identical for the customer and provider apps, so it
 /// lives here and each app passes its own [api]. Matches the other
 /// redesigned screens (PageGlow, page title in the AppBar, bordered tiles).
 /// Unread items carry a primary-coloured border and a dot; tapping one marks
 /// it read and "Mark all as read" clears the rest, both saved through the API.
 /// Pull down to refresh.
+///
+/// A notification about a request also opens it through [onOpenRequest],
+/// which each app supplies because the two apps show a request differently.
+/// Those tiles carry a chevron; the rest only mark themselves read.
 class NotificationsScreen extends StatefulWidget {
   final ApiClient api;
+
+  /// Opens the request with this id. Without it no tile opens anything.
+  final OpenRequest? onOpenRequest;
 
   /// Clock for the time labels; tests pass a fixed one. Defaults to now.
   final DateTime Function()? clock;
 
-  const NotificationsScreen({super.key, required this.api, this.clock});
+  const NotificationsScreen(
+      {super.key, required this.api, this.clock, this.onOpenRequest});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -146,6 +164,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     widget.api
         .patch('/notifications/${n.id}/read', {}, auth: true)
         .catchError((_) => <String, dynamic>{});
+  }
+
+  // Marks it read, then opens its request when it has one. The list reloads
+  // on return, since acting on the request can add notifications.
+  Future<void> _open(OneHubNotification n) async {
+    _markRead(n);
+    final open = widget.onOpenRequest;
+    final id = n.requirementId;
+    if (open == null || id == null) return;
+    await open(context, id);
+    if (mounted) _load();
   }
 
   void _markAllRead() {
@@ -215,7 +244,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         item: n,
                         timeLabel: relativeTimeLabel(n.createdAt, now),
                         unread: !_read.contains(n.id),
-                        onTap: () => _markRead(n),
+                        opens: widget.onOpenRequest != null &&
+                            n.requirementId != null,
+                        onTap: () => _open(n),
                       ),
                 ],
               ],
@@ -231,11 +262,13 @@ class _NotificationTile extends StatelessWidget {
   final OneHubNotification item;
   final String timeLabel;
   final bool unread;
+  final bool opens;
   final VoidCallback onTap;
   const _NotificationTile(
       {required this.item,
       required this.timeLabel,
       required this.unread,
+      required this.opens,
       required this.onTap});
 
   @override
@@ -317,6 +350,14 @@ class _NotificationTile extends StatelessWidget {
                   ],
                 ),
               ),
+              if (opens)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 12),
+                  child: Icon(OneHubIcons.chevronRight,
+                      key: const Key('notification-opens'),
+                      size: 16,
+                      color: textMuted),
+                ),
             ],
           ),
         ),

@@ -10,11 +10,14 @@ import '../theme/onehub_theme.dart';
 /// when the bell is built and again on return from the list. If the check
 /// fails the dot stays hidden rather than guessing.
 ///
-/// [iconColor] overrides the default muted icon color.
+/// [iconColor] overrides the default muted icon color. [onOpenRequest] is
+/// passed on to the list, so a notification about a request opens it.
 class NotificationBell extends StatefulWidget {
   final ApiClient api;
   final Color? iconColor;
-  const NotificationBell({super.key, required this.api, this.iconColor});
+  final OpenRequest? onOpenRequest;
+  const NotificationBell(
+      {super.key, required this.api, this.iconColor, this.onOpenRequest});
 
   @override
   State<NotificationBell> createState() => _NotificationBellState();
@@ -42,7 +45,8 @@ class _NotificationBellState extends State<NotificationBell> {
 
   Future<void> _open() async {
     await Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => NotificationsScreen(api: widget.api)));
+        builder: (_) => NotificationsScreen(
+            api: widget.api, onOpenRequest: widget.onOpenRequest)));
     if (mounted) _check();
   }
 
