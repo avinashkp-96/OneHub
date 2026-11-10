@@ -28,14 +28,18 @@ describe('CategoriesService', () => {
         findMany: jest.fn().mockResolvedValue([]),
         create: jest.fn().mockResolvedValue({ id: 's1' }),
       },
+      providerSubService: { findMany: jest.fn().mockResolvedValue([]) },
     };
     return { service: new CategoriesService(asPrisma(prisma)), prisma };
   }
 
-  it('lists only active categories', async () => {
+  it('lists only active categories, by name', async () => {
     const { service, prisma } = build();
     await service.listActive();
-    expect(prisma.category.findMany).toHaveBeenCalledWith({ where: { active: true } });
+    expect(prisma.category.findMany).toHaveBeenCalledWith({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+    });
   });
 
   it('lists the sub-services of a category', async () => {

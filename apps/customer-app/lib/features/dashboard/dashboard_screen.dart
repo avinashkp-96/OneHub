@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../categories/category_grid_screen.dart';
+import '../categories/sub_service_list_screen.dart';
 import '../home/home_shell.dart';
 import '../profile/profile_state.dart';
 import '../requirements/my_requests_screen.dart';
@@ -13,11 +14,9 @@ import '../search/search_screen.dart';
 // round for the header/search/hero/Services section specifically. Colors,
 // fonts, and icons stay the current OneHub design system
 // (OneHubColors/OneHubTheme/OneHubIcons) per explicit instruction. The
-// Services grid uses explicit dummy data (name/icon/pro count) per that
-// screenshot's own instruction ("use dummy data for now") — "available
-// pros" has no backing field on ServiceCategory regardless, so this is the
-// only way to show it right now; "See all" still opens the real,
-// API-backed CategoryGridScreen. Active Requests stays wired to the real
+// Services grid shows real categories and provider counts from
+// GET /categories; "See all" opens the full CategoryGridScreen. Active
+// Requests stays wired to the real
 // /requirements/mine endpoint (unaffected by that screenshot, which didn't
 // show this section). Nearby Providers has no matching generic endpoint
 // (providers.controller.ts only supports GET /providers?subServiceId=...,
@@ -38,11 +37,13 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Requirement> _requirements = [];
   bool _loading = true;
+  List<ServiceCategory> _categories = [];
 
   @override
   void initState() {
     super.initState();
     _load();
+    _loadCategories();
     // The greeting uses the name; if this fails it just leaves the name out.
     loadCustomerProfile().catchError((_) {});
   }
@@ -61,6 +62,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  // The Expert services grid; on failure it keeps what it had (or nothing).
+  Future<void> _loadCategories() async {
+    try {
+      final json = await api.get('/categories') as List;
+      if (!mounted) return;
+      setState(() => _categories = json
+          .map((c) => ServiceCategory.fromJson(c as Map<String, dynamic>))
+          .toList());
+    } catch (_) {}
   }
 
   @override
@@ -86,7 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: PageGlow(
         child: SafeArea(
           child: RefreshIndicator(
-            onRefresh: _load,
+            onRefresh: () => Future.wait([_load(), _loadCategories()]),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                   OneHubTheme.pageMargin, 20, OneHubTheme.pageMargin, 100),
@@ -106,7 +118,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     actionLabel: 'See all',
                     onAction: openCategories),
                 const SizedBox(height: 12),
-                _ServicesGrid(onTap: openCategories),
+                _ServicesGrid(
+                    categories: _categories,
+                    onTap: (category) => openThenRefresh(
+                        SubServiceListScreen(category: category))),
                 const SizedBox(height: 26),
                 _SectionHeader(
                     title: 'Active requests',
@@ -468,10 +483,10 @@ class _SectionHeader extends StatelessWidget {
 
 // --- Services quick-access grid -----------------------------------------------
 //
-// Explicit dummy data ("use dummy data for now") — icon, name, and pro
-// count all come from a reference screenshot, not a real endpoint.
-// ServiceCategory (the real model) has no "available pros" field at all,
-// so this specific stat can't be real yet regardless.
+// The categories with the most providers, up to four, from GET /categories
+// (each carries `providerCount`). A category without an iconUrl gets a
+// matching icon by name, or the generic category icon. Tapping one opens its
+// services; nothing shows if the list cannot load.
 
 const _categoryTintPalette = [
   OneHubColors.primary,
@@ -481,26 +496,37 @@ const _categoryTintPalette = [
   OneHubColors.danger,
 ];
 
-class _DummyCategory {
-  final String name;
-  final IconData icon;
-  final int proCount;
-  const _DummyCategory(this.name, this.icon, this.proCount);
+const _iconsByName = {
+  'electrician': OneHubIcons.danger,
+  'plumber': OneHubIcons.category,
+  'painter': OneHubIcons.edit,
+  'carpenter': OneHubIcons.work,
+};
+
+/// The four categories with the most providers, ties by name.
+List<ServiceCategory> topCategories(List<ServiceCategory> all) {
+  final sorted = [...all]..sort((a, b) {
+      final byCount = b.providerCount.compareTo(a.providerCount);
+      return byCount != 0 ? byCount : a.name.compareTo(b.name);
+    });
+  return sorted.take(4).toList();
 }
 
-const _dummyCategories = [
-  _DummyCategory('Electrician', OneHubIcons.danger, 18),
-  _DummyCategory('Plumber', OneHubIcons.category, 24),
-  _DummyCategory('Painter', OneHubIcons.edit, 31),
-  _DummyCategory('Carpenter', OneHubIcons.work, 12),
-];
+/// "No pros yet", "1 pro", "12 pros".
+String proCountLabel(int count) => switch (count) {
+      0 => 'No pros yet',
+      1 => '1 pro',
+      _ => '$count pros',
+    };
 
 class _ServicesGrid extends StatelessWidget {
-  final VoidCallback onTap;
-  const _ServicesGrid({required this.onTap});
+  final List<ServiceCategory> categories;
+  final ValueChanged<ServiceCategory> onTap;
+  const _ServicesGrid({required this.categories, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final shown = topCategories(categories);
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -510,15 +536,15 @@ class _ServicesGrid extends StatelessWidget {
         crossAxisSpacing: 12,
         mainAxisExtent: 130,
       ),
-      itemCount: _dummyCategories.length,
-      itemBuilder: (context, index) =>
-          _ServiceCard(category: _dummyCategories[index], onTap: onTap),
+      itemCount: shown.length,
+      itemBuilder: (context, index) => _ServiceCard(
+          category: shown[index], onTap: () => onTap(shown[index])),
     );
   }
 }
 
 class _ServiceCard extends StatelessWidget {
-  final _DummyCategory category;
+  final ServiceCategory category;
   final VoidCallback onTap;
   const _ServiceCard({required this.category, required this.onTap});
 
@@ -533,6 +559,7 @@ class _ServiceCard extends StatelessWidget {
         dark ? OneHubColors.cardFillDark : OneHubColors.cardFillLight;
     final iconBorder =
         dark ? OneHubColors.cardBorderDark : OneHubColors.cardBorderLight;
+    final iconUrl = category.iconUrl;
 
     return Card(
       child: InkWell(
@@ -549,15 +576,29 @@ class _ServiceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: iconFill,
-                    border: Border.all(color: iconBorder)),
-                child: Icon(category.icon, color: textPrimary, size: 18),
+                    border: Border.all(color: iconBorder),
+                    image: iconUrl == null
+                        ? null
+                        : DecorationImage(
+                            image: NetworkImage(iconUrl),
+                            fit: BoxFit.cover,
+                            onError: (_, __) {})),
+                child: iconUrl == null
+                    ? Icon(
+                        _iconsByName[category.name.toLowerCase()] ??
+                            OneHubIcons.category,
+                        color: textPrimary,
+                        size: 18)
+                    : null,
               ),
               const SizedBox(height: 12),
               Text(category.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: OneHubTextStyles.bodyText(textPrimary)
                       .copyWith(fontWeight: FontWeight.w700, fontSize: 15)),
               const SizedBox(height: 2),
-              Text('${category.proCount} available pros',
+              Text(proCountLabel(category.providerCount),
                   style: OneHubTextStyles.fieldLabel(textMuted)
                       .copyWith(letterSpacing: 0, fontSize: 11)),
             ],

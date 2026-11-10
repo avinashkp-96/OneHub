@@ -259,17 +259,11 @@ void main() {
     expect(fake.calls.where((c) => c == 'GET /requirements/mine').length, 2);
   });
 
-  testWidgets('See all and a service card open category browsing',
-      (tester) async {
+  // A service card opens its own category instead; see dashboard_screen_test.
+  testWidgets('See all opens category browsing', (tester) async {
     await pumpScreen(tester, {});
 
     await tester.tap(find.text('See all').first);
-    await tester.pumpAndSettle();
-    expect(find.byType(CategoryGridScreen), findsOneWidget);
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Electrician'));
     await tester.pumpAndSettle();
     expect(find.byType(CategoryGridScreen), findsOneWidget);
   });

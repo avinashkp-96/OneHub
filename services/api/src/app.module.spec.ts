@@ -14,6 +14,7 @@ describe('AppModule wiring', () => {
     category: { findMany: jest.fn().mockResolvedValue([{ id: 'c1', name: 'Electrician' }]) },
     user: { update: jest.fn().mockResolvedValue({}) },
     subService: { findMany: jest.fn().mockResolvedValue([]) },
+    providerSubService: { findMany: jest.fn().mockResolvedValue([]) },
     provider: {
       findMany: jest.fn().mockResolvedValue([]),
       findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'p-mine' }),
@@ -54,7 +55,7 @@ describe('AppModule wiring', () => {
 
   it('serves the public category list', async () => {
     const res = await request(app.getHttpServer()).get('/api/v1/categories').expect(200);
-    expect(res.body).toEqual([{ id: 'c1', name: 'Electrician' }]);
+    expect(res.body).toEqual([{ id: 'c1', name: 'Electrician', providerCount: 0 }]);
   });
 
   it('answers a browser preflight from a local web preview', async () => {

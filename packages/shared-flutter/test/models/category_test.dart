@@ -9,16 +9,19 @@ void main() {
         'name': 'Electrician',
         'iconUrl': 'https://example.com/icon.png',
         'description': 'Wiring and repairs',
+        'providerCount': 3,
       });
       expect(category.id, 'cat_1');
       expect(category.name, 'Electrician');
       expect(category.iconUrl, 'https://example.com/icon.png');
+      expect(category.providerCount, 3);
     });
 
-    test('tolerates a missing optional iconUrl/description', () {
+    test('tolerates a missing optional iconUrl/description/providerCount', () {
       final category = ServiceCategory.fromJson({'id': 'cat_2', 'name': 'Plumber'});
       expect(category.iconUrl, isNull);
       expect(category.description, isNull);
+      expect(category.providerCount, 0);
     });
   });
 

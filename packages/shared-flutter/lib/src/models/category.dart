@@ -4,14 +4,18 @@ class ServiceCategory {
   final String name;
   final String? iconUrl;
   final String? description;
+  // Active providers offering any of its services; GET /categories sends it.
+  final int providerCount;
 
-  const ServiceCategory({required this.id, required this.name, this.iconUrl, this.description});
+  const ServiceCategory(
+      {required this.id, required this.name, this.iconUrl, this.description, this.providerCount = 0});
 
   factory ServiceCategory.fromJson(Map<String, dynamic> json) => ServiceCategory(
         id: json['id'] as String,
         name: json['name'] as String,
         iconUrl: json['iconUrl'] as String?,
         description: json['description'] as String?,
+        providerCount: (json['providerCount'] as num?)?.toInt() ?? 0,
       );
 }
 

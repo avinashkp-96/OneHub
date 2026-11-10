@@ -7,8 +7,28 @@ import { UpsertSubServiceDto } from './dto/upsert-sub-service.dto';
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listActive() {
-    return this.prisma.category.findMany({ where: { active: true } });
+  // Each category carries `providerCount`: how many ACTIVE providers offer at
+  // least one of its sub-services, the same providers search can return. A
+  // provider offering several services in one category counts once.
+  async listActive() {
+    const [categories, offered] = await Promise.all([
+      this.prisma.category.findMany({ where: { active: true }, orderBy: { name: 'asc' } }),
+      this.prisma.providerSubService.findMany({
+        where: { provider: { status: 'ACTIVE' } },
+        select: { providerId: true, subService: { select: { categoryId: true } } },
+      }),
+    ]);
+    const providersByCategory = new Map<string, Set<string>>();
+    for (const row of offered) {
+      const categoryId = row.subService.categoryId;
+      const providers = providersByCategory.get(categoryId) ?? new Set<string>();
+      providers.add(row.providerId);
+      providersByCategory.set(categoryId, providers);
+    }
+    return categories.map((c) => ({
+      ...c,
+      providerCount: providersByCategory.get(c.id)?.size ?? 0,
+    }));
   }
 
   listSubServices(categoryId: string) {

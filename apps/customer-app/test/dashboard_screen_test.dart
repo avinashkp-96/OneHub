@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onehub_customer/features/categories/sub_service_list_screen.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_shared/onehub_shared.dart';
@@ -81,29 +82,82 @@ void main() {
     }
   });
 
-  testWidgets(
-      'Services grid shows the 4 dummy categories with their pro counts',
-      (tester) async {
-    tester.view.physicalSize = const Size(800, 3000);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  group('Expert services grid', () {
+    Map<String, dynamic> cat(String id, String name, int count) =>
+        {'id': id, 'name': name, 'active': true, 'providerCount': count};
 
-    await tester.pumpWidget(
-      MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
-    );
+    Future<FakeApi> pumpWith(WidgetTester tester, Object? categories) async {
+      final fake = installFakeApi({
+        'GET /requirements/mine': (_) => [],
+        'GET /categories': (_) => categories,
+        'GET /categories/cat-p/sub-services': (_) => [],
+      });
+      tester.view.physicalSize = const Size(800, 3000);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
+      );
+      await tester.pumpAndSettle();
+      return fake;
+    }
 
-    // Explicit dummy data per a reference screenshot ("use dummy data for
-    // now") — ServiceCategory has no "available pros" field at all, so this
-    // exact stat can't come from the real /categories endpoint yet.
-    expect(find.text('Electrician'), findsOneWidget);
-    expect(find.text('18 available pros'), findsOneWidget);
-    expect(find.text('Plumber'), findsOneWidget);
-    expect(find.text('24 available pros'), findsOneWidget);
-    expect(find.text('Painter'), findsOneWidget);
-    expect(find.text('31 available pros'), findsOneWidget);
-    expect(find.text('Carpenter'), findsOneWidget);
-    expect(find.text('12 available pros'), findsOneWidget);
+    testWidgets('shows the four categories with the most providers',
+        (tester) async {
+      await pumpWith(tester, [
+        cat('cat-a', 'AC Repair', 0),
+        cat('cat-c', 'Carpenter', 1),
+        cat('cat-e', 'Electrician', 2),
+        cat('cat-p', 'Plumber', 12),
+        cat('cat-x', 'Painter', 2),
+      ]);
+
+      expect(find.text('Plumber'), findsOneWidget);
+      expect(find.text('12 pros'), findsOneWidget);
+      expect(find.text('Electrician'), findsOneWidget);
+      expect(find.text('Painter'), findsOneWidget);
+      expect(find.text('2 pros'), findsNWidgets(2));
+      expect(find.text('Carpenter'), findsOneWidget);
+      expect(find.text('1 pro'), findsOneWidget);
+      expect(find.text('AC Repair'), findsNothing,
+          reason: 'the fewest providers, so the fifth and left out');
+      expect(find.textContaining('available pros'), findsNothing);
+    });
+
+    testWidgets('tapping a category opens its services', (tester) async {
+      final fake = await pumpWith(tester, [cat('cat-p', 'Plumber', 3)]);
+
+      await tester.tap(find.text('Plumber'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(SubServiceListScreen), findsOneWidget);
+      expect(fake.calls, contains('GET /categories/cat-p/sub-services'));
+    });
+
+    testWidgets('shows nothing when the categories cannot load',
+        (tester) async {
+      await pumpWith(tester, const FakeError(500));
+
+      expect(find.text('Expert services'), findsOneWidget);
+      expect(find.textContaining(RegExp(r'^(\d+ pros?|No pros yet)$')),
+          findsNothing);
+    });
+  });
+
+  test('topCategories ranks by provider count, then name', () {
+    const all = [
+      ServiceCategory(id: '1', name: 'B', providerCount: 2),
+      ServiceCategory(id: '2', name: 'A', providerCount: 2),
+      ServiceCategory(id: '3', name: 'C', providerCount: 5),
+    ];
+    expect(topCategories(all).map((c) => c.name), ['C', 'A', 'B']);
+  });
+
+  test('proCountLabel', () {
+    expect(proCountLabel(0), 'No pros yet');
+    expect(proCountLabel(1), '1 pro');
+    expect(proCountLabel(7), '7 pros');
   });
 
   testWidgets(

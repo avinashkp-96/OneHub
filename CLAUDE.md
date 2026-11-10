@@ -1011,6 +1011,20 @@ an email another account uses (409 "email already in use") instead of a 500
 from the unique index. Settings toggles are still in memory only. Tests: API
 262, customer 146 (99.4%).
 
+2026-11-10 (customer home: real services grid): the Expert services grid no
+longer shows four hardcoded categories with made-up "available pros" counts.
+GET /categories now lists active categories by name, each with
+`providerCount`: ACTIVE providers offering at least one of its sub-services,
+counted once per category (the providers search can return). The shared
+`ServiceCategory` gains `providerCount` (0 when absent). The grid shows the
+four categories with the most providers, ties by name, labelled "No pros
+yet", "1 pro" or "N pros"; a category without an iconUrl gets an icon by
+name (Electrician, Plumber, Painter, Carpenter) or the generic one. Tapping a
+card opens that category's services instead of the full category list; See
+all still opens the list. If the list cannot load, the grid shows nothing.
+The demo database has two categories, so the grid shows two cards. Tests:
+API 264, customer 150 (99.2%), shared 100, provider 185.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
