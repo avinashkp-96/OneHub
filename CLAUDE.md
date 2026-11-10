@@ -1064,6 +1064,15 @@ A request that is gone (or this provider rejected) says "This request is no
 longer available." Tests: API 266 (100% lines), shared 110, customer 155,
 provider 192 (96.8%).
 
+2026-11-10 (compact request card): the shared `RequestCard` was too big per
+the user (about 285px per request in Incoming requests). Title 24 to 18px,
+description 14 to 13px, fact values 16 to 14px, posted time 12 to 11px,
+padding 18 to 14px, and every gap tightened; a card with buttons is now about
+230px. It applies everywhere the card is used: provider Incoming requests,
+Active jobs and Next job, customer My requests, and the top of both detail
+pages. The Reject and Send price buttons keep the 48px height of the
+outdoor/gloved-use rule. Tests: shared 111, customer 155, provider 192.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

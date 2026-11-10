@@ -103,4 +103,30 @@ void main() {
     await tester.tap(find.text('Fan repair'));
     expect(taps, 1);
   });
+
+  testWidgets('uses the compact sizes', (tester) async {
+    await pumpCard(
+        tester,
+        RequestCard(
+          statusLabel: 'NEW',
+          statusColor: Colors.orange,
+          postedAt: now,
+          now: now,
+          title: 'Fan repair',
+          description: 'The fan rattles',
+          facts: const [RequestCardFact('CUSTOMER', 'Meera Nair')],
+        ));
+
+    double size(String text) =>
+        tester.widget<Text>(find.text(text)).style!.fontSize!;
+    expect(size('Fan repair'), 18);
+    expect(size('The fan rattles'), 13);
+    expect(size('Meera Nair'), 14);
+    expect(size('Posted just now'), 11);
+
+    final card = tester.getRect(find.byKey(const Key('request-card')));
+    final status = tester.getRect(find.text('NEW'));
+    expect(status.left - card.left, lessThan(30),
+        reason: '14px padding plus the pill inset');
+  });
 }

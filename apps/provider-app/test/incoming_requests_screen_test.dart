@@ -105,7 +105,7 @@ void main() {
           tester, fakeClient(requests: [request({'title': 'Fan repair'})]));
 
       final title = tester.widget<Text>(find.text('Fan repair'));
-      expect(title.style!.fontSize, 24);
+      expect(title.style!.fontSize, 18);
       expect(find.text('Ceiling fan making a rattling noise'), findsOneWidget);
       expect(
           tester.getRect(find.text('Ceiling fan making a rattling noise')).top,

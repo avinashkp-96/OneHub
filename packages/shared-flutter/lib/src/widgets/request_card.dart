@@ -25,6 +25,10 @@ String postedLabel(DateTime postedAt, DateTime now) {
 /// posted, the title in bold, the description, then up to a few
 /// [facts] two to a row under a divider. An optional [footer] (e.g. Accept /
 /// Reject) sits at the bottom, and [onTap] makes the whole card tappable.
+///
+/// Sized to list compactly (2026-11-10, on request): 18px title, 13px
+/// description, 14px fact values, 14px padding. Footer buttons keep their
+/// own 48px height for outdoor, gloved use.
 class RequestCard extends StatelessWidget {
   final String statusLabel;
   final Color statusColor;
@@ -78,17 +82,17 @@ class RequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(f.label, style: OneHubTextStyles.fieldLabel(faint)),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(f.value,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: OneHubTextStyles.pageHeading(textPrimary)
-                    .copyWith(fontSize: 16, height: 1.2)),
+                    .copyWith(fontSize: 14, height: 1.2)),
           ],
         );
 
     final content = Padding(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -96,36 +100,36 @@ class RequestCard extends StatelessWidget {
             children: [
               TintedBadge(label: statusLabel, color: statusColor, pill: true),
               if (posted != null) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(postedLabel(posted, now ?? DateTime.now()),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: OneHubTextStyles.bodyText(faint)
-                          .copyWith(fontSize: 12)),
+                          .copyWith(fontSize: 11)),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
           Text(title,
               style: OneHubTextStyles.pageHeading(textPrimary)
-                  .copyWith(fontSize: 24, height: 1.15)),
+                  .copyWith(fontSize: 18, height: 1.2)),
           if (description.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 4),
             Text(description,
                 maxLines: descriptionMaxLines,
                 overflow: descriptionMaxLines == null
                     ? null
                     : TextOverflow.ellipsis,
-                style: OneHubTextStyles.bodyText(soft).copyWith(height: 1.45)),
+                style: OneHubTextStyles.bodyText(soft).copyWith(fontSize: 13, height: 1.4)),
           ],
           if (facts.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Divider(height: 1, color: divider),
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
             for (var i = 0; i < facts.length; i += 2) ...[
-              if (i > 0) const SizedBox(height: 14),
+              if (i > 0) const SizedBox(height: 10),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,7 +144,7 @@ class RequestCard extends StatelessWidget {
             ],
           ],
           if (footer != null) ...[
-            const SizedBox(height: 18),
+            const SizedBox(height: 14),
             footer!,
           ],
         ],
