@@ -3,7 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
 import '../../core/widgets/location_field.dart';
-import '../../core/widgets/service_tile.dart';
+import '../../core/widgets/service_picker.dart';
 import 'business_details.dart';
 
 // docx 5.2 "Profile & Service Mapping": edit the services offered,
@@ -37,13 +37,12 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
 
   BusinessDetails? _saved;
   List<ServiceCategory> _categories = [];
-  List<SubService> _subServices = [];
-  String? _categoryId;
+  // Every category the provider works in, and the services they offer.
+  final Set<String> _categoryIds = {};
   final Set<String> _selectedIds = {};
   SavedLocation? _location;
 
   bool _loading = true;
-  bool _loadingSubServices = false;
   bool _saving = false;
   // A problem that belongs to no field (no connection, a server fault).
   String? _error;
@@ -75,15 +74,11 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
       final categories = (await _api.get('/categories') as List)
           .map((c) => ServiceCategory.fromJson(c as Map<String, dynamic>))
           .toList();
-      final subServices = saved.categoryId == null
-          ? <SubService>[]
-          : await _fetchSubServices(saved.categoryId!);
       if (!mounted) return;
       setState(() {
         _saved = saved;
         _categories = categories;
-        _categoryId = saved.categoryId;
-        _subServices = subServices;
+        _categoryIds.addAll(saved.categories.map((c) => c.id));
         _selectedIds.addAll(saved.services.map((s) => s.id));
         _experience.text = saved.yearsExperience?.toString() ?? '';
         _coverage.text = formatKm(saved.coverageRadiusKm);
@@ -98,45 +93,6 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
       });
     }
   }
-
-  Future<List<SubService>> _fetchSubServices(String categoryId) async =>
-      (await _api.get('/categories/$categoryId/sub-services') as List)
-          .map((s) => SubService.fromJson(s as Map<String, dynamic>))
-          .toList();
-
-  Future<void> _selectCategory(String categoryId) async {
-    if (categoryId == _categoryId) return;
-    setState(() {
-      _categoryId = categoryId;
-      _selectedIds.clear();
-      // Going back to the saved category brings its saved services back.
-      if (categoryId == _saved?.categoryId) {
-        _selectedIds.addAll(_saved!.services.map((s) => s.id));
-      }
-      _subServices = [];
-      _loadingSubServices = true;
-      _error = null;
-    });
-    try {
-      final subServices = await _fetchSubServices(categoryId);
-      if (!mounted || categoryId != _categoryId) return;
-      setState(() {
-        _subServices = subServices;
-        _loadingSubServices = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Could not load services. ${userMessage(e)}';
-        _loadingSubServices = false;
-      });
-    }
-  }
-
-  void _toggleService(String id) => setState(() {
-        if (!_selectedIds.remove(id)) _selectedIds.add(id);
-        _fieldErrors.remove('services');
-      });
 
   Future<void> _chooseLocation() async {
     final pick = widget.pickLocation ??
@@ -225,15 +181,6 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
         dark ? OneHubColors.textPrimaryDark : OneHubColors.textPrimaryLight;
     final textSecondary =
         dark ? OneHubColors.textSecondaryDark : OneHubColors.textSecondaryLight;
-    final warning = context.statusWarning;
-
-    Widget section(String text) => Padding(
-          padding: const EdgeInsets.only(top: 26, bottom: 12),
-          child: Text(text,
-              style: OneHubTextStyles.pageHeading(textPrimary)
-                  .copyWith(fontSize: 18)),
-        );
-
     final errorText = _error == null
         ? const SizedBox.shrink()
         : Padding(
@@ -304,45 +251,22 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                     ),
                   ),
                 ),
-                section('Category'),
-                if (_categories.isEmpty)
-                  Text('No service categories are available yet.',
-                      style: OneHubTextStyles.bodyText(warning))
-                else
-                  ServiceGrid(
-                    children: [
-                      for (final c in _categories)
-                        ServiceTile(
-                          label: c.name,
-                          imageUrl: c.iconUrl,
-                          fallbackIcon: OneHubIcons.category,
-                          selected: c.id == _categoryId,
-                          onTap: _saving ? null : () => _selectCategory(c.id),
-                        ),
-                    ],
+                const SizedBox(height: 26),
+                ServicePicker(
+                  api: _api,
+                  categories: _categories,
+                  categoryIds: _categoryIds,
+                  serviceIds: _selectedIds,
+                  enabled: !_saving,
+                  onChanged: () =>
+                      setState(() => _fieldErrors.remove('services')),
+                  heading: (text) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(text,
+                        style: OneHubTextStyles.pageHeading(textPrimary)
+                            .copyWith(fontSize: 18)),
                   ),
-                if (_categoryId != null) ...[
-                  section('Services you offer'),
-                  if (_loadingSubServices)
-                    const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: Center(child: CircularProgressIndicator()))
-                  else if (_subServices.isEmpty)
-                    Text('No services listed under this category yet.',
-                        style: OneHubTextStyles.bodyText(warning))
-                  else
-                    ServiceGrid(
-                      children: [
-                        for (final s in _subServices)
-                          ServiceTile(
-                            label: s.name,
-                            fallbackIcon: OneHubIcons.work,
-                            selected: _selectedIds.contains(s.id),
-                            onTap: _saving ? null : () => _toggleService(s.id),
-                          ),
-                      ],
-                    ),
-                ],
+                ),
                 FieldError(_fieldErrors['services']),
                 errorText,
                 const SizedBox(height: 32),

@@ -247,25 +247,21 @@ void main() {
     expect(patches.single['yearsExperience'], isNull);
   });
 
-  testWidgets(
-      'switching category clears the services; switching back restores them',
+  testWidgets('a second category adds its services alongside the first',
       (tester) async {
     await pumpScreen(tester, fakeClient());
 
     await tester.tap(find.text('Plumber'));
     await tester.pumpAndSettle();
     expect(selected(tester, 'Plumber'), isTrue);
-    expect(find.text('Leak Repair'), findsOneWidget);
-    expect(find.text('Fan Installation'), findsNothing);
-    expect(selected(tester, 'Leak Repair'), isFalse);
-
-    await tester.tap(find.text('Electrician'));
-    await tester.pumpAndSettle();
+    expect(selected(tester, 'Electrician'), isTrue);
+    expect(find.text('Electrician services'), findsOneWidget);
+    expect(find.text('Plumber services'), findsOneWidget);
     expect(selected(tester, 'Fan Installation'), isTrue);
-    expect(selected(tester, 'Light Fitting'), isTrue);
+    expect(selected(tester, 'Leak Repair'), isFalse);
   });
 
-  testWidgets('moving to another category saves only that category\'s services',
+  testWidgets('services from several categories are saved together',
       (tester) async {
     await pumpScreen(tester, fakeClient());
 
@@ -276,6 +272,22 @@ void main() {
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 
+    expect((patches.single['subServiceIds'] as List).toSet(), {'s1', 's2', 's5'});
+  });
+
+  testWidgets('unpicking a category drops its services', (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.tap(find.text('Plumber'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Leak Repair'));
+    await tester.pump();
+    await tester.tap(find.text('Electrician'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fan Installation'), findsNothing);
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
     expect(patches.single['subServiceIds'], ['s5']);
   });
 

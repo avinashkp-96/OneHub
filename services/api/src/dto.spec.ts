@@ -75,6 +75,13 @@ describe('SignupProviderDto', () => {
     expect(await errorsFor(SignupProviderDto, provider)).toEqual([]);
   });
 
+  it('needs no category, but at least one service', async () => {
+    const rest: Record<string, unknown> = { ...provider };
+    delete rest.categoryId;
+    expect(await errorsFor(SignupProviderDto, rest)).toEqual([]);
+    expect(await errorsFor(SignupProviderDto, { ...provider, subServiceIds: [] })).toContain('subServiceIds');
+  });
+
   it('requires an ID proof and coverage radius', async () => {
     const rest: Record<string, unknown> = { ...provider };
     delete rest.idProofUrl;

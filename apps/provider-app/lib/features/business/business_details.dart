@@ -1,5 +1,5 @@
 // The provider's own business details as returned by GET /providers/me
-// (docx 5.2): one service category, the services offered under it,
+// (docx 5.2): the categories the provider works in, the services offered,
 // experience and coverage radius.
 
 import 'package:onehub_shared/onehub_shared.dart';
@@ -7,12 +7,21 @@ import 'package:onehub_shared/onehub_shared.dart';
 class OfferedService {
   final String id;
   final String name;
-  const OfferedService(this.id, this.name);
+
+  /// Null from an older API that did not send it.
+  final String? categoryId;
+  const OfferedService(this.id, this.name, [this.categoryId]);
+}
+
+class BusinessCategory {
+  final String id;
+  final String name;
+  const BusinessCategory(this.id, this.name);
 }
 
 class BusinessDetails {
-  final String? categoryId;
-  final String? categoryName;
+  /// Every category the provider works in.
+  final List<BusinessCategory> categories;
   final List<OfferedService> services;
   final int? yearsExperience;
   final double coverageRadiusKm;
@@ -33,8 +42,7 @@ class BusinessDetails {
   final String? bankOrUpiMasked;
 
   const BusinessDetails({
-    required this.categoryId,
-    required this.categoryName,
+    this.categories = const [],
     required this.services,
     required this.yearsExperience,
     required this.coverageRadiusKm,
@@ -50,14 +58,18 @@ class BusinessDetails {
   });
 
   factory BusinessDetails.fromJson(Map<String, dynamic> json) {
-    final category = json['category'] as Map<String, dynamic>?;
+    // An older API sent only `category`, the first one.
+    final list = json['categories'] as List? ??
+        [if (json['category'] != null) json['category']];
     return BusinessDetails(
-      categoryId: category?['id'] as String?,
-      categoryName: category?['name'] as String?,
+      categories: [
+        for (final c in list.cast<Map<String, dynamic>>())
+          BusinessCategory(c['id'] as String, c['name'] as String),
+      ],
       services: [
         for (final s in (json['subServices'] as List? ?? const []))
-          OfferedService(
-              (s as Map<String, dynamic>)['id'] as String, s['name'] as String),
+          OfferedService((s as Map<String, dynamic>)['id'] as String,
+              s['name'] as String, s['categoryId'] as String?),
       ],
       yearsExperience: (json['yearsExperience'] as num?)?.toInt(),
       coverageRadiusKm: (json['coverageRadiusKm'] as num).toDouble(),
@@ -87,6 +99,11 @@ class BusinessDetails {
   String get coverageLabel => location == null
       ? '${formatKm(coverageRadiusKm)} km radius'
       : '${formatKm(coverageRadiusKm)} km around ${location!.city}';
+
+  /// "Electrician, Plumber", or "Not set".
+  String get categoriesLabel => categories.isEmpty
+      ? 'Not set'
+      : categories.map((c) => c.name).join(', ');
 
   String get servicesLabel =>
       services.length == 1 ? '1 service' : '${services.length} services';

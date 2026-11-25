@@ -117,7 +117,7 @@ export class ProvidersService {
   // re-verification once admins can approve. An empty payout value clears it.
   async updateMine(userId: string, dto: UpdateBusinessDto) {
     const ids = dto.subServiceIds ? [...new Set(dto.subServiceIds)] : undefined;
-    if (ids) await this.assertOneCategory(ids);
+    if (ids) await this.assertKnown(ids);
 
     const idProofUrl = dto.idProofUrl?.trim();
     let idProofChanged = false;
@@ -147,22 +147,23 @@ export class ProvidersService {
     return toBusiness(row as BusinessRow);
   }
 
-  private async assertOneCategory(ids: string[]) {
+  // Every service must exist. They may come from any number of categories.
+  private async assertKnown(ids: string[]) {
     const found = await this.prisma.subService.findMany({
       where: { id: { in: ids } },
-      select: { id: true, categoryId: true },
+      select: { id: true },
     });
     if (found.length !== ids.length) throw new BadRequestException('unknown sub-service');
-    if (new Set(found.map((s) => s.categoryId)).size > 1) {
-      throw new BadRequestException('sub-services must all belong to one category');
-    }
   }
 }
 
-// Flattens the nested Prisma shape into what the app shows: one category
-// (a provider offers services from a single category) and its services.
+// Flattens the nested Prisma shape into what the app shows: the categories
+// the provider works in (in the order their services come) and the services,
+// each with its category id. `category` is the first of them, kept for older
+// app builds.
 function toBusiness(row: BusinessRow) {
   const services = row.subServices.map((s) => s.subService);
+  const categories = [...new Map(services.map((s) => [s.category.id, s.category])).values()];
   return {
     id: row.id,
     businessName: row.businessName ?? row.user.fullName,
@@ -176,8 +177,9 @@ function toBusiness(row: BusinessRow) {
       row.user.latitude != null && row.user.longitude != null
         ? { city: row.user.city, latitude: row.user.latitude, longitude: row.user.longitude }
         : null,
-    category: services[0]?.category ?? null,
-    subServices: services.map(({ id, name }) => ({ id, name })),
+    category: categories[0] ?? null,
+    categories,
+    subServices: services.map(({ id, name, category }) => ({ id, name, categoryId: category.id })),
     idProofOnFile: !!row.idProofUrl,
     idProofNeedsReview: row.idProofNeedsReview,
     bankOrUpiMasked: maskPayout(row.bankOrUpiDetails),

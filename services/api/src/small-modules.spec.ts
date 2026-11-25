@@ -220,9 +220,10 @@ describe('Provider business details (providers/me)', () => {
       coverageRadiusKm: 10,
       location: null,
       category: { id: 'c1', name: 'Electrician' },
+      categories: [{ id: 'c1', name: 'Electrician' }],
       subServices: [
-        { id: 's1', name: 'Fan Installation' },
-        { id: 's2', name: 'Light Fitting' },
+        { id: 's1', name: 'Fan Installation', categoryId: 'c1' },
+        { id: 's2', name: 'Light Fitting', categoryId: 'c1' },
       ],
       idProofOnFile: true,
       idProofNeedsReview: false,
@@ -345,16 +346,39 @@ describe('Provider business details (providers/me)', () => {
     expect(prisma.provider.update).not.toHaveBeenCalled();
   });
 
-  it('refuses services from more than one category', async () => {
+  it('accepts services from several categories', async () => {
     const { service, prisma } = build([
       { id: 's1', categoryId: 'c1' },
       { id: 's5', categoryId: 'c2' },
     ]);
 
-    await expect(service.updateMine('u1', { subServiceIds: ['s1', 's5'] })).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(prisma.provider.update).not.toHaveBeenCalled();
+    await service.updateMine('u1', { subServiceIds: ['s1', 's5'] });
+
+    expect(prisma.provider.update.mock.calls[0][0].data.subServices.create).toEqual([
+      { subServiceId: 's1' },
+      { subServiceId: 's5' },
+    ]);
+  });
+
+  it('lists every category the provider works in, once each', async () => {
+    const { service, prisma } = build();
+    prisma.provider.findUniqueOrThrow.mockResolvedValue({
+      ...row,
+      subServices: [
+        { subService: { id: 's1', name: 'Fan Installation', category: { id: 'c1', name: 'Electrician' } } },
+        { subService: { id: 's5', name: 'Leak Repair', category: { id: 'c2', name: 'Plumber' } } },
+        { subService: { id: 's2', name: 'Light Fitting', category: { id: 'c1', name: 'Electrician' } } },
+      ],
+    });
+
+    const result = await service.getMine('u1');
+
+    expect(result.categories).toEqual([
+      { id: 'c1', name: 'Electrician' },
+      { id: 'c2', name: 'Plumber' },
+    ]);
+    expect(result.category).toEqual({ id: 'c1', name: 'Electrician' });
+    expect(result.subServices[1]).toEqual({ id: 's5', name: 'Leak Repair', categoryId: 'c2' });
   });
 
   it('controller always uses the signed-in user id', async () => {

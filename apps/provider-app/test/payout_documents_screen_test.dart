@@ -61,8 +61,6 @@ void main() {
     String? masked,
   }) =>
       BusinessDetails(
-        categoryId: null,
-        categoryName: null,
         services: const [],
         yearsExperience: null,
         coverageRadiusKm: 5,

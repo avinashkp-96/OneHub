@@ -23,8 +23,8 @@ export class UpdateBusinessDto {
   @Max(100)
   coverageRadiusKm?: number;
 
-  // Replaces the whole set. All ids must belong to one category, checked in
-  // ProvidersService because it needs the database.
+  // Replaces the whole set. Services may come from several categories; each
+  // id must exist, checked in ProvidersService because it needs the database.
   @IsOptional()
   @IsArray()
   @ArrayNotEmpty()

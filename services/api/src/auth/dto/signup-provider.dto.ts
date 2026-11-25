@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import { ArrayNotEmpty, IsArray, IsEmail, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 // docx 2.3 Provider — Sign Up
 export class SignupProviderDto {
@@ -21,10 +21,15 @@ export class SignupProviderDto {
   @IsString()
   confirmPassword: string;
 
+  // Older app builds sent the one category picked; a provider may now offer
+  // services from several, so the services alone say which.
+  @IsOptional()
   @IsString()
-  categoryId: string;
+  categoryId?: string;
 
   @IsArray()
+  @ArrayNotEmpty({ message: 'choose at least one service you offer' })
+  @IsString({ each: true })
   subServiceIds: string[];
 
   @IsOptional()

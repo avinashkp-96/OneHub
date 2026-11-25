@@ -3,7 +3,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
 import '../../core/widgets/location_field.dart';
-import '../../core/widgets/service_tile.dart';
+import '../../core/widgets/service_picker.dart';
 
 // docx 2.3 — Provider Sign Up. Profile photo upload isn't built (no file
 // picker/storage integration yet) — ID proof is a URL field for the same
@@ -40,7 +40,7 @@ class _SignupScreenState extends State<SignupScreen> {
   ];
   static const _stepSubtitles = [
     'Start with your details and a password.',
-    'Pick your category, then the services you provide.',
+    'Pick your categories, then the services you provide.',
     'An admin verifies your ID before you go live.',
   ];
 
@@ -61,8 +61,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _bankOrUpiDetails = TextEditingController();
 
   List<ServiceCategory> _categories = [];
-  List<SubService> _subServices = [];
-  String? _selectedCategoryId;
+  // Every category the provider works in, and the services they offer.
+  final Set<String> _selectedCategoryIds = {};
   final Set<String> _selectedSubServiceIds = {};
 
   int _step = 0;
@@ -72,7 +72,6 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscureConfirmPassword = true;
   bool _busy = false;
   bool _loadingCategories = true;
-  bool _loadingSubServices = false;
   bool _created = false;
   // A problem that belongs to no field (no connection, a server fault),
   // shown above the form.
@@ -178,34 +177,6 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  Future<void> _selectCategory(String categoryId) async {
-    if (categoryId == _selectedCategoryId) return;
-    setState(() {
-      _selectedCategoryId = categoryId;
-      _selectedSubServiceIds.clear();
-      _subServices = [];
-      _loadingSubServices = true;
-      _error = null;
-    });
-    try {
-      final json =
-          await _api.get('/categories/$categoryId/sub-services') as List;
-      if (!mounted) return;
-      setState(() {
-        _subServices = json
-            .map((s) => SubService.fromJson(s as Map<String, dynamic>))
-            .toList();
-        _loadingSubServices = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'Could not load the services. ${userMessage(e)}';
-        _loadingSubServices = false;
-      });
-    }
-  }
-
   Future<void> _sendOtp() async {
     if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
       setState(() => _fieldErrors['mobile'] = 'Enter a 10-digit mobile number.');
@@ -257,8 +228,8 @@ class _SignupScreenState extends State<SignupScreen> {
         };
       case 1:
         return {
-          if (_selectedCategoryId == null)
-            'services': 'Choose your service category.'
+          if (_selectedCategoryIds.isEmpty)
+            'services': 'Choose at least one service category.'
           else if (_selectedSubServiceIds.isEmpty)
             'services': 'Choose at least one service you offer.',
         };
@@ -319,7 +290,6 @@ class _SignupScreenState extends State<SignupScreen> {
         if (_email.text.trim().isNotEmpty) 'email': _email.text.trim(),
         'password': _password.text,
         'confirmPassword': _confirmPassword.text,
-        'categoryId': _selectedCategoryId,
         'subServiceIds': _selectedSubServiceIds.toList(),
         if (_yearsExperience.text.trim().isNotEmpty)
           'yearsExperience': int.tryParse(_yearsExperience.text.trim()),
@@ -512,70 +482,28 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Widget _buildServicesStep(Color textPrimary) {
-    final warning = context.statusWarning;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _errorText(),
-        Text('Category',
-            style: OneHubTextStyles.pageHeading(textPrimary)
-                .copyWith(fontSize: 18)),
-        const SizedBox(height: 12),
         if (_loadingCategories)
           const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(child: CircularProgressIndicator()))
-        else if (_categories.isEmpty)
-          Text('No service categories are available yet.',
-              style: OneHubTextStyles.bodyText(warning))
         else
-          ServiceGrid(
-            children: [
-              for (final c in _categories)
-                ServiceTile(
-                  label: c.name,
-                  imageUrl: c.iconUrl,
-                  fallbackIcon: OneHubIcons.category,
-                  selected: c.id == _selectedCategoryId,
-                  onTap: () => _selectCategory(c.id),
-                ),
-            ],
-          ),
-        if (_selectedCategoryId != null) ...[
-          const SizedBox(height: 28),
-          Text('Services you offer',
-              style: OneHubTextStyles.pageHeading(textPrimary)
-                  .copyWith(fontSize: 18)),
-          const SizedBox(height: 4),
-          Text('Select all that apply.',
-              style: OneHubTextStyles.bodyText(
-                  textPrimary.withValues(alpha: 0.6))),
-          const SizedBox(height: 12),
-          if (_loadingSubServices)
-            const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: CircularProgressIndicator()))
-          else if (_subServices.isEmpty)
-            Text('No services listed under this category yet.',
-                style: OneHubTextStyles.bodyText(warning))
-          else
-            ServiceGrid(
-              children: [
-                for (final s in _subServices)
-                  ServiceTile(
-                    label: s.name,
-                    fallbackIcon: OneHubIcons.work,
-                    selected: _selectedSubServiceIds.contains(s.id),
-                    onTap: () => setState(() {
-                      if (!_selectedSubServiceIds.remove(s.id)) {
-                        _selectedSubServiceIds.add(s.id);
-                      }
-                      _fieldErrors.remove('services');
-                    }),
-                  ),
-              ],
+          ServicePicker(
+            api: _api,
+            categories: _categories,
+            categoryIds: _selectedCategoryIds,
+            serviceIds: _selectedSubServiceIds,
+            onChanged: () => setState(() => _fieldErrors.remove('services')),
+            heading: (text) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(text,
+                  style: OneHubTextStyles.pageHeading(textPrimary)
+                      .copyWith(fontSize: 18)),
             ),
-        ],
+          ),
         FieldError(_fieldErrors['services']),
         const SizedBox(height: OneHubTheme.sectionGap),
         PrimaryCta(onPressed: _next, child: const Text('Continue')),

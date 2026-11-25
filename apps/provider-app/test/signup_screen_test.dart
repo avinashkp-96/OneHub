@@ -260,7 +260,7 @@ void main() {
     await next(tester);
 
     await next(tester);
-    expect(find.text('Choose your service category.'), findsOneWidget);
+    expect(find.text('Choose at least one service category.'), findsOneWidget);
 
     await tester.tap(find.text('Electrician'));
     await tester.pumpAndSettle();
@@ -268,7 +268,7 @@ void main() {
     expect(find.text('Choose at least one service you offer.'), findsOneWidget);
   });
 
-  testWidgets('switching category clears the selected services',
+  testWidgets('several categories can be picked; unpicking one drops its services',
       (tester) async {
     await pumpScreen(tester);
     await completeStepOne(tester);
@@ -277,6 +277,14 @@ void main() {
 
     await tester.tap(find.text('Plumber'));
     await tester.pumpAndSettle();
+    expect(find.text('Electrician services'), findsOneWidget);
+    expect(find.text('Plumber services'), findsOneWidget);
+    expect(find.text('Wiring repair'), findsOneWidget,
+        reason: 'the first category stays picked');
+
+    await tester.tap(find.text('Electrician'));
+    await tester.pumpAndSettle();
+    expect(find.text('Wiring repair'), findsNothing);
     await next(tester);
 
     expect(find.text('Choose at least one service you offer.'), findsOneWidget);

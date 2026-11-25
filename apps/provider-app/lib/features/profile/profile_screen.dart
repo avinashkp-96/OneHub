@@ -454,7 +454,7 @@ class _BusinessCard extends StatelessWidget {
           _DetailRow(
               icon: OneHubIcons.category,
               label: 'SERVICE CATEGORY',
-              value: d.categoryName ?? 'Not set'),
+              value: d.categoriesLabel),
           Divider(height: 1, color: divider),
           _DetailRow(
               icon: OneHubIcons.work,

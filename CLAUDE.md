@@ -1262,6 +1262,23 @@ to unlock and password reset relies on. Checked: the provider code field shows
 and the test code creates a customer account. Tests: API 347 (100% lines),
 shared 171, customer 190, provider 203.
 
+2026-11-25 (several categories): a provider may now work in more than one
+category (an electrician who also does plumbing). The one-category rule is
+gone from `PATCH /providers/me` (each service must still exist) and provider
+signup no longer needs `categoryId` (older builds may still send it; it is
+ignored), but must send at least one service. `GET /providers/me` adds
+`categories` (each once, in the order of the provider's services) and each
+service's `categoryId`; `category` stays as the first one for older builds.
+Provider app: new `core/widgets/service_picker.dart` (`ServicePicker`) is used
+by signup step 2 and Business details: category tiles are multi-select, each
+picked category gets its own "<Category> services" grid, loaded once, and
+unpicking a category drops its services. `BusinessDetails` has `categories`
+and `categoriesLabel` ("Electrician, Plumber"), which the Profile Business card
+shows; it still reads an older reply with only `category`. Checked in the
+browser: signup step 1 passed with the on-screen test code, and step 2 shows
+both categories ticked with a services grid for each. Tests: API 347 (100%
+lines), provider 206 (96.2%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
