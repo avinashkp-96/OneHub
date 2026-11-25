@@ -193,17 +193,23 @@ class RequestDetailScreen extends StatelessWidget {
                           if (i > 0) Divider(height: 1, color: divider),
                           Padding(
                             padding: const EdgeInsets.symmetric(vertical: 14),
+                            // A long value (an address) wraps under
+                            // itself on the right instead of overflowing.
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                    child: Text(facts[i].label.toUpperCase(),
-                                        style: OneHubTextStyles.fieldLabel(
-                                            textMuted))),
-                                Text(facts[i].value,
+                                Text(facts[i].label.toUpperCase(),
                                     style:
-                                        OneHubTextStyles.bodyText(textSecondary)
-                                            .copyWith(
-                                                fontWeight: FontWeight.w700)),
+                                        OneHubTextStyles.fieldLabel(textMuted)),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(facts[i].value,
+                                      textAlign: TextAlign.end,
+                                      style: OneHubTextStyles.bodyText(
+                                              textSecondary)
+                                          .copyWith(
+                                              fontWeight: FontWeight.w700)),
+                                ),
                               ],
                             ),
                           ),

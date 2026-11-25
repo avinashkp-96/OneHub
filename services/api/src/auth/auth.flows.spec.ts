@@ -69,11 +69,20 @@ describe('AuthService.signupCustomer (success)', () => {
       otp: '1234',
       password: 'secret1',
       confirmPassword: 'secret1',
-      city: 'Kochi',
+      address: {
+      house: '12B, Palm Grove',
+      street: 'Changampuzha Nagar',
+      pincode: '682024',
+      latitude: 10.0261,
+      longitude: 76.3125,
+    },
     });
 
     const data = prisma.user.create.mock.calls[0][0].data;
     expect(data.passwordHash).toBe('hashed-password');
+    // The first address is saved as Home, and sets the account's location.
+    expect(data.addresses.create).toMatchObject({ label: 'Home', house: '12B, Palm Grove', city: 'Edappally' });
+    expect(data).toMatchObject({ city: 'Edappally', latitude: 10.0261, longitude: 76.3125 });
     expect(data).not.toHaveProperty('password');
     expect(data.role).toBe('CUSTOMER');
   });

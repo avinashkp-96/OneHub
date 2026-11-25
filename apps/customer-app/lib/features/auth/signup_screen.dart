@@ -4,6 +4,7 @@ import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
 import '../../core/widgets/otp_input.dart';
+import '../addresses/address_form.dart';
 
 // docx 2.1 — Customer Sign Up. 3-step flow per a formal style guide PDF the
 // user supplied directly ("Component library and visual tokens extracted
@@ -14,7 +15,9 @@ import '../../core/widgets/otp_input.dart';
 // this PDF doesn't have them; the style guide's own "Badges" section is a
 // component-library showcase, not a spec for this screen's layout.
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+  /// Asks where the address is; tests pass one to skip the sheet and GPS.
+  final LocationPicker? pickLocation;
+  const SignupScreen({super.key, this.pickLocation});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -30,6 +33,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   final _confirmPassword = TextEditingController();
+  // The customer's first saved address (Home), where providers come to.
+  final _address = AddressDraft();
 
   _Step _step = _Step.form;
   String _otp = '';
@@ -45,6 +50,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   void dispose() {
     _resendTimer?.cancel();
+    _address.dispose();
     super.dispose();
   }
 
@@ -59,6 +65,8 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_password.text != _confirmPassword.text) {
       return 'Password and confirmation must match.';
     }
+    final addressProblem = _address.problem();
+    if (addressProblem != null) return addressProblem;
     if (!_acceptedTerms) return 'Accept the Terms & Conditions to continue.';
     return null;
   }
@@ -124,9 +132,7 @@ class _SignupScreenState extends State<SignupScreen> {
         if (_email.text.trim().isNotEmpty) 'email': _email.text.trim(),
         'password': _password.text,
         'confirmPassword': _confirmPassword.text,
-        // City field removed from this screen for now (will be added back
-        // later); the backend DTO still requires a string, so send empty.
-        'city': '',
+        'address': _address.toAddress().toJson(),
       });
       _resendTimer?.cancel();
       setState(() => _step = _Step.success);
@@ -167,6 +173,10 @@ class _SignupScreenState extends State<SignupScreen> {
                       setState(() => _obscurePassword = !_obscurePassword),
                   onToggleConfirmPassword: () => setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  address: AddressFields(
+                      draft: _address,
+                      enabled: !_busy,
+                      pickLocation: widget.pickLocation),
                   acceptedTerms: _acceptedTerms,
                   onAcceptedTermsChanged: (v) =>
                       setState(() => _acceptedTerms = v ?? false),
@@ -208,8 +218,10 @@ class _FormStep extends StatelessWidget {
       onBackToLogin;
   final ValueChanged<bool?> onAcceptedTermsChanged;
   final String? error;
+  final Widget address;
 
   const _FormStep({
+    required this.address,
     required this.fullName,
     required this.mobile,
     required this.email,
@@ -321,6 +333,16 @@ class _FormStep extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: OneHubTheme.sectionGap),
+                Text('YOUR ADDRESS',
+                    style: OneHubTextStyles.pageHeading(textPrimary)
+                        .copyWith(fontSize: 16)),
+                const SizedBox(height: 4),
+                Text('Where providers come for your jobs. You can add more later.',
+                    style: OneHubTextStyles.bodyText(textSecondary)
+                        .copyWith(fontSize: 13)),
+                const SizedBox(height: 12),
+                address,
                 const SizedBox(height: 12),
                 // Its own Material, because GlowCard paints a coloured box
                 // that would otherwise hide the tile's ink splash.
@@ -331,21 +353,8 @@ class _FormStep extends StatelessWidget {
                     controlAffinity: ListTileControlAffinity.leading,
                     value: acceptedTerms,
                     onChanged: onAcceptedTermsChanged,
-                    title: Text.rich(
-                      TextSpan(
-                        style: OneHubTextStyles.bodyText(textSecondary),
-                        children: [
-                          const TextSpan(text: 'I agree to the '),
-                          TextSpan(
-                              text: 'Terms & Conditions',
-                              style: OneHubTextStyles.linkText(primary)),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                              text: 'Privacy Policy',
-                              style: OneHubTextStyles.linkText(primary)),
-                        ],
-                      ),
-                    ),
+                    title: TermsAgreementText(
+                        textColor: textSecondary, linkColor: primary),
                   ),
                 ),
                 const SizedBox(height: 8),

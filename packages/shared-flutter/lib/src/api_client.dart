@@ -116,6 +116,10 @@ class ApiClient {
   Future<Map<String, dynamic>> patch(String path, Map<String, dynamic> body, {bool auth = false}) =>
       _send(_http.patch, path, body, auth);
 
+  /// A signed-in DELETE, such as removing a saved address.
+  Future<Map<String, dynamic>> delete(String path) =>
+      _send(_http.delete, path, const {}, true);
+
   Future<Map<String, dynamic>> _send(
     Future<http.Response> Function(Uri, {Map<String, String>? headers, Object? body}) method,
     String path,

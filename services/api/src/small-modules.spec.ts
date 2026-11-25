@@ -108,7 +108,7 @@ describe('UsersService and controller', () => {
     const args = prisma.user.findUniqueOrThrow.mock.calls[0][0];
     expect(args.where).toEqual({ id: 'u1' });
     expect(args.select.provider.select.subServices).toBe(true);
-    expect(args.select.addresses).toBe(true);
+    expect(args.select.addresses.orderBy).toEqual({ createdAt: 'asc' });
   });
 
   it('updates only the given profile fields', async () => {

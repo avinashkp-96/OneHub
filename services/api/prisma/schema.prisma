@@ -64,15 +64,21 @@ model User {
   refreshTokens RefreshToken[]
 }
 
+// A customer's saved address (Home, Office...). A request copies the one it
+// is for into Requirement.address, so later edits never change a past job.
 model Address {
-  id      String @id @default(cuid())
-  userId  String
-  user    User   @relation(fields: [userId], references: [id])
-  label   String
-  line    String
-  city    String
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  label     String
+  house     String
+  street    String   @default("")
+  landmark  String?
+  pincode   String   @default("")
+  city      String
   latitude  Float?
   longitude Float?
+  createdAt DateTime @default(now())
 }
 
 model Provider {
@@ -143,6 +149,9 @@ model Requirement {
   voiceTranscript String?
   photoUrls      String[]
   preferredAt    DateTime?
+  // Where the job is: a copy of the customer's saved address at posting
+  // time. Only the provider the customer confirms sees it in full.
+  address        Json?
   status         RequestStatus @default(SENT)
   createdAt      DateTime      @default(now())
 

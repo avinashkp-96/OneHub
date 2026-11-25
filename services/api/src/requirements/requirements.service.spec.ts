@@ -14,7 +14,7 @@ describe('RequirementsService.listForProvider', () => {
 
   it('filters the included bids to this provider only', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    const prisma = { requirement: { findMany }, provider: providerAt(kochi) } as unknown as PrismaService;
+    const prisma = { requirement: { findMany, updateMany: jest.fn() }, provider: providerAt(kochi) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);
 
     await service.listForProvider('provider-1');
@@ -42,7 +42,7 @@ describe('RequirementsService.listForProvider', () => {
         customer: { fullName: 'Anil Kumar', city: null, latitude: null, longitude: null },
       },
     ]);
-    const prisma = { requirement: { findMany }, provider: providerAt(kochi) } as unknown as PrismaService;
+    const prisma = { requirement: { findMany, updateMany: jest.fn() }, provider: providerAt(kochi) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);
 
     const [withLocation, withoutLocation] = await service.listForProvider('provider-1');
@@ -53,6 +53,7 @@ describe('RequirementsService.listForProvider', () => {
       customerName: 'Meera Nair',
       customerPlace: 'Kochi',
       distanceKm: 6.7,
+      address: null,
     });
     expect(withoutLocation).toEqual({
       id: 'r2',
@@ -60,12 +61,13 @@ describe('RequirementsService.listForProvider', () => {
       customerName: 'Anil Kumar',
       customerPlace: null,
       distanceKm: null,
+      address: null,
     });
   });
 
   it("reads only this provider's own answer", async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    const prisma = { requirement: { findMany }, provider: providerAt(kochi) } as unknown as PrismaService;
+    const prisma = { requirement: { findMany, updateMany: jest.fn() }, provider: providerAt(kochi) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);
 
     await service.listForProvider('provider-1');
@@ -84,7 +86,7 @@ describe('RequirementsService.listForProvider', () => {
         customer: { fullName: 'Meera Nair', city: 'Kochi', latitude: 10.0261, longitude: 76.3125 },
       },
     ]);
-    const prisma = { requirement: { findMany }, provider: providerAt(null) } as unknown as PrismaService;
+    const prisma = { requirement: { findMany, updateMany: jest.fn() }, provider: providerAt(null) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);
 
     const [r] = await service.listForProvider('provider-1');
@@ -94,7 +96,7 @@ describe('RequirementsService.listForProvider', () => {
 
   it('scopes the query to requirements targeted at this provider', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
-    const prisma = { requirement: { findMany }, provider: providerAt(kochi) } as unknown as PrismaService;
+    const prisma = { requirement: { findMany, updateMany: jest.fn() }, provider: providerAt(kochi) } as unknown as PrismaService;
     const service = new RequirementsService(prisma, unusedNotifications);
 
     await service.listForProvider('provider-1');

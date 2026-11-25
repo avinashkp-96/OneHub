@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
+import '../addresses/address_form.dart';
+import '../addresses/addresses_screen.dart';
 import '../profile/profile_state.dart';
 
 // docx 4.3 — Post a Requirement. `subServiceId` is carried over from category
@@ -25,8 +27,14 @@ class PostRequirementScreen extends StatefulWidget {
 
   /// Asks for a photo; tests pass a fake. Defaults to the camera or gallery.
   final PhotoPicker pickPhoto;
+
+  /// Passed on to Add address; tests use it to skip the sheet and GPS.
+  final LocationPicker? pickLocation;
   const PostRequirementScreen(
-      {super.key, required this.subServiceId, this.pickPhoto = choosePhoto});
+      {super.key,
+      required this.subServiceId,
+      this.pickPhoto = choosePhoto,
+      this.pickLocation});
 
   @override
   State<PostRequirementScreen> createState() => _PostRequirementScreenState();
@@ -52,6 +60,42 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   final List<String> _photoUrls = [];
   int _uploading = 0;
 
+  // The job address: one of the customer's saved addresses, the first by
+  // default. Providers are measured from it.
+  List<JobAddress>? _addresses;
+  JobAddress? _address;
+
+  Future<void> _loadAddresses() async {
+    try {
+      final list = await loadAddresses();
+      if (!mounted) return;
+      setState(() {
+        _addresses = list;
+        _address ??= list.isEmpty ? null : list.first;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _addresses = const []);
+    }
+  }
+
+  void _chooseAddress(JobAddress a) {
+    if (a.id == _address?.id) return;
+    setState(() {
+      _address = a;
+      _loading = true;
+      _selectedProviderIds.clear();
+    });
+    _loadProviders();
+  }
+
+  Future<void> _addAddress() async {
+    final added = await Navigator.of(context).push<JobAddress>(MaterialPageRoute(
+        builder: (_) => AddressFormScreen(pickLocation: widget.pickLocation)));
+    if (added == null || !mounted) return;
+    setState(() => _addresses = [...?_addresses, added]);
+    _chooseAddress(added);
+  }
+
   Future<void> _addPhoto() async {
     final photo = await widget.pickPhoto(context);
     if (photo == null || !mounted) return;
@@ -71,14 +115,21 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   @override
   void initState() {
     super.initState();
-    _loadProviders();
+    _loadAddresses().then((_) => _loadProviders());
   }
 
   Future<void> _loadProviders() async {
     try {
-      // With a saved location the API lists providers nearest first and
-      // leaves out those whose coverage does not reach the customer.
-      final near = customerLocation.value;
+      // With a position the API lists providers nearest first and leaves
+      // out those whose coverage does not reach the job: the job address,
+      // else the location saved from Home.
+      final address = _address;
+      final near = address == null
+          ? customerLocation.value
+          : SavedLocation(
+              city: address.city,
+              latitude: address.latitude,
+              longitude: address.longitude);
       final json = await api.get(
               '/providers?subServiceId=${widget.subServiceId}${near == null ? '' : '&${near.query}'}')
           as List;
@@ -116,6 +167,10 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
           'Add a title, describe the work and select at least one provider.');
       return;
     }
+    if (_address == null) {
+      setState(() => _error = 'Add the address for this job.');
+      return;
+    }
     setState(() {
       _sending = true;
       _error = null;
@@ -125,6 +180,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
           '/requirements',
           {
             'subServiceId': widget.subServiceId,
+            'addressId': _address!.id,
             'title': _title.text.trim(),
             'description': _description.text.trim(),
             if (_preferredAt != null)
@@ -288,6 +344,39 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                   ),
                 ),
                 const SizedBox(height: 26),
+                Text('Job address',
+                    style: OneHubTextStyles.pageHeading(textPrimary)
+                        .copyWith(fontSize: 18)),
+                const SizedBox(height: 4),
+                Text(
+                  'Only the provider you choose sees the full address.',
+                  style: OneHubTextStyles.fieldLabel(textMuted)
+                      .copyWith(letterSpacing: 0),
+                ),
+                const SizedBox(height: 12),
+                if (_addresses == null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else
+                  for (final a in _addresses!)
+                    AddressCard(
+                      key: Key('address-${a.id}'),
+                      address: a,
+                      selected: a.id == _address?.id,
+                      onTap: () => _chooseAddress(a),
+                    ),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    key: const Key('add-address'),
+                    onPressed: _addAddress,
+                    icon: const Icon(OneHubIcons.plus, size: 16),
+                    label: const Text('Add address'),
+                  ),
+                ),
+                const SizedBox(height: 26),
                 Text('Select providers',
                     style: OneHubTextStyles.pageHeading(textPrimary)
                         .copyWith(fontSize: 18)),
@@ -299,11 +388,12 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  switch (customerLocation.value) {
-                    final SavedLocation l =>
+                  switch ((_address?.city, customerLocation.value)) {
+                    (final String city, _) => 'Nearest first, from $city.',
+                    (null, final SavedLocation l) =>
                       'Nearest first, from ${l.city}.',
-                    null =>
-                      'Set your location on Home to see the nearest first.',
+                    (null, null) =>
+                      'Add the job address to see the nearest first.',
                   },
                   key: const Key('providers-near'),
                   style: OneHubTextStyles.fieldLabel(textMuted)

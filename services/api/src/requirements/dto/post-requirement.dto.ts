@@ -20,6 +20,10 @@ export class PostRequirementDto {
   @IsString()
   subServiceId: string;
 
+  // One of the customer's saved addresses: where the job is.
+  @IsString()
+  addressId: string;
+
   // A short headline for the request, shown above the description in both
   // apps' lists.
   @IsString()

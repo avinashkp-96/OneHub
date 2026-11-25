@@ -4,6 +4,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
 import { UpdateLocationDto } from './dto/update-location.dto';
 import { placeName } from '../locations/areas';
+import { ADDRESS_SELECT } from './addresses';
 import { Role, settingsFor } from './settings';
 
 // What a user gets back about their own account, from GET and PATCH
@@ -38,7 +39,7 @@ export const SELF_SELECT = {
       subServices: true,
     },
   },
-  addresses: true,
+  addresses: { select: ADDRESS_SELECT, orderBy: { createdAt: 'asc' } },
 } as const;
 
 @Injectable()

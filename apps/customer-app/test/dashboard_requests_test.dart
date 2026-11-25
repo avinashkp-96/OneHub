@@ -388,20 +388,47 @@ void main() {
       expect(find.text('Edappally'), findsOneWidget);
     });
 
-    testWidgets('without a test picker the chip opens the location sheet',
+    testWidgets('the chip lists saved addresses, not areas, and saves the pick',
         (tester) async {
-      await pumpScreen(tester, {
+      final routes = {
         ...me(city: 'Edappally'),
-        'GET /locations/areas': (_) => [
-              {'name': 'Edappally', 'latitude': 10.0261, 'longitude': 76.3125},
+        'GET /users/me/addresses': (_) => [
+              {
+                'id': 'a2',
+                'label': 'Office',
+                'house': '4th floor, Tower A',
+                'street': 'Infopark',
+                'pincode': '682042',
+                'city': 'Kakkanad',
+                'latitude': 10.0159,
+                'longitude': 76.3419,
+              },
             ],
+        'PUT /users/me/location': (http.Request r) => {
+              'fullName': 'Meera Nair',
+              ...jsonDecode(r.body) as Map<String, dynamic>,
+            },
+      };
+      await pumpScreen(tester, routes);
+      final fake = installFakeApi({
+        'GET /categories': (_) => [],
+        'GET /requirements/mine': (_) => [],
+        ...routes,
       });
 
       await tester.tap(find.byKey(const Key('location-chip')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Choose your location'), findsOneWidget);
-      expect(find.byKey(const Key('area-Edappally')), findsOneWidget);
+      expect(find.text('Choose an address'), findsOneWidget);
+      expect(find.text('Choose your location'), findsNothing);
+      expect(find.byKey(const Key('home-add-address')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('home-address-a2')));
+      await tester.pumpAndSettle();
+
+      expect(fake.bodies.single,
+          {'city': 'Kakkanad', 'latitude': 10.0159, 'longitude': 76.3419});
+      expect(find.text('Kakkanad'), findsOneWidget);
     });
   });
 

@@ -23,7 +23,12 @@ void main() {
             body: Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SignupScreen())),
+                    MaterialPageRoute(
+                        builder: (_) => SignupScreen(
+                            pickLocation: (_, __) async => const SavedLocation(
+                                city: 'Edappally',
+                                latitude: 10.0261,
+                                longitude: 76.3125)))),
                 child: const Text('open'),
               ),
             ),
@@ -35,8 +40,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  Future<void> fillAddress(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('address-location')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('address-house')), '12B, Palm Grove');
+    await tester.enterText(
+        find.byKey(const Key('address-street')), 'Changampuzha Nagar');
+    await tester.enterText(find.byKey(const Key('address-pincode')), '682024');
+  }
+
   Future<void> fillForm(WidgetTester tester,
       {String confirm = 'secret1', bool terms = true}) async {
+    await fillAddress(tester);
     await tester.enterText(find.widgetWithText(TextField, 'John Doe'), 'Meera');
     await tester.enterText(
         find.widgetWithText(TextField, '10-digit number'), '9876543210');
@@ -104,10 +119,64 @@ void main() {
     await tester.enterText(
         find.widgetWithText(TextField, 'Re-enter'), 'secret1');
     await submitForm(tester);
+    expect(find.text('Set the address on the map: use GPS or pick your area.'),
+        findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('address-location')));
+    await tester.pumpAndSettle();
+    expect(find.text('Edappally'), findsOneWidget);
+    await submitForm(tester);
+    expect(find.text('Enter the house or flat number.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('address-house')), '12B');
+    await submitForm(tester);
+    expect(find.text('Enter the street and area.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('address-street')), 'MG Road');
+    await tester.enterText(find.byKey(const Key('address-pincode')), '68202');
+    await submitForm(tester);
+    expect(find.text('Enter a 6-digit PIN code.'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('address-pincode')), '682024');
+    await submitForm(tester);
     expect(find.text('Accept the Terms & Conditions to continue.'),
         findsOneWidget);
 
     expect(fake.calls, isEmpty);
+  });
+
+  testWidgets('sends the address with the new account', (tester) async {
+    final fake = okApi();
+    await pumpScreen(tester);
+    await fillForm(tester);
+    await tester.enterText(
+        find.byKey(const Key('address-landmark')), ' Near the church ');
+    await submitForm(tester);
+    await tester.pumpAndSettle();
+    await enterCode(tester, '123456');
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Verify & Create Account'));
+    await tester.pumpAndSettle();
+
+    expect(fake.bodies.last['address'], {
+      'label': 'Home',
+      'house': '12B, Palm Grove',
+      'street': 'Changampuzha Nagar',
+      'landmark': 'Near the church',
+      'pincode': '682024',
+      'city': 'Edappally',
+      'latitude': 10.0261,
+      'longitude': 76.3125,
+    });
+  });
+
+  testWidgets('the Terms link opens the Terms & privacy page', (tester) async {
+    okApi();
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('terms-link')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InfoScreen), findsOneWidget);
   });
 
   testWidgets('both password fields toggle visibility independently',

@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/com
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceRangeDto } from './dto/submit-bid.dto';
+import { EXPIRED_MESSAGE, expireStale, hasExpired } from '../requirements/expiry';
 
 const CONTACT_UNLOCK_PRICE_INR = Number(process.env.CONTACT_UNLOCK_PRICE_INR ?? 50);
 
@@ -30,8 +31,12 @@ export class BidsService {
   ) {}
 
   // docx 5.4 "Submit Bid" — only a provider the request was sent to may bid,
-  // once. Sending a price is how a provider accepts a request (there is no
-  // separate accept step), so it also records their answer as ACCEPTED.
+  // once, while the request is open (see requirements/expiry.ts). Sending a
+  // price is how a provider accepts a request (there is no separate accept
+  // step), so it also records their answer as ACCEPTED.
+  //
+  // Bids are sealed: a provider never sees another provider's price
+  // (listForRequirement), only the customer sees them all.
   async submitInitialBid(requirementId: string, providerId: string, range: PriceRangeDto) {
     const link = await this.prisma.requirementProvider.findUnique({
       where: { requirementId_providerId: { requirementId, providerId } },
@@ -40,6 +45,7 @@ export class BidsService {
     if (link.status === 'REJECTED') throw new ForbiddenException('you rejected this request');
     const existing = await this.prisma.bid.findFirst({ where: { requirementId, providerId } });
     if (existing) throw new BadRequestException('you already sent a price for this request; refine it instead');
+    await this.assertOpen(requirementId);
 
     const bid = await this.prisma.bid.create({
       data: {
@@ -65,8 +71,14 @@ export class BidsService {
 
   // docx 5.4 "Pay ₹50 to Contact Customer" — payment gateway integration is a follow-up; this
   // records the unlock once payment succeeds upstream. Only the bid's own provider may unlock.
+  //
+  // Price first (decided 2026-11-25): unlocking acts on the provider's bid, so
+  // the customer always has a price before their number is shared. A provider
+  // pays once per bid, and not after the request has expired.
   async unlockContact(bidId: string, providerId: string) {
     const bid = await this.ownedBid(bidId, providerId);
+    if (bid.contactUnlocked) throw new BadRequestException('contact is already unlocked for this bid');
+    await this.assertOpen(bid.requirementId);
     await this.prisma.payment.create({
       data: {
         providerId: bid.providerId,
@@ -100,10 +112,16 @@ export class BidsService {
   async confirmBid(bidId: string, customerId: string) {
     const bid = await this.prisma.bid.findUniqueOrThrow({
       where: { id: bidId },
-      include: { requirement: { select: { customerId: true, status: true } } },
+      include: {
+        requirement: { select: { customerId: true, status: true, createdAt: true, preferredAt: true } },
+      },
     });
     if (bid.requirement.customerId !== customerId) {
       throw new ForbiddenException('this is not your request');
+    }
+    if (hasExpired(bid.requirement)) {
+      await expireStale(this.prisma, { id: bid.requirementId });
+      throw new BadRequestException(`${EXPIRED_MESSAGE}; post it again to get new prices`);
     }
     if (bid.requirement.status === 'CONFIRMED' || bid.requirement.status === 'COMPLETED') {
       throw new BadRequestException('a provider has already been confirmed for this request');
@@ -145,6 +163,19 @@ export class BidsService {
       where: { requirementId, providerId: viewer.providerId },
       include: { provider: { select: PUBLIC_PROVIDER_FIELDS } },
     });
+  }
+
+  // Refuses work on an expired request, marking it EXPIRED if its time ran
+  // out since it was last read.
+  private async assertOpen(requirementId: string) {
+    const requirement = await this.prisma.requirement.findUniqueOrThrow({
+      where: { id: requirementId },
+      select: { status: true, createdAt: true, preferredAt: true },
+    });
+    if (hasExpired(requirement)) {
+      await expireStale(this.prisma, { id: requirementId });
+      throw new BadRequestException(EXPIRED_MESSAGE);
+    }
   }
 
   private async ownedBid(bidId: string, providerId: string) {

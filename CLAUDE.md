@@ -1164,6 +1164,43 @@ instead. Checked live through the gateway (distances, sort, save, Home chip);
 the GPS sheet in the browser was not driven. Tests: API 318 (100% lines),
 shared 148, customer 171 (99.2%), provider 198 (96.4%).
 
+2026-11-25 (addresses and bid rules): customers now give a full address, so
+providers can find the job. The unused `Address` model became saved
+addresses: label, house, street, landmark (optional), 6-digit PIN code, area
+and map position (migration `20261126090000_job_addresses`, which also adds
+`Requirement.address`). `GET`, `POST` and `DELETE /users/me/addresses` (own
+only; the last one cannot be deleted). Customer signup now requires an
+`address` (saved as Home; it also sets the account's location) in place of the
+unused city. `POST /requirements` requires `addressId`, one of the customer's
+own, and keeps a copy in `Requirement.address`, so later edits never change a
+sent job. `GET /requirements/incoming` measures distance and names the place
+from the job address, and sends the full address only to the provider the
+customer confirmed (per the user, not on unlock). Bid rules, decided by the
+user: price first (unlocking acts on a bid; a second unlock of the same bid is
+refused, so it is never paid twice); bids sealed (unchanged); a request expires
+`REQUEST_OPEN_DAYS` = 3 days after posting, or the day after a later preferred
+date (`src/requirements/expiry.ts`). With no scheduler, open requests past that
+are marked EXPIRED when either side's list loads or someone acts on them; a
+price, unlock or confirmation on one is refused. Apps: shared `JobAddress`,
+`Requirement.address`, `ApiClient.delete`, and `TermsAgreementText` /
+`openTermsAndPrivacy` (the signup Terms and Privacy names now open the Terms &
+privacy page, in both apps). Customer: a YOUR ADDRESS group on signup
+(`AddressFields`), Profile > Saved addresses (list, add, delete), a Job address
+choice on the request form (first saved one by default, Add address inline;
+providers re-list from the chosen address), and the address on the request
+detail. Provider: the job detail shows ADDRESS once chosen. `RequestDetailScreen`
+facts now wrap a long value instead of overflowing. Checked live through the
+gateway: address hidden before and after unlock, shown after confirmation;
+second unlock refused; a backdated request refused a price and showed EXPIRED;
+the signup address group, area sheet and Terms link in the browser. The
+placeholder privacy text does not mention addresses yet. Tests: API 344 (100%
+lines), shared 155, customer 180 (99.1%), provider 200 (96.4%).
+Follow-up, per the user: the Home location chip no longer offers GPS or the
+area list. Its sheet (`chooseHomeAddress`) lists the saved addresses, with the
+one Home is set to checked, plus Add new address, which opens the Add address
+form; the chosen address is saved as the account location. GPS and the area
+list remain only for an address's map position. Customer tests: 183.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the
@@ -1219,8 +1256,7 @@ possible, so treat those two as fixed.
 ## **Open items**
 
 Carried over from the requirements doc, section 9:
-- Whether an initial price range is mandatory before contact-unlock, or providers can skip straight to unlocking contact.
-- Bid visibility/expiry rules.
+- Settled 2026-11-25: a price comes before the contact unlock; bids are sealed (a provider sees only their own); a request expires 3 days after posting (or the day after a later preferred date). See the 2026-11-25 (addresses and bid rules) entry.
 - Provider verification workflow: manual admin review vs. automated document checks (current scaffold assumes manual — status starts `PENDING_VERIFICATION` and there's no approval endpoint yet).
 - Certification thresholds (`CERTIFICATION_MIN_SERVICES`, `CERTIFICATION_MIN_RATING` in `ratings.service.ts`) are placeholders pending a business decision.
 

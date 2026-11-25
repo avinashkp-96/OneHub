@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { placeName } from '../locations/areas';
+import { addressFields } from '../users/addresses';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
@@ -37,6 +38,7 @@ export class AuthService {
     if (existing) throw new ConflictException('mobile number already registered');
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+    const address = addressFields(dto.address);
     const user = await this.prisma.user.create({
       data: {
         role: 'CUSTOMER',
@@ -45,9 +47,10 @@ export class AuthService {
         mobileVerifiedAt: new Date(),
         email: dto.email,
         passwordHash,
-        city: dto.city,
-        latitude: dto.latitude,
-        longitude: dto.longitude,
+        city: address.city,
+        latitude: address.latitude,
+        longitude: address.longitude,
+        addresses: { create: address },
       },
     });
     return this.issueToken(user.id, 'CUSTOMER');

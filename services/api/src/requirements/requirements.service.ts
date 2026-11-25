@@ -3,6 +3,8 @@ import { distanceKm } from '../locations/geo';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PostRequirementDto } from './dto/post-requirement.dto';
+import { expireStale } from './expiry';
+import { ADDRESS_FIELDS_SELECT, AddressFields } from '../users/addresses';
 
 @Injectable()
 export class RequirementsService {
@@ -11,11 +13,18 @@ export class RequirementsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  // docx 4.3 — "Send Request" CTA
+  // docx 4.3 — "Send Request" CTA. The request keeps a copy of the chosen
+  // saved address, which must be the customer's own.
   async postRequirement(customerId: string, dto: PostRequirementDto) {
+    const address = await this.prisma.address.findFirst({
+      where: { id: dto.addressId, userId: customerId },
+      select: ADDRESS_FIELDS_SELECT,
+    });
+    if (!address) throw new BadRequestException('choose one of your saved addresses');
     const requirement = await this.prisma.requirement.create({
       data: {
         customerId,
+        address,
         subServiceId: dto.subServiceId,
         title: dto.title.trim(),
         description: dto.description,
@@ -40,6 +49,7 @@ export class RequirementsService {
   // no relation to Provider in the schema, so the names come from one extra
   // lookup for all providers on all the customer's requests.
   async listForCustomer(customerId: string) {
+    await expireStale(this.prisma, { customerId });
     const requirements = await this.prisma.requirement.findMany({
       where: { customerId },
       include: { targetedProviders: true, bids: true },
@@ -74,10 +84,14 @@ export class RequirementsService {
   // `customerName`, `customerPlace` (the customer's city; requests have no
   // address of their own) and `distanceKm` from the provider's saved location,
   // null when either side has no coordinates. The customer's coordinates and
-  // contact details are never sent. `myResponse` is this provider's own
+  // contact details are never sent. The job address (a copy of the
+  // customer's saved one) sets the place and distance when there is one, and
+  // is sent in full only to the provider the customer confirmed.
+  // `myResponse` is this provider's own
   // answer (SENT until they accept or reject), since the requirement's
   // `status` can reflect another provider on a multi-provider request.
   async listForProvider(providerId: string) {
+    await expireStale(this.prisma, { targetedProviders: { some: { providerId } } });
     const [requirements, provider] = await Promise.all([
       this.prisma.requirement.findMany({
         where: { targetedProviders: { some: { providerId } } },
@@ -96,13 +110,18 @@ export class RequirementsService {
     ]);
     const from = provider?.user;
 
-    return requirements.map(({ customer, targetedProviders, ...r }) => ({
-      ...r,
-      myResponse: targetedProviders[0]?.status ?? 'SENT',
-      customerName: customer.fullName,
-      customerPlace: customer.city,
-      distanceKm: from ? distanceKm(from, customer) : null,
-    }));
+    return requirements.map(({ customer, targetedProviders, address, ...r }) => {
+      const job = jobAddress(address);
+      const chosen = !!r.confirmedBidId && r.bids.some((b) => b.confirmed && b.id === r.confirmedBidId);
+      return {
+        ...r,
+        myResponse: targetedProviders[0]?.status ?? 'SENT',
+        customerName: customer.fullName,
+        customerPlace: job?.city ?? customer.city,
+        distanceKm: from ? distanceKm(from, job ?? customer) : null,
+        address: chosen ? job : null,
+      };
+    });
   }
 
   // docx 5.3 Reject. There is no separate accept: a provider accepts by
@@ -145,4 +164,11 @@ export class RequirementsService {
     await this.notifications.jobCompleted(requirementId);
     return completed;
   }
+}
+
+// The stored job address, when the request has one with a map position.
+function jobAddress(value: unknown): AddressFields | null {
+  if (!value || typeof value !== 'object') return null;
+  const a = value as AddressFields;
+  return typeof a.latitude === 'number' && typeof a.longitude === 'number' ? a : null;
 }

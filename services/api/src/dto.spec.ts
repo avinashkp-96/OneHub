@@ -23,7 +23,7 @@ const customer = {
   otp: '1234',
   password: 'secret1',
   confirmPassword: 'secret1',
-  city: 'Kochi',
+  address: { house: '12B', street: 'MG Road', pincode: '682024', latitude: 10.02, longitude: 76.31 },
 };
 
 const provider = {
@@ -47,6 +47,17 @@ describe('SignupCustomerDto', () => {
 
   it('rejects a mobile that is not 10 digits', async () => {
     expect(await errorsFor(SignupCustomerDto, { ...customer, mobile: '12345' })).toContain('mobile');
+  });
+
+  it('needs a complete address', async () => {
+    const rest: Record<string, unknown> = { ...customer };
+    delete rest.address;
+    expect(await errorsFor(SignupCustomerDto, rest)).toContain('address');
+    for (const bad of [{ house: ' ' }, { street: '' }, { pincode: '68202' }, { pincode: '012345' }, { latitude: 99 }]) {
+      expect(await errorsFor(SignupCustomerDto, { ...customer, address: { ...customer.address, ...bad } })).toContain(
+        'address',
+      );
+    }
   });
 
   it('rejects a short password', async () => {
@@ -103,7 +114,7 @@ describe('PriceRangeDto', () => {
 });
 
 describe('PostRequirementDto', () => {
-  const ok = { subServiceId: 's1', title: 'Fan repair', description: 'Fix', providerIds: ['p1'] };
+  const ok = { subServiceId: 's1', addressId: 'a1', title: 'Fan repair', description: 'Fix', providerIds: ['p1'] };
 
   it('accepts a minimal body', async () => {
     expect(await errorsFor(PostRequirementDto, ok)).toEqual([]);

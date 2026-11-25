@@ -11,7 +11,13 @@ describe('AuthService.signupCustomer', () => {
     otp: '1234',
     password: 'secret1',
     confirmPassword: 'secret1',
-    city: 'Bengaluru',
+    address: {
+      house: '12B, Palm Grove',
+      street: 'Changampuzha Nagar',
+      pincode: '682024',
+      latitude: 10.0261,
+      longitude: 76.3125,
+    },
   };
 
   function build(overrides: { userExists?: boolean; otpValid?: boolean }) {

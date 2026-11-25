@@ -166,6 +166,10 @@ Future<void> openJobDetail(
       facts: [
         if (job.customerName != null) DetailFact('Customer', job.customerName!),
         if (place.isNotEmpty) DetailFact('Location', place),
+        // The API sends the full address only once the customer has chosen
+        // this provider.
+        if (job.address != null)
+          DetailFact('Address', job.address!.lines.join('\n')),
         if (bid != null) DetailFact('Your bid', bid),
         if (preferred != null)
           DetailFact('Preferred date',

@@ -4,6 +4,7 @@ import '../../core/api.dart';
 import '../help/help_content.dart';
 import 'profile_state.dart';
 import '../requirements/my_requests_screen.dart';
+import '../addresses/addresses_screen.dart';
 
 // Customer Profile, reached from the Profile item in the dashboard's nav bar.
 // Matches the other redesigned screens (PageGlow, page title in the AppBar, one GlowCard, bordered tile) — no new reference, applied
@@ -167,6 +168,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 12),
                 OneHubLinkTile(
+                  icon: OneHubIcons.location,
+                  title: 'Saved addresses',
+                  subtitle: 'Where providers come for your jobs',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const AddressesScreen())),
+                ),
+                const SizedBox(height: 10),
+                OneHubLinkTile(
                   icon: OneHubIcons.notification,
                   title: 'Settings',
                   subtitle: 'Notifications and about',
@@ -192,15 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: OneHubIcons.lock,
                   title: 'Terms & privacy',
                   subtitle: 'How OneHub works and handles your data',
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const InfoScreen(
-                              title: 'Terms & privacy',
-                              subtitle: 'The ground rules.',
-                              notice: legalPlaceholderNotice,
-                              sections: [
-                                ...onehubTermsSections,
-                                ...onehubPrivacySections
-                              ]))),
+                  onTap: () => openTermsAndPrivacy(context),
                 ),
                 const SizedBox(height: 26),
                 Text('Activity',

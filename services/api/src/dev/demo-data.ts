@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { addressCopy } from '../users/addresses';
 
 // Demo data for local development: two categories with their sub-services, one
 // customer and two active providers, plus one open request so the electrician
@@ -41,6 +42,17 @@ export const DEMO_CUSTOMER = {
   longitude: 76.3125,
 };
 
+export const DEMO_HOME = {
+  label: 'Home',
+  house: '12B, Palm Grove Apartments',
+  street: 'Changampuzha Nagar, Edappally',
+  landmark: 'Near Edappally Church',
+  pincode: '682024',
+  city: 'Edappally',
+  latitude: 10.0261,
+  longitude: 76.3125,
+};
+
 export const DEMO_PROVIDERS = [
   { mobile: '9000000002', name: 'Rajesh Electricals', category: 'Electrician', years: 8, email: 'rajesh@example.test', city: 'Kadavanthra', latitude: 9.9667, longitude: 76.2999 },
   { mobile: '9000000003', name: 'Kochi Plumbing Co', category: 'Plumber', years: 5, email: 'kochiplumbing@example.test', city: 'Kakkanad', latitude: 10.0159, longitude: 76.3419 },
@@ -52,7 +64,7 @@ export function assertNotProduction(env: { NODE_ENV?: string }) {
   }
 }
 
-type Db = Pick<PrismaClient, 'category' | 'subService' | 'user' | 'provider' | 'requirement'>;
+type Db = Pick<PrismaClient, 'category' | 'subService' | 'user' | 'provider' | 'requirement' | 'address'>;
 
 export async function seedDemoData(db: Db, hashPassword: (plain: string) => Promise<string>) {
   const passwordHash = await hashPassword(DEMO_PASSWORD);
@@ -77,6 +89,11 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
     update: { passwordHash, city: DEMO_CUSTOMER.city, latitude: DEMO_CUSTOMER.latitude, longitude: DEMO_CUSTOMER.longitude },
     create: { ...DEMO_CUSTOMER, role: 'CUSTOMER', mobileVerifiedAt: new Date(), passwordHash },
   });
+
+  const home =
+    (await db.address.findFirst({ where: { userId: customer.id } })) ??
+    (await db.address.create({ data: { userId: customer.id, ...DEMO_HOME } }));
+  const homeCopy = addressCopy({ ...home, latitude: home.latitude ?? DEMO_HOME.latitude, longitude: home.longitude ?? DEMO_HOME.longitude });
 
   const providerIds: Record<string, string> = {};
   for (const p of DEMO_PROVIDERS) {
@@ -119,6 +136,7 @@ export async function seedDemoData(db: Db, hashPassword: (plain: string) => Prom
         customerId: customer.id,
         subServiceId: subsByCategory.Electrician[0].id,
         title: 'Switchboard sparking',
+        address: homeCopy,
         description: 'Kitchen switchboard sparks when the mixer is plugged in. Need it checked and fixed.',
         photoUrls: [],
         targetedProviders: { create: [{ providerId: providerIds.Electrician }] },

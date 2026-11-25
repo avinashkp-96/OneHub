@@ -592,17 +592,11 @@ class _SignupScreenState extends State<SignupScreen> {
                   onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
                 ),
                 Expanded(
-                  child: Text.rich(
-                    TextSpan(
-                      style: OneHubTextStyles.bodyText(textSecondary),
-                      children: [
-                        const TextSpan(text: 'I accept the '),
-                        TextSpan(
-                            text: 'Terms & Conditions',
-                            style: OneHubTextStyles.linkText(primary)),
-                      ],
-                    ),
-                  ),
+                  child: TermsAgreementText(
+                      lead: 'I accept the ',
+                      privacy: false,
+                      textColor: textSecondary,
+                      linkColor: primary),
                 ),
               ],
             ),

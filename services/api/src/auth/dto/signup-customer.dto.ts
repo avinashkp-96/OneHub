@@ -1,4 +1,6 @@
-import { IsEmail, IsLatitude, IsLongitude, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsDefined, IsEmail, IsOptional, IsString, Matches, MinLength, ValidateNested } from 'class-validator';
+import { AddressDto } from '../../users/dto/address.dto';
 
 // docx 2.1 Customer — Sign Up
 export class SignupCustomerDto {
@@ -21,14 +23,10 @@ export class SignupCustomerDto {
   @IsString()
   confirmPassword: string;
 
-  @IsString()
-  city: string;
-
-  @IsOptional()
-  @IsLatitude()
-  latitude?: number;
-
-  @IsOptional()
-  @IsLongitude()
-  longitude?: number;
+  // The customer's first saved address (Home), where providers come to.
+  // Its map position also becomes the account's location.
+  @IsDefined()
+  @ValidateNested()
+  @Type(() => AddressDto)
+  address: AddressDto;
 }

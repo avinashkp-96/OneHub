@@ -23,6 +23,21 @@ void main() {
     },
   ];
 
+  // The customer's saved addresses; every fake API below serves them.
+  final home = {
+    'id': 'a1',
+    'label': 'Home',
+    'house': '12B, Palm Grove',
+    'street': 'Changampuzha Nagar',
+    'pincode': '682024',
+    'city': 'Edappally',
+    'latitude': 10.0261,
+    'longitude': 76.3125,
+  };
+  final addressRoute = <String, Object? Function(dynamic)>{
+    'GET /users/me/addresses': (_) => [home],
+  };
+
   // Opens the screen from a button, with a stand-in '/dashboard' route, so a
   // successful submit can be seen landing on Home with the stack cleared.
   // The photo picker the screen gets; a test can make it back out.
@@ -48,7 +63,12 @@ void main() {
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
                       builder: (_) => PostRequirementScreen(
-                          subServiceId: 'sub-1', pickPhoto: pick)),
+                          subServiceId: 'sub-1',
+                          pickPhoto: pick,
+                          pickLocation: (_, __) async => const SavedLocation(
+                              city: 'Aluva',
+                              latitude: 10.1076,
+                              longitude: 76.3516))),
                 ),
                 child: const Text('open'),
               ),
@@ -97,6 +117,7 @@ void main() {
           city: 'Edappally', latitude: 10.0261, longitude: 76.3125);
       String? query;
       installFakeApi({
+      ...addressRoute,
         'GET /providers': (r) {
           query = r.url.query;
           return [
@@ -113,9 +134,11 @@ void main() {
       expect(find.text('600 m away'), findsOneWidget);
     });
 
-    testWidgets('without a location it says where to set one', (tester) async {
+    testWidgets('without an address it says to add one, and cannot send',
+        (tester) async {
       String? query;
-      installFakeApi({
+      final fake = installFakeApi({
+        'GET /users/me/addresses': (_) => [],
         'GET /providers': (r) {
           query = r.url.query;
           return providers;
@@ -124,9 +147,77 @@ void main() {
       await pumpScreen(tester);
 
       expect(query, 'subServiceId=sub-1');
-      expect(find.text('Set your location on Home to see the nearest first.'),
+      expect(find.text('Add the job address to see the nearest first.'),
           findsOneWidget);
       expect(find.textContaining('away'), findsNothing);
+
+      await describe(tester);
+      await tester.tap(find.text('Asha Electricals'));
+      await send(tester);
+      expect(find.text('Add the address for this job.'), findsOneWidget);
+      expect(fake.calls.where((c) => c.startsWith('POST')), isEmpty);
+    });
+
+    testWidgets('another address re-lists providers from there, and a new one can be added',
+        (tester) async {
+      final queries = <String>[];
+      final office = {
+        ...home,
+        'id': 'a2',
+        'label': 'Office',
+        'city': 'Kakkanad',
+        'latitude': 10.0159,
+        'longitude': 76.3419,
+      };
+      final fake = installFakeApi({
+        'GET /users/me/addresses': (_) => [home, office],
+        'GET /providers': (r) {
+          queries.add(r.url.query);
+          return providers;
+        },
+        'POST /users/me/addresses': (_) =>
+            {...office, 'id': 'a3', 'label': 'Other', 'city': 'Aluva'},
+        'POST /requirements': (_) => {'id': 'r1'},
+      });
+      await pumpScreen(tester);
+      expect(find.text('Nearest first, from Edappally.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('address-a2')));
+      await tester.pumpAndSettle();
+      expect(queries.last, 'subServiceId=sub-1&latitude=10.0159&longitude=76.3419');
+      expect(find.text('Nearest first, from Kakkanad.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('add-address')));
+      await tester.pumpAndSettle();
+      expect(find.text('Add address'), findsWidgets);
+      await tester.enterText(find.byKey(const Key('address-house')), '1');
+      await tester.tap(find.text('Save address'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set the address on the map: use GPS or pick your area.'),
+          findsOneWidget);
+      await tester.tap(find.byKey(const Key('address-location')));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('address-street')), 'Bank Road');
+      await tester.enterText(find.byKey(const Key('address-pincode')), '683101');
+      await tester.tap(find.byKey(const Key('address-label-Other')));
+      await tester.tap(find.text('Save address'));
+      await tester.pumpAndSettle();
+
+      expect(fake.bodies.last, {
+        'label': 'Other',
+        'house': '1',
+        'street': 'Bank Road',
+        'pincode': '683101',
+        'city': 'Aluva',
+        'latitude': 10.1076,
+        'longitude': 76.3516,
+      });
+      expect(find.text('Nearest first, from Aluva.'), findsOneWidget);
+
+      await describe(tester);
+      await tester.tap(find.text('Asha Electricals'));
+      await send(tester);
+      expect(fake.bodies.last['addressId'], 'a3');
     });
   });
 
@@ -145,7 +236,7 @@ void main() {
     );
 
     expect(find.text('Tell us what you need'), findsOneWidget);
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsWidgets);
     await tester.pumpAndSettle();
     expect(find.byType(CircularProgressIndicator), findsNothing);
   });
@@ -226,6 +317,7 @@ void main() {
   testWidgets('sends the request and goes to Home with nothing to go back to',
       (tester) async {
     final fake = installFakeApi({
+      ...addressRoute,
       'GET /providers': (_) => providers,
       'POST /requirements': (_) => {'id': 'r1'},
     });
@@ -236,6 +328,7 @@ void main() {
     await send(tester);
 
     expect(fake.bodies.single['subServiceId'], 'sub-1');
+    expect(fake.bodies.single['addressId'], 'a1');
     expect(fake.bodies.single['title'], 'Fan repair');
     expect(fake.bodies.single['description'], 'Fan is noisy');
     expect(fake.bodies.single['providerIds'], ['p1', 'p2']);
@@ -251,6 +344,7 @@ void main() {
 
   testWidgets('includes the preferred date when one is picked', (tester) async {
     final fake = installFakeApi({
+      ...addressRoute,
       'GET /providers': (_) => providers,
       'POST /requirements': (_) => {'id': 'r1'},
     });
@@ -285,6 +379,7 @@ void main() {
   testWidgets('shows the server error and stays on the form when sending fails',
       (tester) async {
     installFakeApi({
+      ...addressRoute,
       'GET /providers': (_) => providers,
       'POST /requirements': (_) => const FakeError(500, 'down'),
     });
@@ -300,6 +395,7 @@ void main() {
   group('photos', () {
     var uploads = 0;
     Map<String, Object? Function(dynamic)> routes({bool failUpload = false}) => {
+          ...addressRoute,
           'GET /providers': (_) => providers,
           'POST /uploads/photo': (_) => failUpload
               ? const FakeError(400, 'only JPEG, PNG or WebP images can be uploaded')

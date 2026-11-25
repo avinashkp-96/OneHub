@@ -252,6 +252,8 @@ Future<void> openRequestDetail(BuildContext context, Requirement r) {
       ],
       facts: [
         DetailFact('Bids', '${r.bids.length}'),
+        if (r.address != null)
+          DetailFact('Address', '${r.address!.label}: ${r.address!.oneLine}'),
       ],
       photos: [for (final url in r.photoUrls) api.resolve(url)],
       action: actionLabel == null

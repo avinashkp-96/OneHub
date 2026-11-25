@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import '../addresses/addresses_screen.dart';
 import '../categories/category_grid_screen.dart';
 import '../categories/sub_service_list_screen.dart';
 import '../home/home_shell.dart';
@@ -158,9 +159,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // --- Header row: location chip + notification bell -------------------------
 
-// The chip shows the customer's saved area (customerLocation, from
-// GET /users/me) or "Set your location". Tapping it offers GPS or the service
-// areas, and the choice is saved on the account.
+// The chip shows the area of the address Home is set to (customerLocation,
+// from GET /users/me), or "Set your location". Tapping it lists the saved
+// addresses and Add new address; the chosen one is saved as the account's
+// location, which the request form and search measure providers from.
 class _TopRow extends StatefulWidget {
   final LocationPicker? pickLocation;
   const _TopRow({this.pickLocation});
@@ -175,7 +177,7 @@ class _TopRowState extends State<_TopRow> {
   Future<void> _pickLocation() async {
     final pick = widget.pickLocation ??
         (BuildContext context, SavedLocation? current) =>
-            chooseLocation(context, api, current: current);
+            chooseHomeAddress(context, current);
     final picked = await pick(context, customerLocation.value);
     if (picked == null || !mounted) return;
     setState(() => _saving = true);

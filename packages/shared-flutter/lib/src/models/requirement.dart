@@ -1,3 +1,4 @@
+import 'address.dart';
 import 'category.dart';
 
 // Mirrors services/api Prisma model `Requirement` / `Bid` — docx sections 4.3-4.5, 5.3-5.4.
@@ -55,6 +56,9 @@ class Requirement {
   // The sub-service it was posted under, with its typical price range. Null
   // when the response does not include it.
   final SubService? subService;
+  // Where the job is (a copy of the customer's saved address). The customer
+  // always has it; a provider only once the customer has chosen them.
+  final JobAddress? address;
 
   const Requirement({
     required this.id,
@@ -72,6 +76,7 @@ class Requirement {
     this.createdAt,
     this.preferredAt,
     this.subService,
+    this.address,
   });
 
   factory Requirement.fromJson(Map<String, dynamic> json) => Requirement(
@@ -103,6 +108,7 @@ class Requirement {
         subService: json['subService'] is Map<String, dynamic>
             ? SubService.fromJson(json['subService'] as Map<String, dynamic>)
             : null,
+        address: JobAddress.tryParse(json['address']),
       );
 
   /// The title, or the description when there is no title.

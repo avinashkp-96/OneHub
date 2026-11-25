@@ -105,4 +105,59 @@ void main() {
     }
     expect(incomingStageLabel(IncomingStage.bidSent), 'BID SENT');
   });
+
+  testWidgets('the chosen provider sees the full job address; others only the area',
+      (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    Requirement job({bool chosen = false}) => Requirement.fromJson({
+          'id': 'r1',
+          'subServiceId': 's',
+          'description': 'Fix the fan',
+          'status': chosen ? 'CONFIRMED' : 'BID_RECEIVED',
+          'customerName': 'Meera',
+          'customerPlace': 'Edappally',
+          'distanceKm': 6.7,
+          'address': chosen
+              ? {
+                  'label': 'Home',
+                  'house': '12B, Palm Grove',
+                  'street': 'Changampuzha Nagar',
+                  'landmark': 'Edappally Church',
+                  'pincode': '682024',
+                  'city': 'Edappally',
+                  'latitude': 10.0261,
+                  'longitude': 76.3125,
+                }
+              : null,
+        });
+    Future<void> open(Requirement r) async {
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => openJobDetail(context, r,
+                statusLabel: 'SELECTED', statusColor: Colors.green, steps: const []),
+            child: const Text('open'),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    await open(job());
+    expect(find.text('Edappally · 6.7 km away'), findsOneWidget);
+    expect(find.text('ADDRESS'), findsNothing);
+
+    await open(job(chosen: true));
+    expect(find.text('ADDRESS'), findsOneWidget);
+    expect(
+        find.text(
+            '12B, Palm Grove\nChangampuzha Nagar, Edappally\nNear Edappally Church\nPIN 682024'),
+        findsOneWidget);
+  });
 }

@@ -18,6 +18,9 @@ function buildService(
       findUniqueOrThrow: jest.fn().mockResolvedValue(requirement),
     },
     bid: { findUniqueOrThrow: jest.fn().mockResolvedValue(bid) },
+    address: {
+      findFirst: jest.fn().mockResolvedValue({ label: 'Home', house: '12B', city: 'Edappally', latitude: 10, longitude: 76 }),
+    },
     requirementProvider: {
       findUnique: jest.fn().mockResolvedValue(link),
       update: jest.fn().mockResolvedValue({}),
@@ -38,7 +41,7 @@ function buildService(
 }
 
 describe('RequirementsService notifications', () => {
-  const dto = { subServiceId: 's1', title: 'Fan repair', description: 'Fix fan', providerIds: ['p1', 'p2'] };
+  const dto = { subServiceId: 's1', addressId: 'a1', title: 'Fan repair', description: 'Fix fan', providerIds: ['p1', 'p2'] };
 
   it('tells the targeted providers about a new request', async () => {
     const { service, notifications } = buildService();
@@ -60,17 +63,22 @@ describe('RequirementsService notifications', () => {
 });
 
 describe('RequirementsService.postRequirement', () => {
+  const dto = { subServiceId: 's1', addressId: 'a9', title: 'Fan', description: 'Fix', providerIds: ['p1'] };
+
   it('creates the request as SENT and targets each chosen provider', async () => {
     const { service, prisma } = buildService();
 
     await service.postRequirement('cust-1', {
       subServiceId: 's1',
+      addressId: 'a1',
       title: '  Fan repair  ',
       description: 'Fix a fan',
       providerIds: ['p1', 'p2'],
     });
 
+    expect(prisma.address.findFirst.mock.calls[0][0].where).toEqual({ id: 'a1', userId: 'cust-1' });
     const data = prisma.requirement.create.mock.calls[0][0].data;
+    expect(data.address).toEqual({ label: 'Home', house: '12B', city: 'Edappally', latitude: 10, longitude: 76 });
     expect(data.customerId).toBe('cust-1');
     expect(data.status).toBe('SENT');
     expect(data.title).toBe('Fan repair');
@@ -84,6 +92,7 @@ describe('RequirementsService.postRequirement', () => {
 
     await service.postRequirement('cust-1', {
       subServiceId: 's1',
+      addressId: 'a1',
       title: '  Fan repair  ',
       description: 'Fix a fan',
       photoUrls: ['a.png'],
@@ -94,6 +103,14 @@ describe('RequirementsService.postRequirement', () => {
     const data = prisma.requirement.create.mock.calls[0][0].data;
     expect(data.photoUrls).toEqual(['a.png']);
     expect(data.preferredAt).toEqual(new Date('2026-11-01T10:00:00.000Z'));
+  });
+
+  it("refuses an address that is not one of the customer's own", async () => {
+    const { service, prisma } = buildService();
+    prisma.address.findFirst.mockResolvedValue(null);
+
+    await expect(service.postRequirement('cust-1', dto)).rejects.toThrow('choose one of your saved addresses');
+    expect(prisma.requirement.create).not.toHaveBeenCalled();
   });
 });
 
@@ -231,7 +248,7 @@ describe('RequirementsController', () => {
 
   it('post and mine use the signed-in customer id', async () => {
     const { controller, requirements } = build();
-    const dto = { subServiceId: 's', title: 't', description: 'd', providerIds: ['p'] };
+    const dto = { subServiceId: 's', addressId: 'a', title: 't', description: 'd', providerIds: ['p'] };
 
     expect(await controller.post(req, dto)).toBe('posted');
     expect(await controller.mine(req)).toBe('mine');

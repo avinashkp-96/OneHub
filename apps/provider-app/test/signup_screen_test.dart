@@ -321,6 +321,21 @@ void main() {
     expect(signupBody!['city'], 'Kadavanthra');
   });
 
+  testWidgets('the Terms link on step 3 opens the Terms & privacy page',
+      (tester) async {
+    await pumpScreen(tester);
+    await completeStepOne(tester);
+    await next(tester);
+    await completeStepTwo(tester);
+    await next(tester);
+
+    expect(find.byKey(const Key('privacy-link')), findsNothing);
+    await tester.tap(find.byKey(const Key('terms-link')));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(InfoScreen), findsOneWidget);
+  });
+
   testWidgets('shows the server error on step 3 when sign-up fails',
       (tester) async {
     await pumpScreen(tester, client: fakeClient(failSignup: true));

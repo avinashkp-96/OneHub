@@ -17,7 +17,7 @@ function buildService(o: Setup = {}) {
     providerId: 'p1',
     requirementId: 'r1',
     contactUnlocked: false,
-    requirement: { customerId: 'cust-1', status: 'BID_RECEIVED' },
+    requirement: { customerId: 'cust-1', status: 'BID_RECEIVED', createdAt: new Date(), preferredAt: null },
   };
   const prisma = {
     bid: {
@@ -30,6 +30,8 @@ function buildService(o: Setup = {}) {
     requirement: {
       update: jest.fn().mockResolvedValue({}),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      // An open request, posted just now.
+      findUniqueOrThrow: jest.fn().mockResolvedValue({ status: 'BID_RECEIVED', createdAt: new Date(), preferredAt: null }),
       findUnique: jest
         .fn()
         .mockResolvedValue(o.requirement === undefined ? { customerId: 'cust-1' } : o.requirement),

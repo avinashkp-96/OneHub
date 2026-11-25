@@ -20,6 +20,10 @@ function fakeDb(opts: { existingSubs?: boolean; existingRequest?: boolean } = {}
     },
     user: { upsert: jest.fn(async ({ where }) => ({ id: `user-${where.mobile}` })) },
     provider: { update: jest.fn(async ({ where }) => ({ id: `prov-${where.userId}` })) },
+    address: {
+      findFirst: jest.fn(async () => null),
+      create: jest.fn(async ({ data }) => ({ id: 'addr-1', createdAt: new Date(), ...data })),
+    },
     requirement: {
       findFirst: jest.fn(async () => (opts.existingRequest ? { id: 'r1' } : null)),
       create: jest.fn<Promise<{ id: string }>, [{ data: RequestData }]>(async () => ({ id: 'r-new' })),
