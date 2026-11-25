@@ -215,21 +215,33 @@ void main() {
     expect(customerProfile.value?.email, 'meera@example.com');
   });
 
-  testWidgets('Settings opens with this app\'s toggles and remembers a change',
+  testWidgets('Settings loads the saved switches and saves a change',
       (tester) async {
     final toggle = customerSettingsToggles.first.value;
     final before = toggle.value;
     addTearDown(() => toggle.value = before);
-    await pumpScreen(tester);
+    await pumpScreen(tester, routes: {
+      'GET /users/me/settings': (_) =>
+          {'requestUpdates': false, 'reminders': true, 'offers': false},
+      'PATCH /users/me/settings': (_) =>
+          {'requestUpdates': true, 'reminders': true, 'offers': false},
+    });
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(find.text('OneHub'), findsOneWidget);
+    expect(toggle.value, isFalse, reason: 'loaded from the account');
 
     await tester.tap(find.text(customerSettingsToggles.first.title));
-    await tester.pump();
-    expect(toggle.value, !before);
+    await tester.pumpAndSettle();
+    expect(toggle.value, isTrue);
+    expect(fake.bodies.last, {'requestUpdates': true});
+  });
+
+  test('the customer switches use the API setting names', () {
+    expect(customerSettingsToggles.map((t) => t.key),
+        ['requestUpdates', 'reminders', 'offers']);
   });
 
   testWidgets('Help & support opens the FAQ and contact details',

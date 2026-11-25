@@ -76,6 +76,14 @@ void main() {
       httpClient: MockClient((request) async {
         final path = request.url.path;
         requests.add('${request.method} $path');
+        if (path == '/users/me/settings') {
+          if (request.method == 'PATCH') {
+            bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+          }
+          return http.Response(
+              jsonEncode({'newRequests': false, 'jobUpdates': true, 'offers': false}),
+              200);
+        }
         if (request.method == 'PATCH') {
           if (failPatches > 0) {
             failPatches--;
@@ -360,7 +368,7 @@ void main() {
     expect(find.text('Saved. Your new ID is under review.'), findsOneWidget);
   });
 
-  testWidgets('Settings opens with this app\'s toggles and remembers a change',
+  testWidgets('Settings loads the saved switches and saves a change',
       (tester) async {
     final toggle = providerSettingsToggles.first.value;
     final before = toggle.value;
@@ -371,10 +379,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SettingsScreen), findsOneWidget);
     expect(find.text('OneHub Provider'), findsOneWidget);
+    expect(toggle.value, isFalse, reason: 'loaded from the account');
+    expect(requests, contains('GET /users/me/settings'));
 
     await tester.tap(find.text(providerSettingsToggles.first.title));
-    await tester.pump();
-    expect(toggle.value, !before);
+    await tester.pumpAndSettle();
+    expect(toggle.value, isTrue);
+    expect(requests.last, 'PATCH /users/me/settings');
+    expect(bodies.last, {'newRequests': true});
+  });
+
+  test('the provider switches use the API setting names', () {
+    expect(providerSettingsToggles.map((t) => t.key),
+        ['newRequests', 'jobUpdates', 'offers']);
   });
 
   testWidgets('Help & support opens the FAQ and contact details',

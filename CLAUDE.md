@@ -1092,6 +1092,24 @@ Customer signup returns both tokens like login. Checked live with 30-second
 access tokens: 401, refresh, retry, no login screen. Tests: API 276 (100% lines), shared 121, customer 155,
 provider 192.
 
+2026-11-25 (saved settings): the Settings switches were in memory only and
+reset on restart. They are now saved on the account and the API honours them.
+New column `User.settings` (JSON, default empty, migration
+`20261125120000_user_settings`); keys, defaults and the event mapping live in
+`src/users/settings.ts`, so adding a switch needs no migration. Customer:
+requestUpdates (new and updated bids), reminders (job completed, rate your
+provider), offers. Provider: newRequests (new requests), jobUpdates (contact
+unlocked, selected, not selected, new rating, certified), offers. Defaults are
+on, offers off. `GET` and `PATCH /users/me/settings`; a switch of the other
+role is refused (400). `NotificationsService.send` drops a note whose
+recipient turned its switch off. Offers is stored but nothing sends offers yet.
+The shared `SettingsScreen` now takes the `ApiClient`, loads the switches
+(disabled until they arrive, so another account's values never show), saves
+each flip, and puts a switch back with a message if saving fails;
+`SettingsToggle` gained `key`. Checked live: with Request updates off, a
+provider's price left the customer's notifications unchanged. Tests: API 287
+(100% lines), shared 124, customer 156, provider 193.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

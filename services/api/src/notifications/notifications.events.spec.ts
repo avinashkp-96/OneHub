@@ -6,6 +6,8 @@ import { NotificationEvent, NotificationsService } from './notifications.service
 // The Notification Matrix (docx section 6): who is told about what.
 function build() {
   const prisma = {
+    // Recipients' notification switches; none stored means every default.
+    user: { findMany: jest.fn().mockResolvedValue([]) },
     notification: {
       createMany: jest.fn().mockResolvedValue({ count: 1 }),
       updateMany: jest.fn().mockResolvedValue({ count: 3 }),
@@ -155,6 +157,27 @@ describe('Notification Matrix events', () => {
     const { service, sent } = build();
     await service.ratingReceived('p1', 5, true);
     expect(sent().map((n: { requirementId?: string }) => n.requirementId)).toEqual([undefined, undefined]);
+  });
+
+  it('skips a recipient who turned that kind of notification off', async () => {
+    const { service, prisma, sent } = build();
+    prisma.user.findMany.mockResolvedValue([
+      { id: 'u-p1', role: 'PROVIDER', settings: { newRequests: false } },
+      { id: 'u-p2', role: 'PROVIDER', settings: {} },
+    ]);
+
+    await service.requestSent('r1');
+
+    expect(sent().map((n: { userId: string }) => n.userId)).toEqual(['u-p2']);
+  });
+
+  it('sends nothing when every recipient turned it off', async () => {
+    const { service, prisma } = build();
+    prisma.user.findMany.mockResolvedValue([{ id: 'cust-1', role: 'CUSTOMER', settings: { reminders: false } }]);
+
+    await service.jobCompleted('r1');
+
+    expect(prisma.notification.createMany).not.toHaveBeenCalled();
   });
 
   it('a failure is logged and never thrown to the caller', async () => {

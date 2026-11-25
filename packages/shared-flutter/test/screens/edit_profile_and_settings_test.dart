@@ -1,6 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
 void main() {
@@ -150,36 +154,117 @@ void main() {
   });
 
   group('SettingsScreen', () {
-    testWidgets('lists the toggles and flips them', (tester) async {
+    late List<String> calls;
+    late List<Object?> bodies;
+
+    // The settings API: GET answers [stored] (or fails), PATCH records the
+    // body and answers [patchStatus].
+    ApiClient fakeApi(
+        {Map<String, bool> stored = const {'push': false, 'promo': true},
+        bool loadFails = false,
+        int patchStatus = 200}) {
+      calls = [];
+      bodies = [];
+      return ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((request) async {
+          calls.add('${request.method} ${request.url.path}');
+          if (request.method == 'GET') {
+            return loadFails
+                ? http.Response(jsonEncode({'message': 'down'}), 500)
+                : http.Response(jsonEncode(stored), 200);
+          }
+          bodies.add(jsonDecode(request.body));
+          return http.Response(jsonEncode({'ok': true}), patchStatus);
+        }),
+      );
+    }
+
+    late ValueNotifier<bool> push;
+    late ValueNotifier<bool> promo;
+
+    Future<void> pumpSettings(WidgetTester tester, ApiClient api) async {
       tallView(tester);
-      final push = ValueNotifier(true);
-      final promo = ValueNotifier(false);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('plugins.it_nomads.com/flutter_secure_storage'),
+        (call) async => null,
+      );
+      push = ValueNotifier(true);
+      promo = ValueNotifier(false);
       await tester.pumpWidget(MaterialApp(
         theme: OneHubTheme.dark(),
         home: SettingsScreen(
+          api: api,
           appName: 'OneHub Test',
           toggles: [
             SettingsToggle(
-                title: 'Push alerts', subtitle: 'Request updates', value: push),
+                key: 'push',
+                title: 'Push alerts',
+                subtitle: 'Request updates',
+                value: push),
             SettingsToggle(
-                title: 'Offers', subtitle: 'Promotions', value: promo),
+                key: 'promo', title: 'Offers', subtitle: 'Promotions', value: promo),
           ],
         ),
       ));
+    }
 
-      expect(find.byType(PageGlow), findsOneWidget);
-      expect(find.byType(GlowCard), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
-      expect(find.text('Push alerts'), findsOneWidget);
-      expect(find.text('OneHub Test'), findsOneWidget);
-      expect(find.text('Version 1.0.0'), findsOneWidget);
+    bool enabled(WidgetTester tester, String key) =>
+        tester.widget<SwitchListTile>(find.byKey(Key('setting-$key'))).onChanged !=
+        null;
 
-      await tester.tap(find.text('Push alerts'));
-      await tester.tap(find.text('Offers'));
-      await tester.pump();
+    testWidgets('loads the saved switches, disabled until they arrive',
+        (tester) async {
+      await pumpSettings(tester, fakeApi());
 
+      expect(enabled(tester, 'push'), isFalse,
+          reason: "another account's values must not be flippable");
+      await tester.pumpAndSettle();
+
+      expect(calls, ['GET /users/me/settings']);
       expect(push.value, isFalse);
       expect(promo.value, isTrue);
+      expect(enabled(tester, 'push'), isTrue);
+      expect(find.byType(PageGlow), findsOneWidget);
+      expect(find.byType(GlowCard), findsOneWidget);
+      expect(find.text('OneHub Test'), findsOneWidget);
+      expect(find.text('Version 1.0.0'), findsOneWidget);
+      expect(find.text('Settings are saved to your account.'), findsOneWidget);
+    });
+
+    testWidgets('saves a flip to the account', (tester) async {
+      await pumpSettings(tester, fakeApi());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Push alerts'));
+      await tester.pumpAndSettle();
+
+      expect(push.value, isTrue);
+      expect(calls.last, 'PATCH /users/me/settings');
+      expect(bodies.single, {'push': true});
+    });
+
+    testWidgets('puts the switch back when saving fails', (tester) async {
+      await pumpSettings(tester, fakeApi(patchStatus: 500));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Offers'));
+      await tester.pumpAndSettle();
+
+      expect(promo.value, isTrue, reason: 'back to the saved value');
+      expect(find.text('Could not save that change. Try again.'),
+          findsOneWidget);
+    });
+
+    testWidgets('says so when the switches cannot load, and stays disabled',
+        (tester) async {
+      await pumpSettings(tester, fakeApi(loadFails: true));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Could not load your settings'),
+          findsOneWidget);
+      expect(enabled(tester, 'push'), isFalse);
     });
   });
 }

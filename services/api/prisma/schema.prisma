@@ -51,6 +51,8 @@ model User {
   latitude     Float?
   longitude    Float?
   profilePhotoUrl String?
+  // Notification switches; see src/users/settings.ts for keys and defaults.
+  settings     Json     @default("{}")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

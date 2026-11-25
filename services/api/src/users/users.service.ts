@@ -1,6 +1,8 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { Role, settingsFor } from './settings';
 
 // What a user gets back about their own account, from GET and PATCH
 // /users/me. Selected explicitly so the password hash never leaves the server
@@ -71,5 +73,32 @@ export class UsersService {
       profilePhotoUrl: dto.profilePhotoUrl,
     };
     return this.prisma.user.update({ where: { id: userId }, data, select: SELF_SELECT });
+  }
+
+  // The caller's notification switches, defaults filled in.
+  async settings(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { role: true, settings: true },
+    });
+    return settingsFor(user.role as Role, user.settings);
+  }
+
+  // Changes only the switches sent. A switch that is not the caller's role's
+  // (a customer setting newRequests, say) is refused rather than stored.
+  async updateSettings(userId: string, dto: UpdateSettingsDto) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { role: true, settings: true },
+    });
+    const role = user.role as Role;
+    const current = settingsFor(role, user.settings);
+    const changes = Object.entries(dto).filter(([, v]) => v !== undefined);
+    const unknown = changes.map(([k]) => k).filter((k) => !(k in current));
+    if (unknown.length) throw new BadRequestException(`not a setting for this account: ${unknown.join(', ')}`);
+
+    const next = { ...current, ...Object.fromEntries(changes) };
+    await this.prisma.user.update({ where: { id: userId }, data: { settings: next } });
+    return next;
   }
 }

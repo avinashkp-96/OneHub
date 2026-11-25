@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Role, wants } from '../users/settings';
 
 // docx section 6, Notification Matrix. Each row is one method below, called by
 // the service where that event happens. They look up who to tell and the
@@ -9,6 +10,9 @@ import { PrismaService } from '../prisma/prisma.service';
 // list. Push and SMS delivery are not integrated yet (see CLAUDE.md,
 // Integrations). The matrix's "subscription expiring/renewed" row has no
 // event to hang off until a renewal job exists.
+//
+// Each recipient's notification switches are honoured (src/users/settings.ts):
+// a note for an event they turned off is dropped.
 //
 // Sending is best-effort: a failure is logged and never fails the action that
 // triggered it (a bid must not be lost because its notification was not).
@@ -199,12 +203,25 @@ export class NotificationsService {
 
   private async send(what: string, build: () => Promise<Note[]>) {
     try {
-      const notes = await build();
+      const notes = await this.wanted(await build());
       if (notes.length === 0) return;
       await this.prisma.notification.createMany({ data: notes.map((n) => ({ ...n, channel: 'IN_APP' })) });
     } catch (e) {
       this.logger.warn(`notification ${what} not sent: ${(e as Error).message}`);
     }
+  }
+
+  private async wanted(notes: Note[]) {
+    if (notes.length === 0) return notes;
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set(notes.map((n) => n.userId))] } },
+      select: { id: true, role: true, settings: true },
+    });
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return notes.filter((n) => {
+      const u = byId.get(n.userId);
+      return !u || wants(u.role as Role, u.settings, n.event);
+    });
   }
 
   private async provider(providerId: string) {

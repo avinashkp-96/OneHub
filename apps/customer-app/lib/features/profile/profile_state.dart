@@ -37,20 +37,25 @@ Future<void> saveCustomerProfile(String name, String email) async {
   }
 }
 
-// Notification preferences have no settings endpoint yet, so these start from
-// fixed values, Settings changes them, and they reset when the app restarts.
+// Notification switches, saved on the account through /users/me/settings
+// (the Settings screen loads and saves them). The API skips notifications the
+// customer turned off: Request updates covers new and updated bids, Reminders
+// the prompt to rate a finished job. Nothing sends offers yet.
 final customerSettingsToggles = [
   SettingsToggle(
+    key: 'requestUpdates',
     title: 'Request updates',
     subtitle: 'New bids, confirmations and completions',
     value: ValueNotifier(true),
   ),
   SettingsToggle(
+    key: 'reminders',
     title: 'Reminders',
     subtitle: 'Nudges to rate a finished job',
     value: ValueNotifier(true),
   ),
   SettingsToggle(
+    key: 'offers',
     title: 'Offers and tips',
     subtitle: 'Discounts and seasonal service reminders',
     value: ValueNotifier(false),

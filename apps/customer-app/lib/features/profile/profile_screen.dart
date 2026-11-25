@@ -145,6 +145,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: 'Notifications and about',
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => SettingsScreen(
+                          api: api,
                           appName: 'OneHub',
                           toggles: customerSettingsToggles))),
                 ),
