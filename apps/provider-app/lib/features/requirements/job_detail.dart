@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
+import '../../core/api.dart';
 
 // Where a provider stands on one request, and the job detail page both
 // Incoming requests and Active jobs open: the request card, a progress
@@ -169,8 +170,8 @@ Future<void> openJobDetail(
         if (preferred != null)
           DetailFact('Preferred date',
               '${preferred.day} ${_months[preferred.month - 1]} ${preferred.year}'),
-        DetailFact('Photos', '${job.photoUrls.length}'),
       ],
+      photos: [for (final url in job.photoUrls) api.resolve(url)],
       action: action,
     ),
   ));

@@ -22,6 +22,10 @@ void main() {
 
   late List<String> posted;
 
+  // What the ID proof upload and the signup call received.
+  String? idProofAuth;
+  Map<String, dynamic>? signupBody;
+
   ApiClient fakeClient({bool failSignup = false}) {
     posted = [];
     return ApiClient(
@@ -29,6 +33,14 @@ void main() {
       httpClient: MockClient((request) async {
         final path = request.url.path;
         if (request.method == 'POST') posted.add(path);
+        if (path == '/uploads/id-proof') {
+          idProofAuth = request.headers['Authorization'];
+          return http.Response(
+              jsonEncode({'url': 'upload:id-proofs/abc.jpg'}), 201);
+        }
+        if (path == '/auth/provider/signup') {
+          signupBody = jsonDecode(request.body) as Map<String, dynamic>;
+        }
         if (path == '/categories') {
           return http.Response(
             jsonEncode([
@@ -65,7 +77,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
           theme: OneHubTheme.dark(),
-          home: SignupScreen(client: client ?? fakeClient())),
+          home: SignupScreen(
+              client: client ?? fakeClient(),
+              pickPhoto: (_) async =>
+                  PickedPhoto(Uint8List.fromList([1, 2, 3]), 'id.jpg'))),
     );
     await tester.pumpAndSettle();
   }
@@ -270,10 +285,14 @@ void main() {
 
     await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));
     await tester.pump();
-    expect(find.text('ID proof is required for verification.'), findsOneWidget);
+    expect(find.text('Upload a photo of your ID proof for verification.'),
+        findsOneWidget);
 
-    await tester.enterText(find.widgetWithText(TextField, 'Document link'),
-        'https://example.test/id.pdf');
+    await tester.tap(find.byKey(const Key('upload-id-proof')));
+    await tester.pumpAndSettle();
+    expect(find.text('ADDED'), findsOneWidget);
+    expect(posted, contains('/uploads/id-proof'));
+    expect(idProofAuth, isNull, reason: 'there is no account to sign in yet');
     await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));
     await tester.pump();
     expect(find.text('Accept the Terms & Conditions to continue.'),
@@ -286,6 +305,7 @@ void main() {
 
     expect(find.text('Account Created!'), findsOneWidget);
     expect(posted, contains('/auth/provider/signup'));
+    expect(signupBody!['idProofUrl'], 'upload:id-proofs/abc.jpg');
   });
 
   testWidgets('shows the server error on step 3 when sign-up fails',
@@ -296,8 +316,8 @@ void main() {
     await completeStepTwo(tester);
     await next(tester);
 
-    await tester.enterText(find.widgetWithText(TextField, 'Document link'),
-        'https://example.test/id.pdf');
+    await tester.tap(find.byKey(const Key('upload-id-proof')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox));
     await tester.pump();
     await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));

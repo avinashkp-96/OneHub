@@ -158,6 +158,47 @@ class ApiClient {
     }
   }
 
+  /// Uploads one image as the multipart field "file" to [path]
+  /// (`/uploads/photo`, or `/uploads/id-proof` during signup with [auth]
+  /// false) and returns the url the API stored it under. A signed-in upload
+  /// renews an expired access token like any other call.
+  Future<String> upload(String path, List<int> bytes, String filename,
+      {bool auth = true}) async {
+    Future<http.Response> once() async {
+      final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'));
+      if (auth) {
+        final t = await token;
+        if (t != null) request.headers['Authorization'] = 'Bearer $t';
+      }
+      request.files
+          .add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      return http.Response.fromStream(await _http.send(request));
+    }
+
+    var res = await once();
+    if (res.statusCode == 401 && auth) res = await _retryAfter401(res, once);
+    final body = _decode(res.body);
+    if (res.statusCode == 413) {
+      throw ApiException(413, 'image must be 5 MB or smaller');
+    }
+    if (res.statusCode >= 400 || body is! Map || body['url'] is! String) {
+      final message = body is Map ? body['message']?.toString() : null;
+      throw ApiException(res.statusCode, message ?? 'upload failed');
+    }
+    return body['url'] as String;
+  }
+
+  /// A stored file url an image widget can load. Uploaded photos are stored
+  /// as paths on the API ("/api/v1/uploads/photos/…"): with an absolute
+  /// [baseUrl] (installed apps) they go on its host, and with a relative one
+  /// (the web build, served beside the API) they already work. Full links are
+  /// left as they are.
+  String resolve(String url) {
+    if (!url.startsWith('/')) return url;
+    final base = Uri.parse(baseUrl);
+    return base.hasScheme ? base.replace(path: url).toString() : url;
+  }
+
   Future<dynamic> get(String path) async {
     Future<http.Response> once() async {
       final t = await token;

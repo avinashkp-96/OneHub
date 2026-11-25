@@ -16,6 +16,7 @@ export 'src/session_expiry.dart';
 export 'src/theme/curved_nav_bar.dart';
 export 'src/widgets/link_tile.dart';
 export 'src/widgets/notification_bell.dart';
+export 'src/widgets/photos.dart';
 export 'src/widgets/request_card.dart';
 export 'src/widgets/success_snack_bar.dart';
 export 'src/theme/glow_card.dart';

@@ -11,11 +11,20 @@ class ProfileDetails {
   final String name;
   final String phone;
   final String email;
+
+  /// A loadable link to the account photo, or null for none.
+  final String? photoUrl;
   const ProfileDetails(
-      {required this.name, required this.phone, required this.email});
+      {required this.name,
+      required this.phone,
+      required this.email,
+      this.photoUrl});
 
   ProfileDetails copyWith({String? name, String? email}) => ProfileDetails(
-      name: name ?? this.name, phone: phone, email: email ?? this.email);
+      name: name ?? this.name,
+      phone: phone,
+      email: email ?? this.email,
+      photoUrl: photoUrl);
 }
 
 /// Edit name and email. The phone number is shown but locked: changing it

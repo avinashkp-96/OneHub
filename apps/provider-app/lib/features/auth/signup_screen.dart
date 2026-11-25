@@ -13,7 +13,11 @@ import '../../core/widgets/service_tile.dart';
 // way ResetPasswordScreen does, so the steps can be tested with a fake API.
 class SignupScreen extends StatefulWidget {
   final ApiClient? client;
-  const SignupScreen({super.key, this.client});
+
+  /// Asks for the ID proof photo; tests pass a fake. Defaults to the camera or
+  /// gallery.
+  final PhotoPicker pickPhoto;
+  const SignupScreen({super.key, this.client, this.pickPhoto = choosePhoto});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -40,7 +44,11 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPassword = TextEditingController();
   final _yearsExperience = TextEditingController();
   final _coverageRadiusKm = TextEditingController(text: '5');
-  final _idProofUrl = TextEditingController();
+  // The uploaded ID proof's reference, from POST /uploads/id-proof. That
+  // route is open because the account does not exist yet; the file is
+  // private and never served.
+  String? _idProof;
+  bool _uploadingId = false;
   final _bankOrUpiDetails = TextEditingController();
 
   List<ServiceCategory> _categories = [];
@@ -60,6 +68,25 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _error;
 
   ApiClient get _api => widget.client ?? api;
+
+  Future<void> _uploadIdProof() async {
+    final photo = await widget.pickPhoto(context);
+    if (photo == null || !mounted) return;
+    setState(() {
+      _uploadingId = true;
+      _error = null;
+    });
+    try {
+      final ref = await _api.upload('/uploads/id-proof', photo.bytes, photo.name,
+          auth: false);
+      if (mounted) setState(() => _idProof = ref);
+    } catch (e) {
+      final message = e is ApiException ? e.message : '$e';
+      if (mounted) setState(() => _error = 'Could not upload the ID proof: $message');
+    } finally {
+      if (mounted) setState(() => _uploadingId = false);
+    }
+  }
 
   @override
   void initState() {
@@ -159,8 +186,8 @@ class _SignupScreenState extends State<SignupScreen> {
         }
         return null;
       default:
-        if (_idProofUrl.text.trim().isEmpty) {
-          return 'ID proof is required for verification.';
+        if (_idProof == null) {
+          return 'Upload a photo of your ID proof for verification.';
         }
         if (!_acceptedTerms) {
           return 'Accept the Terms & Conditions to continue.';
@@ -219,7 +246,7 @@ class _SignupScreenState extends State<SignupScreen> {
         // once location permission handling is built.
         'latitude': 0,
         'longitude': 0,
-        'idProofUrl': _idProofUrl.text.trim(),
+        'idProofUrl': _idProof,
         if (_bankOrUpiDetails.text.trim().isNotEmpty)
           'bankOrUpiDetails': _bankOrUpiDetails.text.trim(),
       });
@@ -489,9 +516,31 @@ class _SignupScreenState extends State<SignupScreen> {
             const FieldLabel('ID PROOF (AADHAAR / PAN)',
                 required: true, icon: OneHubIcons.documentList),
             const SizedBox(height: OneHubTheme.gapFieldInternals),
-            TextField(
-                controller: _idProofUrl,
-                decoration: const InputDecoration(hintText: 'Document link')),
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  key: const Key('upload-id-proof'),
+                  onPressed: _uploadingId || _busy ? null : _uploadIdProof,
+                  icon: _uploadingId
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(OneHubIcons.camera, size: 16),
+                  label: Text(_idProof == null
+                      ? 'Upload a photo'
+                      : 'Choose a different one'),
+                ),
+                if (_idProof != null) ...[
+                  const SizedBox(width: 12),
+                  TintedBadge(label: 'ADDED', color: context.statusSuccess),
+                ],
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text('Only OneHub sees it, to verify your account.',
+                style: OneHubTextStyles.fieldLabel(textSecondary)
+                    .copyWith(letterSpacing: 0, fontSize: 11)),
             const SizedBox(height: OneHubTheme.sectionGap),
             const FieldLabel('BANK / UPI DETAILS (optional)',
                 icon: OneHubIcons.wallet),

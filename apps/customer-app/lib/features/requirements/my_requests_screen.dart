@@ -252,8 +252,8 @@ Future<void> openRequestDetail(BuildContext context, Requirement r) {
       ],
       facts: [
         DetailFact('Bids', '${r.bids.length}'),
-        DetailFact('Photos', '${r.photoUrls.length}'),
       ],
+      photos: [for (final url in r.photoUrls) api.resolve(url)],
       action: actionLabel == null
           ? null
           : PrimaryCta(

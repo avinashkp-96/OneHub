@@ -23,3 +23,5 @@ packages/*/pubspec.lock
 # OS
 .DS_Store
 Thumbs.db
+# Files people upload to a local API (see services/api/src/uploads).
+services/api/uploads/

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:onehub_customer/features/requirements/post_requirement_screen.dart';
@@ -23,6 +24,10 @@ void main() {
 
   // Opens the screen from a button, with a stand-in '/dashboard' route, so a
   // successful submit can be seen landing on Home with the stack cleared.
+  // The photo picker the screen gets; a test can make it back out.
+  PhotoPicker pick = (_) async =>
+      PickedPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]), 'fan.jpg');
+
   Future<void> pumpScreen(WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1.0;
@@ -41,8 +46,8 @@ void main() {
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                      builder: (_) =>
-                          const PostRequirementScreen(subServiceId: 'sub-1')),
+                      builder: (_) => PostRequirementScreen(
+                          subServiceId: 'sub-1', pickPhoto: pick)),
                 ),
                 child: const Text('open'),
               ),
@@ -247,5 +252,101 @@ void main() {
 
     expect(find.textContaining('Could not send the request'), findsOneWidget);
     expect(find.byType(PostRequirementScreen), findsOneWidget);
+  });
+
+  group('photos', () {
+    var uploads = 0;
+    Map<String, Object? Function(dynamic)> routes({bool failUpload = false}) => {
+          'GET /providers': (_) => providers,
+          'POST /uploads/photo': (_) => failUpload
+              ? const FakeError(400, 'only JPEG, PNG or WebP images can be uploaded')
+              : {'url': '/api/v1/uploads/photos/p${uploads++}.jpg'},
+          'POST /requirements': (_) => {'id': 'r1'},
+        };
+
+    setUp(() {
+      uploads = 0;
+      pick = (_) async =>
+          PickedPhoto(Uint8List.fromList([0xff, 0xd8, 0xff]), 'fan.jpg');
+    });
+
+    Future<void> addPhoto(WidgetTester tester) async {
+      await tester.tap(find.byKey(const Key('add-photo')));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a picked photo is uploaded straight away and sent with the request',
+        (tester) async {
+      final fake = installFakeApi(routes());
+      await pumpScreen(tester);
+
+      expect(find.text('PHOTOS (OPTIONAL)', findRichText: true), findsOneWidget);
+      await addPhoto(tester);
+      await addPhoto(tester);
+
+      expect(fake.calls.where((c) => c == 'POST /uploads/photo'), hasLength(2));
+      expect(find.byType(PhotoThumb), findsNWidgets(2));
+
+      await describe(tester);
+      await tester.tap(find.text('Asha Electricals'));
+      await send(tester);
+
+      expect(fake.bodies.single['photoUrls'], [
+        '/api/v1/uploads/photos/p0.jpg',
+        '/api/v1/uploads/photos/p1.jpg',
+      ]);
+    });
+
+    testWidgets('a removed photo is not sent, and no photos sends no list',
+        (tester) async {
+      final fake = installFakeApi(routes());
+      await pumpScreen(tester);
+
+      await addPhoto(tester);
+      await tester.tap(find.bySemanticsLabel('Remove photo'));
+      await tester.pump();
+      expect(find.byType(PhotoThumb), findsNothing);
+
+      await describe(tester);
+      await tester.tap(find.text('Asha Electricals'));
+      await send(tester);
+
+      expect(fake.bodies.single.containsKey('photoUrls'), isFalse);
+    });
+
+    testWidgets('the add button goes once there are five', (tester) async {
+      installFakeApi(routes());
+      await pumpScreen(tester);
+
+      for (var i = 0; i < maxRequestPhotos; i++) {
+        await addPhoto(tester);
+      }
+
+      expect(find.byType(PhotoThumb), findsNWidgets(maxRequestPhotos));
+      expect(find.byKey(const Key('add-photo')), findsNothing);
+    });
+
+    testWidgets('backing out of the picker uploads nothing', (tester) async {
+      final fake = installFakeApi(routes());
+      pick = (_) async => null;
+      await pumpScreen(tester);
+
+      await addPhoto(tester);
+
+      expect(fake.calls.where((c) => c.startsWith('POST /uploads')), isEmpty);
+    });
+
+    testWidgets('a refused upload says why', (tester) async {
+      installFakeApi(routes(failUpload: true));
+      await pumpScreen(tester);
+
+      await addPhoto(tester);
+
+      expect(
+          find.text(
+              'Could not add the photo: only JPEG, PNG or WebP images can be uploaded'),
+          findsOneWidget);
+      expect(find.byType(PhotoThumb), findsNothing);
+    });
   });
 }

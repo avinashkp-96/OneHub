@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/glow_card.dart';
+import '../widgets/photos.dart';
 import '../widgets/request_card.dart';
 import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
@@ -37,7 +38,8 @@ class DetailBadgeRow {
 /// supplies). Same shell as the other screens (PageGlow, page title in the
 /// AppBar). The top card is the brand gradient [RequestCard] with the status,
 /// posted time, title and description; the timeline, badge rows and facts
-/// are plain bordered cards.
+/// are plain bordered cards. [photos] (loadable urls) show as thumbnails
+/// under the timeline; tapping one opens them full screen.
 class RequestDetailScreen extends StatelessWidget {
   final String heading;
 
@@ -57,6 +59,7 @@ class RequestDetailScreen extends StatelessWidget {
   final String badgeRowsTitle;
   final List<DetailBadgeRow> badgeRows;
   final List<DetailFact> facts;
+  final List<String> photos;
   final Widget? action;
   const RequestDetailScreen({
     super.key,
@@ -71,6 +74,7 @@ class RequestDetailScreen extends StatelessWidget {
     this.badgeRowsTitle = '',
     this.badgeRows = const [],
     this.facts = const [],
+    this.photos = const [],
     this.action,
   });
 
@@ -126,6 +130,14 @@ class RequestDetailScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              if (photos.isNotEmpty) ...[
+                const SizedBox(height: 26),
+                Text('Photos',
+                    style: OneHubTextStyles.pageHeading(textPrimary)
+                        .copyWith(fontSize: 18)),
+                const SizedBox(height: 12),
+                PhotoStrip(urls: photos),
+              ],
               if (badgeRows.isNotEmpty) ...[
                 const SizedBox(height: 26),
                 Text(badgeRowsTitle,

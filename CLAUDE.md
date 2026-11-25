@@ -1110,6 +1110,39 @@ each flip, and puts a switch back with a message if saving fails;
 provider's price left the customer's notifications unchanged. Tests: API 287
 (100% lines), shared 124, customer 156, provider 193.
 
+2026-11-25 (photo uploads): photos were link fields or a count with nothing
+behind it. New `src/uploads` module, files on the API server's disk under
+`UPLOAD_DIR` (default `services/api/uploads`, git-ignored) until hosting is
+decided. `POST /uploads/photo` (signed in) stores a public photo and returns
+`/api/v1/uploads/photos/<32 hex>.<ext>`; `GET /uploads/photos/:name` serves
+it with a year-long immutable cache and nosniff. `POST /uploads/id-proof` is
+open, because provider signup needs it before the account exists, and stores
+the file under `private/id-proofs`, returning only a reference
+(`upload:id-proofs/...`) that no route serves; it needs rate limiting before the
+API is public. Only JPEG, PNG and WebP up to 5 MB are kept, judged by the file's
+first bytes, not its name or header (an oversized upload is cut off, 413).
+`POST /requirements` accepts at most 5 `photoUrls`, and only ones this API
+issued. `ApiClient` gained `upload` (multipart, renews an expired token like
+other calls) and `resolve` (puts a stored path on the API host for installed
+apps; the web build uses it as is). Shared `photos.dart`: `choosePhoto` (camera
+or gallery sheet, then `image_picker` at 1600px and 80% quality), `PhotoThumb`,
+`PhotoStrip`, a full-screen `PhotoViewer` (swipe, pinch zoom, "1 of 2") and
+`ProfileAvatar`; screens take a `PhotoPicker` so tests skip the platform
+picker. New Iconly glyphs: camera, image, delete. `RequestDetailScreen` shows
+`photos` under the timeline (the Photos count fact is gone). Customer: the
+request form has a PHOTOS (OPTIONAL) field, each photo uploaded on pick, with
+remove buttons and Send disabled while uploading; tapping the Profile avatar
+changes the account photo (`ProfileDetails.photoUrl`). Provider: the same avatar
+tap on Profile; Payout & documents swaps both link fields for Add/Change photo,
+Remove, and Upload a new ID proof (nothing saves until Save changes); signup
+step 3 uploads the ID proof instead of asking for a link. Checked live through
+the gateway: uploads, serving, an HTML file named .png refused, a request with
+two photos shown on its detail page and in the viewer, the account photo on
+Profile, the camera/gallery sheet. Picking a real file was not driven in the
+browser pane; tests cover it. iOS would need camera and photo library usage
+strings in Info.plist; iOS is not set up. Tests: API 298 (100% lines), shared
+137, customer 163 (99.2%), provider 195 (96.5%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

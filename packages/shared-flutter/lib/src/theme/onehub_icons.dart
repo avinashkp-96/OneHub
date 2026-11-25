@@ -74,6 +74,14 @@ abstract final class OneHubIcons {
       IconData(0xe948, fontFamily: _lightFamily, fontPackage: _package);
   static const calendar =
       IconData(0xe91a, fontFamily: _lightFamily, fontPackage: _package);
+
+  // Photos (request photos, profile photo, ID proof)
+  static const camera =
+      IconData(0xe91f, fontFamily: _lightFamily, fontPackage: _package);
+  static const image =
+      IconData(0xe934, fontFamily: _lightFamily, fontPackage: _package);
+  static const delete =
+      IconData(0xe925, fontFamily: _lightFamily, fontPackage: _package);
   static const filter =
       IconData(0xe92c, fontFamily: _lightFamily, fontPackage: _package);
 

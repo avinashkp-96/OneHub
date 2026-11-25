@@ -12,11 +12,16 @@ void main() {
   late List<String> requests;
   late List<Object?> bodies;
   late bool fail;
+  late bool failUpload;
+  // What the fake picker hands back; null is the user backing out.
+  PickedPhoto? picked;
 
   setUp(() {
     requests = [];
     bodies = [];
     fail = false;
+    failUpload = false;
+    picked = PickedPhoto(Uint8List.fromList([1, 2, 3]), 'me.jpg');
     // Authenticated calls read the token from secure storage.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -28,7 +33,20 @@ void main() {
   ApiClient fakeClient() => ApiClient(
         baseUrl: 'https://example.test',
         httpClient: MockClient((request) async {
-          requests.add('${request.method} ${request.url.path}');
+          final path = request.url.path;
+          requests.add('${request.method} $path');
+          if (path.startsWith('/uploads/')) {
+            if (failUpload) {
+              return http.Response(jsonEncode({'message': 'too big'}), 400);
+            }
+            return http.Response(
+                jsonEncode({
+                  'url': path == '/uploads/photo'
+                      ? '/api/v1/uploads/photos/new.jpg'
+                      : 'upload:id-proofs/new.jpg'
+                }),
+                201);
+          }
           bodies.add(jsonDecode(request.body));
           return fail
               ? http.Response(jsonEncode({'message': 'nope'}), 500)
@@ -71,8 +89,10 @@ void main() {
           body: TextButton(
             onPressed: () async => popped.add(await Navigator.of(context)
                 .push<bool>(MaterialPageRoute(
-                    builder: (_) =>
-                        PayoutDocumentsScreen(details: d, client: client)))),
+                    builder: (_) => PayoutDocumentsScreen(
+                        details: d,
+                        client: client,
+                        pickPhoto: (_) async => picked)))),
             child: const Text('open'),
           ),
         ),
@@ -121,18 +141,28 @@ void main() {
     expect(requests, isEmpty);
   });
 
-  testWidgets('rejects links that are not http or https', (tester) async {
+  testWidgets('backing out of the picker uploads nothing', (tester) async {
+    picked = null;
     await pumpScreen(tester, details());
 
-    await tester.enterText(find.byKey(const Key('photo-field')), 'me.jpg');
-    await save(tester);
-    expect(find.textContaining('photo link must start'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('change-photo')));
+    await tester.tap(find.byKey(const Key('upload-id-proof')));
+    await tester.pumpAndSettle();
 
-    await tester.enterText(find.byKey(const Key('photo-field')), '');
-    await tester.enterText(find.byKey(const Key('id-proof-field')), 'id');
-    await save(tester);
-    expect(find.textContaining('ID proof link must start'), findsOneWidget);
     expect(requests, isEmpty);
+    expect(find.text('Add photo'), findsOneWidget);
+    expect(find.text('ON FILE'), findsOneWidget);
+  });
+
+  testWidgets('a failed upload says so and changes nothing', (tester) async {
+    failUpload = true;
+    await pumpScreen(tester, details());
+
+    await tester.tap(find.byKey(const Key('change-photo')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not upload: too big'), findsOneWidget);
+    expect(find.text('Add photo'), findsOneWidget);
   });
 
   testWidgets('rejects payout details over 120 characters', (tester) async {
@@ -145,25 +175,34 @@ void main() {
     expect(requests, isEmpty);
   });
 
-  testWidgets('a new photo link goes to /users/me only', (tester) async {
+  testWidgets('a new photo is uploaded, then saved to /users/me only',
+      (tester) async {
     final popped = await pumpScreen(tester, details());
 
-    await tester.enterText(
-        find.byKey(const Key('photo-field')), ' https://example.test/me.jpg ');
+    await tester.tap(find.byKey(const Key('change-photo')));
+    await tester.pumpAndSettle();
+    expect(requests, ['POST /uploads/photo']);
+    expect(find.text('Change photo'), findsOneWidget);
+    final preview =
+        tester.widget<ProfileAvatar>(find.byKey(const Key('photo-preview')));
+    expect(preview.photoUrl, 'https://example.test/api/v1/uploads/photos/new.jpg');
+
     await save(tester);
 
-    expect(requests, ['PATCH /users/me']);
+    expect(requests, ['POST /uploads/photo', 'PATCH /users/me']);
     expect(bodies, [
-      {'profilePhotoUrl': 'https://example.test/me.jpg'}
+      {'profilePhotoUrl': '/api/v1/uploads/photos/new.jpg'}
     ]);
     expect(popped, [true]);
     expect(find.text('Saved.'), findsOneWidget);
   });
 
-  testWidgets('emptying the photo link clears it', (tester) async {
+  testWidgets('Remove clears the photo', (tester) async {
     await pumpScreen(tester, details(photo: 'https://example.test/old.jpg'));
 
-    await tester.enterText(find.byKey(const Key('photo-field')), '');
+    await tester.tap(find.byKey(const Key('remove-photo')));
+    await tester.pump();
+    expect(find.text('Add photo'), findsOneWidget);
     await save(tester);
 
     expect(bodies, [
@@ -175,16 +214,17 @@ void main() {
       (tester) async {
     final popped = await pumpScreen(tester, details());
 
-    await tester.enterText(
-        find.byKey(const Key('id-proof-field')), 'https://example.test/id.pdf');
+    await tester.tap(find.byKey(const Key('upload-id-proof')));
+    await tester.pumpAndSettle();
+    expect(find.text('READY TO SAVE'), findsOneWidget);
     await tester.enterText(
         find.byKey(const Key('payout-field')), 'rajesh@okhdfc');
     await save(tester);
 
-    expect(requests, ['PATCH /providers/me']);
+    expect(requests, ['POST /uploads/id-proof', 'PATCH /providers/me']);
     expect(bodies, [
       {
-        'idProofUrl': 'https://example.test/id.pdf',
+        'idProofUrl': 'upload:id-proofs/new.jpg',
         'bankOrUpiDetails': 'rajesh@okhdfc'
       }
     ]);

@@ -76,6 +76,15 @@ void main() {
       httpClient: MockClient((request) async {
         final path = request.url.path;
         requests.add('${request.method} $path');
+        if (path.startsWith('/uploads/')) {
+          return http.Response(
+              jsonEncode({
+                'url': path == '/uploads/photo'
+                    ? '/api/v1/uploads/photos/new.jpg'
+                    : 'upload:id-proofs/new.jpg'
+              }),
+              201);
+        }
         if (path == '/users/me/settings') {
           if (request.method == 'PATCH') {
             bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
@@ -116,7 +125,10 @@ void main() {
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                      builder: (_) => ProfileScreen(client: client)),
+                      builder: (_) => ProfileScreen(
+                          client: client,
+                          pickPhoto: (_) async => PickedPhoto(
+                              Uint8List.fromList([1, 2, 3]), 'me.jpg'))),
                 ),
                 child: const Text('open'),
               ),
@@ -164,17 +176,29 @@ void main() {
     expect(find.byIcon(OneHubIcons.email), findsNothing);
   });
 
-  testWidgets('a photo link replaces the initial in the avatar',
-      (tester) async {
-    (business as Map)['profilePhotoUrl'] = 'https://example.test/me.jpg';
+  testWidgets('the photo replaces the initial in the avatar', (tester) async {
+    (business as Map)['profilePhotoUrl'] = '/api/v1/uploads/photos/me.jpg';
     await pumpScreen(tester);
 
     final avatar =
-        tester.widget<Container>(find.byKey(const Key('profile-avatar')));
-    final decoration = avatar.decoration as BoxDecoration;
-    expect((decoration.image!.image as NetworkImage).url,
-        'https://example.test/me.jpg');
+        tester.widget<ProfileAvatar>(find.byKey(const Key('profile-avatar')));
+    expect(avatar.photoUrl, 'https://example.test/api/v1/uploads/photos/me.jpg',
+        reason: 'a stored path is put on the API host');
     expect(find.text('R'), findsNothing);
+  });
+
+  testWidgets('tapping the avatar uploads a photo and saves it', (tester) async {
+    await pumpScreen(tester);
+
+    await tester.tap(find.byKey(const Key('profile-avatar')));
+    await tester.pumpAndSettle();
+
+    expect(requests, containsAllInOrder(['POST /uploads/photo', 'PATCH /users/me']));
+    expect(bodies.last, {'profilePhotoUrl': '/api/v1/uploads/photos/new.jpg'});
+    expect(find.text('Photo updated.'), findsOneWidget);
+    final avatar =
+        tester.widget<ProfileAvatar>(find.byKey(const Key('profile-avatar')));
+    expect(avatar.photoUrl, endsWith('/uploads/photos/new.jpg'));
   });
 
   testWidgets('lists the business details from the API', (tester) async {
@@ -358,8 +382,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PayoutDocumentsScreen), findsOneWidget);
 
-    await tester.enterText(find.byKey(const Key('id-proof-field')),
-        'https://example.test/new-id.pdf');
+    await tester.tap(find.byKey(const Key('upload-id-proof')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
 

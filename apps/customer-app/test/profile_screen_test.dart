@@ -54,7 +54,9 @@ void main() {
             body: Center(
               child: TextButton(
                 onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ProfileScreen())),
+                    MaterialPageRoute(builder: (_) => ProfileScreen(
+                        pickPhoto: (_) async => PickedPhoto(
+                            Uint8List.fromList([1, 2, 3]), 'me.jpg')))),
                 child: const Text('open'),
               ),
             ),
@@ -213,6 +215,37 @@ void main() {
     expect(find.text('Could not save your profile: email already in use'),
         findsOneWidget);
     expect(customerProfile.value?.email, 'meera@example.com');
+  });
+
+  testWidgets('tapping the avatar uploads a photo and makes it the account photo',
+      (tester) async {
+    await pumpScreen(tester, routes: {
+      'POST /uploads/photo': (_) => {'url': '/api/v1/uploads/photos/me.jpg'},
+      'PATCH /users/me': (_) =>
+          {...meJson(), 'profilePhotoUrl': '/api/v1/uploads/photos/me.jpg'},
+    });
+
+    await tester.tap(find.byKey(const Key('profile-avatar')));
+    await tester.pumpAndSettle();
+
+    expect(fake.calls, containsAllInOrder(['POST /uploads/photo', 'PATCH /users/me']));
+    expect(fake.bodies.last, {'profilePhotoUrl': '/api/v1/uploads/photos/me.jpg'});
+    expect(customerProfile.value!.photoUrl,
+        'https://example.test/api/v1/uploads/photos/me.jpg');
+    expect(find.text('Photo updated.'), findsOneWidget);
+  });
+
+  testWidgets('a photo that cannot be saved says so', (tester) async {
+    await pumpScreen(tester, routes: {
+      'POST /uploads/photo': (_) => const FakeError(400, 'image must be 5 MB or smaller'),
+    });
+
+    await tester.tap(find.byKey(const Key('profile-avatar')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Could not save the photo: image must be 5 MB or smaller'),
+        findsOneWidget);
+    expect(customerProfile.value!.photoUrl, isNull);
   });
 
   testWidgets('Settings loads the saved switches and saves a change',

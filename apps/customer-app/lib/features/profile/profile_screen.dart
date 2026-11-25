@@ -11,14 +11,19 @@ import '../requirements/my_requests_screen.dart';
 //
 // The name, phone and email come from GET /users/me (see profile_state.dart),
 // reloaded each time the screen opens and on pull to refresh. Edit profile
-// saves through PATCH /users/me. "My requests" and "Log out" are real;
+// saves through PATCH /users/me. Tapping the avatar picks a photo, uploads it
+// and makes it the account photo. "My requests" and "Log out" are real;
 // logging out clears the stored token and the loaded profile, and returns to
 // the login screen with no way back.
 
 class ProfileScreen extends StatefulWidget {
   /// True when shown as the Profile tab under the bottom bar: no back arrow.
   final bool asTab;
-  const ProfileScreen({super.key, this.asTab = false});
+
+  /// Asks for a photo; tests pass a fake. Defaults to the camera or gallery.
+  final PhotoPicker pickPhoto;
+  const ProfileScreen(
+      {super.key, this.asTab = false, this.pickPhoto = choosePhoto});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -27,6 +32,25 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = false;
   bool _failed = false;
+  bool _savingPhoto = false;
+
+  Future<void> _changePhoto() async {
+    final photo = await widget.pickPhoto(context);
+    if (photo == null || !mounted) return;
+    setState(() => _savingPhoto = true);
+    try {
+      await saveCustomerPhoto(photo);
+      if (mounted) showSuccessMessage(context, 'Photo updated.');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text('Could not save the photo: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
+  }
 
   @override
   void initState() {
@@ -118,7 +142,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     details: d,
                     // Keeps showing what is already loaded while it refreshes.
                     loading: _loading && d == null,
-                    failed: _failed && d == null),
+                    failed: _failed && d == null,
+                    savingPhoto: _savingPhoto,
+                    onChangePhoto: _changePhoto),
                 const SizedBox(height: 26),
                 Text('Account',
                     style: OneHubTextStyles.pageHeading(textPrimary)
@@ -212,8 +238,14 @@ class _AccountCard extends StatelessWidget {
   final ProfileDetails? details;
   final bool loading;
   final bool failed;
+  final bool savingPhoto;
+  final VoidCallback onChangePhoto;
   const _AccountCard(
-      {required this.details, required this.loading, required this.failed});
+      {required this.details,
+      required this.loading,
+      required this.failed,
+      required this.savingPhoto,
+      required this.onChangePhoto});
 
   @override
   Widget build(BuildContext context) {
@@ -244,26 +276,12 @@ class _AccountCard extends StatelessWidget {
         padding: const EdgeInsets.all(OneHubTheme.cardPadding),
         child: Row(
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [
-                    OneHubColors.primary,
-                    OneHubColors.primaryGradientEnd
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Text(
-                name.substring(0, 1).toUpperCase(),
-                style: OneHubTextStyles.pageHeading(Colors.white)
-                    .copyWith(fontSize: 24),
-              ),
+            ProfileAvatar(
+              key: const Key('profile-avatar'),
+              name: name,
+              photoUrl: d.photoUrl,
+              busy: savingPhoto,
+              onTap: onChangePhoto,
             ),
             const SizedBox(width: 16),
             Expanded(

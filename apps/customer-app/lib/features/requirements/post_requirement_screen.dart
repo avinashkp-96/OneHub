@@ -13,9 +13,19 @@ import '../../core/widgets/field_label.dart';
 // provider selection since that's a repeated list, not more form-card
 // content, and a page title in the AppBar matching the auth
 // screens' OTP step, rather than an AppBar title plus a second heading.
+//
+// Photos: up to [maxRequestPhotos], each uploaded as soon as it is picked
+// (POST /uploads/photo) so sending only carries their links. Providers see
+// them on the request before they send a price.
+const maxRequestPhotos = 5;
+
 class PostRequirementScreen extends StatefulWidget {
   final String subServiceId;
-  const PostRequirementScreen({super.key, required this.subServiceId});
+
+  /// Asks for a photo; tests pass a fake. Defaults to the camera or gallery.
+  final PhotoPicker pickPhoto;
+  const PostRequirementScreen(
+      {super.key, required this.subServiceId, this.pickPhoto = choosePhoto});
 
   @override
   State<PostRequirementScreen> createState() => _PostRequirementScreenState();
@@ -38,6 +48,24 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   bool _loading = true;
   bool _sending = false;
   String? _error;
+  final List<String> _photoUrls = [];
+  int _uploading = 0;
+
+  Future<void> _addPhoto() async {
+    final photo = await widget.pickPhoto(context);
+    if (photo == null || !mounted) return;
+    setState(() => _uploading++);
+    try {
+      final url = await api.upload('/uploads/photo', photo.bytes, photo.name);
+      if (mounted) setState(() => _photoUrls.add(url));
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = 'Could not add the photo: ${e.message}');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not add the photo: $e');
+    } finally {
+      if (mounted) setState(() => _uploading--);
+    }
+  }
 
   @override
   void initState() {
@@ -97,6 +125,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
             if (_preferredAt != null)
               'preferredAt': _preferredAt!.toIso8601String(),
             'providerIds': _selectedProviderIds.toList(),
+            if (_photoUrls.isNotEmpty) 'photoUrls': _photoUrls,
           },
           auth: true);
       if (mounted) {
@@ -212,6 +241,43 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: OneHubTheme.sectionGap),
+                        const FieldLabel('PHOTOS (OPTIONAL)',
+                            icon: OneHubIcons.image),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (var i = 0; i < _photoUrls.length; i++)
+                              _RemovablePhoto(
+                                key: Key('request-photo-$i'),
+                                url: api.resolve(_photoUrls[i]),
+                                onRemove: () =>
+                                    setState(() => _photoUrls.removeAt(i)),
+                              ),
+                            for (var i = 0; i < _uploading; i++)
+                              const _PhotoSlot(
+                                  child: SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))),
+                            if (_photoUrls.length + _uploading <
+                                maxRequestPhotos)
+                              _PhotoSlot(
+                                key: const Key('add-photo'),
+                                onTap: _addPhoto,
+                                child: Icon(OneHubIcons.camera,
+                                    size: 22, color: textMuted),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                            'Up to $maxRequestPhotos. Providers see them before they send a price.',
+                            style: OneHubTextStyles.fieldLabel(textMuted)
+                                .copyWith(letterSpacing: 0, fontSize: 11)),
                       ],
                     ),
                   ),
@@ -253,7 +319,8 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                     ),
                 const SizedBox(height: 20),
                 PrimaryCta(
-                  onPressed: _sending ? null : _sendRequest,
+                  onPressed:
+                      _sending || _uploading > 0 ? null : _sendRequest,
                   child: _sending
                       ? const SizedBox(
                           height: 20,
@@ -270,6 +337,70 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   }
 
   String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
+}
+
+/// A 72px input-styled slot for the add button or an upload in progress.
+class _PhotoSlot extends StatelessWidget {
+  final Widget child;
+  final VoidCallback? onTap;
+  const _PhotoSlot({super.key, required this.child, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final fill = dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight;
+    final border =
+        dark ? OneHubColors.inputBorderDark : OneHubColors.inputBorderLight;
+    final radius = BorderRadius.circular(OneHubTheme.radiusInputField);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: radius,
+      child: Container(
+        width: 72,
+        height: 72,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+            color: fill, borderRadius: radius, border: Border.all(color: border)),
+        child: child,
+      ),
+    );
+  }
+}
+
+/// An uploaded photo with a small remove button in its corner.
+class _RemovablePhoto extends StatelessWidget {
+  final String url;
+  final VoidCallback onRemove;
+  const _RemovablePhoto({super.key, required this.url, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        PhotoThumb(url: url),
+        Positioned(
+          top: -6,
+          right: -6,
+          child: Semantics(
+            button: true,
+            label: 'Remove photo',
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: context.statusDanger),
+                child: const Icon(OneHubIcons.delete,
+                    size: 13, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _ProviderTile extends StatelessWidget {

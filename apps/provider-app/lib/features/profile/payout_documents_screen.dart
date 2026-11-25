@@ -9,19 +9,27 @@ import '../business/business_details.dart';
 // tile on Profile. Same shell as the other provider screens (PageGlow, page
 // title in the AppBar, one GlowCard).
 //
-// There is no file storage yet, so the photo and the ID proof are links, as at
-// signup. The photo saves through PATCH /users/me; the ID proof and payout
-// details through PATCH /providers/me. The API never sends the ID link or the
-// payout details back, so those two fields start empty and leaving one empty
-// keeps what is on file. A new ID link puts the ID under review; the account
-// stays active meanwhile.
+// The photo and the ID proof are picked from the camera or gallery and
+// uploaded straight away (POST /uploads/photo, /uploads/id-proof); nothing
+// changes on the account until Save changes. The photo then saves through
+// PATCH /users/me, the ID proof and payout details through PATCH
+// /providers/me. The API never sends the ID proof or the payout details back,
+// so leaving them alone keeps what is on file. A new ID proof puts the ID
+// under review; the account stays active meanwhile.
 
 /// Takes the [details] Profile already loaded and an optional [client], like
 /// the other provider screens. Pops with `true` after a successful save.
 class PayoutDocumentsScreen extends StatefulWidget {
   final BusinessDetails details;
   final ApiClient? client;
-  const PayoutDocumentsScreen({super.key, required this.details, this.client});
+
+  /// Asks for a photo; tests pass a fake. Defaults to the camera or gallery.
+  final PhotoPicker pickPhoto;
+  const PayoutDocumentsScreen(
+      {super.key,
+      required this.details,
+      this.client,
+      this.pickPhoto = choosePhoto});
 
   @override
   State<PayoutDocumentsScreen> createState() => _PayoutDocumentsScreenState();
@@ -30,52 +38,78 @@ class PayoutDocumentsScreen extends StatefulWidget {
 class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
   ApiClient get _api => widget.client ?? api;
 
-  late final _photo =
-      TextEditingController(text: widget.details.profilePhotoUrl ?? '');
-  final _idProof = TextEditingController();
+  // The photo as it will be saved: the one on file, a new upload, or null.
+  late String? _photo = widget.details.profilePhotoUrl;
+  String? _newIdProof;
   final _payout = TextEditingController();
 
+  bool _uploadingPhoto = false;
+  bool _uploadingId = false;
   bool _clearPayout = false;
   bool _saving = false;
   String? _error;
 
   @override
   void dispose() {
-    _photo.dispose();
-    _idProof.dispose();
     _payout.dispose();
     super.dispose();
   }
 
-  static bool _looksLikeLink(String v) =>
-      RegExp(r'^https?://\S+\.\S+$').hasMatch(v);
+  Future<String?> _upload(String path) async {
+    final photo = await widget.pickPhoto(context);
+    if (photo == null || !mounted) return null;
+    try {
+      return await _api.upload(path, photo.bytes, photo.name);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = 'Could not upload: ${e.message}');
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Could not upload: $e');
+    }
+    return null;
+  }
+
+  Future<void> _changePhoto() async {
+    setState(() {
+      _uploadingPhoto = true;
+      _error = null;
+    });
+    final url = await _upload('/uploads/photo');
+    if (!mounted) return;
+    setState(() {
+      if (url != null) _photo = url;
+      _uploadingPhoto = false;
+    });
+  }
+
+  Future<void> _uploadIdProof() async {
+    setState(() {
+      _uploadingId = true;
+      _error = null;
+    });
+    final ref = await _upload('/uploads/id-proof');
+    if (!mounted) return;
+    setState(() {
+      if (ref != null) _newIdProof = ref;
+      _uploadingId = false;
+    });
+  }
 
   Future<void> _save() async {
-    final photo = _photo.text.trim();
-    final idProof = _idProof.text.trim();
     final payout = _payout.text.trim();
-
-    String? problem;
-    if (photo.isNotEmpty && !_looksLikeLink(photo)) {
-      problem = 'The photo link must start with http:// or https://.';
-    } else if (idProof.isNotEmpty && !_looksLikeLink(idProof)) {
-      problem = 'The ID proof link must start with http:// or https://.';
-    } else if (payout.length > 120) {
-      problem = 'Bank or UPI details must be 120 characters or fewer.';
-    }
-    if (problem != null) {
-      setState(() => _error = problem);
+    if (payout.length > 120) {
+      setState(() =>
+          _error = 'Bank or UPI details must be 120 characters or fewer.');
       return;
     }
 
     final business = <String, dynamic>{
-      if (idProof.isNotEmpty) 'idProofUrl': idProof,
+      if (_newIdProof != null) 'idProofUrl': _newIdProof,
       if (payout.isNotEmpty)
         'bankOrUpiDetails': payout
       else if (_clearPayout)
         'bankOrUpiDetails': '',
     };
-    final photoChanged = photo != (widget.details.profilePhotoUrl ?? '');
+    final photoChanged = _photo != widget.details.profilePhotoUrl;
     if (business.isEmpty && !photoChanged) {
       setState(() => _error = 'Nothing to save yet.');
       return;
@@ -87,8 +121,7 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
     });
     try {
       if (photoChanged) {
-        await _api.patch(
-            '/users/me', {'profilePhotoUrl': photo.isEmpty ? null : photo},
+        await _api.patch('/users/me', {'profilePhotoUrl': _photo},
             auth: true);
       }
       if (business.isNotEmpty) {
@@ -98,7 +131,7 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
       final messenger = ScaffoldMessenger.of(context);
       final bar = successSnackBar(
           context,
-          idProof.isNotEmpty
+          _newIdProof != null
               ? 'Saved. Your new ID is under review.'
               : 'Saved.');
       Navigator.of(context).pop(true);
@@ -125,12 +158,16 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
     final hintStyle = OneHubTextStyles.fieldLabel(textMuted)
         .copyWith(letterSpacing: 0, fontSize: 11);
 
-    final (idLabel, idColor) = d.idProofNeedsReview
-        ? ('UNDER REVIEW', context.statusWarning)
-        : d.idProofOnFile
-            ? ('ON FILE', context.statusSuccess)
-            : ('NOT ADDED', context.statusDanger);
+    final (idLabel, idColor) = _newIdProof != null
+        ? ('READY TO SAVE', OneHubColors.primary)
+        : d.idProofNeedsReview
+            ? ('UNDER REVIEW', context.statusWarning)
+            : d.idProofOnFile
+                ? ('ON FILE', context.statusSuccess)
+                : ('NOT ADDED', context.statusDanger);
     final masked = d.bankOrUpiMasked;
+    final photo = _photo;
+    final busy = _uploadingPhoto || _uploadingId;
 
     return Scaffold(
       appBar: AppBar(
@@ -151,42 +188,79 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const FieldLabel('PROFILE PHOTO LINK',
+                      const FieldLabel('PROFILE PHOTO',
                           icon: OneHubIcons.profile),
                       const SizedBox(height: OneHubTheme.gapFieldInternals),
-                      TextField(
-                        key: const Key('photo-field'),
-                        controller: _photo,
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                            hintText: 'https://example.com/photo.jpg'),
+                      Row(
+                        children: [
+                          ProfileAvatar(
+                            key: const Key('photo-preview'),
+                            name: d.businessName,
+                            photoUrl: photo == null ? null : _api.resolve(photo),
+                            busy: _uploadingPhoto,
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                OutlinedButton.icon(
+                                  key: const Key('change-photo'),
+                                  onPressed: busy ? null : _changePhoto,
+                                  icon: const Icon(OneHubIcons.camera, size: 16),
+                                  label: Text(photo == null
+                                      ? 'Add photo'
+                                      : 'Change photo'),
+                                ),
+                                if (photo != null)
+                                  TextButton(
+                                    key: const Key('remove-photo'),
+                                    onPressed: busy
+                                        ? null
+                                        : () => setState(() => _photo = null),
+                                    child: Text('Remove',
+                                        style: TextStyle(
+                                            color: context.statusDanger)),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 6),
-                      Text('Leave empty to show your initial instead.',
+                      Text('Without a photo your initial is shown.',
                           style: hintStyle),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       Row(
                         children: [
                           const Expanded(
-                            child: FieldLabel('ID PROOF LINK',
+                            child: FieldLabel('ID PROOF',
                                 icon: OneHubIcons.documentList),
                           ),
                           TintedBadge(label: idLabel, color: idColor),
                         ],
                       ),
                       const SizedBox(height: OneHubTheme.gapFieldInternals),
-                      TextField(
-                        key: const Key('id-proof-field'),
-                        controller: _idProof,
-                        keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                            hintText: 'Link to a new ID proof'),
+                      OutlinedButton.icon(
+                        key: const Key('upload-id-proof'),
+                        onPressed: busy ? null : _uploadIdProof,
+                        icon: _uploadingId
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(OneHubIcons.camera, size: 16),
+                        label: Text(_newIdProof == null
+                            ? 'Upload a new ID proof'
+                            : 'Choose a different one'),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                          'Leave empty to keep the one on file. A new ID is '
-                          'reviewed by OneHub; you keep receiving requests '
-                          'meanwhile.',
+                          'A photo of your Aadhaar or PAN. Only OneHub sees '
+                          'it. A new ID is reviewed; you keep receiving '
+                          'requests meanwhile.',
                           style: hintStyle),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       const FieldLabel('BANK ACCOUNT OR UPI ID',
@@ -239,7 +313,7 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
               ),
               const SizedBox(height: 24),
               PrimaryCta(
-                  onPressed: _saving ? null : _save,
+                  onPressed: _saving || busy ? null : _save,
                   child: Text(_saving ? 'Saving…' : 'Save changes')),
               const SizedBox(height: 12),
               Text(

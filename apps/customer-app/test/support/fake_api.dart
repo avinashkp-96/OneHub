@@ -27,7 +27,10 @@ class FakeApi {
         baseUrl: 'https://example.test',
         httpClient: MockClient((request) async {
           calls.add('${request.method} ${request.url.path}');
-          if (request.method != 'GET' && request.body.isNotEmpty) {
+          // JSON bodies only: an upload is multipart, and binary.
+          if (request.method != 'GET' &&
+              (request.headers['content-type'] ?? '').contains('json') &&
+              request.body.isNotEmpty) {
             bodies.add(jsonDecode(request.body) as Map<String, dynamic>);
           }
           final handler = routes['${request.method} ${request.url.path}'];

@@ -12,6 +12,10 @@ ProfileDetails _fromJson(Map<String, dynamic> json) => ProfileDetails(
       name: json['fullName'] as String? ?? '',
       phone: phoneLabel(json['mobile'] as String? ?? ''),
       email: json['email'] as String? ?? '',
+      photoUrl: switch (json['profilePhotoUrl']) {
+        final String url => api.resolve(url),
+        _ => null,
+      },
     );
 
 /// "9000000001" as "+91 90000 00001"; anything else as it is.
@@ -31,6 +35,19 @@ Future<void> saveCustomerProfile(String name, String email) async {
     final json = await api.patch(
         '/users/me', {'fullName': name, 'email': email.isEmpty ? null : email},
         auth: true);
+    customerProfile.value = _fromJson(json);
+  } on ApiException catch (e) {
+    throw e.message;
+  }
+}
+
+/// Uploads [photo] and makes it the account photo. Throws a message the
+/// Profile screen can show.
+Future<void> saveCustomerPhoto(PickedPhoto photo) async {
+  try {
+    final url = await api.upload('/uploads/photo', photo.bytes, photo.name);
+    final json =
+        await api.patch('/users/me', {'profilePhotoUrl': url}, auth: true);
     customerProfile.value = _fromJson(json);
   } on ApiException catch (e) {
     throw e.message;

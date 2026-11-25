@@ -29,7 +29,11 @@ class ProfileScreen extends StatefulWidget {
 
   /// True when shown as the Profile tab under the bottom bar: no back arrow.
   final bool asTab;
-  const ProfileScreen({super.key, this.client, this.asTab = false});
+
+  /// Asks for a photo; tests pass a fake. Defaults to the camera or gallery.
+  final PhotoPicker pickPhoto;
+  const ProfileScreen(
+      {super.key, this.client, this.asTab = false, this.pickPhoto = choosePhoto});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -40,6 +44,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   BusinessDetails? _details;
   bool _loading = true;
+  bool _savingPhoto = false;
+
+  // Tapping the avatar: pick, upload, save as the account photo, reload.
+  Future<void> _changePhoto() async {
+    final photo = await widget.pickPhoto(context);
+    if (photo == null || !mounted) return;
+    setState(() => _savingPhoto = true);
+    try {
+      final url = await _api.upload('/uploads/photo', photo.bytes, photo.name);
+      await _api.patch('/users/me', {'profilePhotoUrl': url}, auth: true);
+      await _load();
+      if (mounted) showSuccessMessage(context, 'Photo updated.');
+    } catch (e) {
+      if (mounted) {
+        final message = e is ApiException ? e.message : '$e';
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+              SnackBar(content: Text('Could not save the photo: $message')));
+      }
+    } finally {
+      if (mounted) setState(() => _savingPhoto = false);
+    }
+  }
 
   @override
   void initState() {
@@ -151,7 +179,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Text('Your provider account.',
                     style: OneHubTextStyles.bodyText(textSecondary)),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                _AccountCard(details: d, loading: _loading),
+                _AccountCard(
+                    details: d,
+                    loading: _loading && !_savingPhoto,
+                    resolve: _api.resolve,
+                    savingPhoto: _savingPhoto,
+                    onChangePhoto: _changePhoto),
                 const SizedBox(height: 26),
                 _BusinessCard(
                   details: d,
@@ -180,7 +213,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   onTap: () {
                     if (d != null) {
                       _openThenReload(
-                          PayoutDocumentsScreen(details: d, client: client));
+                          PayoutDocumentsScreen(
+                              details: d,
+                              client: client,
+                              pickPhoto: widget.pickPhoto));
                     }
                   },
                 ),
@@ -278,13 +314,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
-/// Avatar (the photo link when there is one, else the initial), business
-/// name, phone and email, and a verification badge: ID UNDER REVIEW while a
-/// new ID proof waits, VERIFIED when active, PENDING otherwise.
+/// Avatar (the photo when there is one, else the initial; tapping it changes
+/// the photo), business name, phone and email, and a verification badge: ID
+/// UNDER REVIEW while a new ID proof waits, VERIFIED when active, PENDING
+/// otherwise.
 class _AccountCard extends StatelessWidget {
   final BusinessDetails? details;
   final bool loading;
-  const _AccountCard({required this.details, required this.loading});
+  final String Function(String url) resolve;
+  final bool savingPhoto;
+  final VoidCallback onChangePhoto;
+  const _AccountCard(
+      {required this.details,
+      required this.loading,
+      required this.resolve,
+      required this.savingPhoto,
+      required this.onChangePhoto});
 
   @override
   Widget build(BuildContext context) {
@@ -322,33 +367,12 @@ class _AccountCard extends StatelessWidget {
         padding: const EdgeInsets.all(OneHubTheme.cardPadding),
         child: Row(
           children: [
-            Container(
+            ProfileAvatar(
               key: const Key('profile-avatar'),
-              width: 56,
-              height: 56,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [
-                    OneHubColors.primary,
-                    OneHubColors.primaryGradientEnd
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                image: photo == null
-                    ? null
-                    : DecorationImage(
-                        image: NetworkImage(photo),
-                        fit: BoxFit.cover,
-                        onError: (_, __) {}),
-              ),
-              child: photo == null
-                  ? Text(name.substring(0, 1).toUpperCase(),
-                      style: OneHubTextStyles.pageHeading(Colors.white)
-                          .copyWith(fontSize: 24))
-                  : null,
+              name: name,
+              photoUrl: photo == null ? null : resolve(photo),
+              busy: savingPhoto,
+              onTap: onChangePhoto,
             ),
             const SizedBox(width: 16),
             Expanded(
