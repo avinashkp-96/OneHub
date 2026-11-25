@@ -42,7 +42,7 @@ class _BidListScreenState extends State<BidListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load bids: $e';
+        _error = 'Could not load bids. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -56,7 +56,7 @@ class _BidListScreenState extends State<BidListScreen> {
       showSuccessMessage(context, 'Provider confirmed. They will be in touch.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not confirm this provider: $e');
+      setState(() => _error = 'Could not confirm this provider. ${userMessage(e)}');
     }
   }
 

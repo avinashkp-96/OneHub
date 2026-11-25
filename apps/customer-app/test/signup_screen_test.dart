@@ -95,11 +95,11 @@ void main() {
     await pumpScreen(tester);
 
     await submitForm(tester);
-    expect(find.text('Full name is required.'), findsOneWidget);
+    expect(find.text('Enter your full name.'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, 'John Doe'), 'Meera');
     await submitForm(tester);
-    expect(find.text('Enter a valid 10-digit mobile number.'), findsOneWidget);
+    expect(find.text('Enter a 10-digit mobile number.'), findsOneWidget);
 
     await tester.enterText(
         find.widgetWithText(TextField, '10-digit number'), '9876543210');
@@ -114,7 +114,7 @@ void main() {
     await tester.enterText(
         find.widgetWithText(TextField, 'Re-enter'), 'different');
     await submitForm(tester);
-    expect(find.text('Password and confirmation must match.'), findsOneWidget);
+    expect(find.text('The passwords do not match.'), findsOneWidget);
 
     await tester.enterText(
         find.widgetWithText(TextField, 'Re-enter'), 'secret1');
@@ -262,7 +262,7 @@ void main() {
         .tap(find.widgetWithText(PrimaryCta, 'Verify & Create Account'));
     await tester.pump();
 
-    expect(find.text('Enter the 6-digit code.'), findsOneWidget);
+    expect(find.text('Enter the 6-digit code we sent you.'), findsOneWidget);
     expect(fake.calls.where((c) => c.contains('signup')), isEmpty);
   });
 
@@ -310,7 +310,7 @@ void main() {
     await fillForm(tester);
     await submitForm(tester);
 
-    expect(find.textContaining('Could not send an OTP'), findsOneWidget);
+    expect(find.text(serverTroubleMessage), findsOneWidget);
     expect(find.text('Phone Verification'), findsNothing);
   });
 
@@ -327,8 +327,32 @@ void main() {
         .tap(find.widgetWithText(PrimaryCta, 'Verify & Create Account'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Could not verify that code'), findsOneWidget);
+    // A code problem stays on the code step, under the boxes.
+    expect(find.text('Wrong code.'), findsOneWidget);
+    expect(find.text('Phone Verification'), findsOneWidget);
     expect(find.text('Account Created!'), findsNothing);
+  });
+
+  testWidgets('a number already registered goes back to the form, under the mobile field',
+      (tester) async {
+    installFakeApi({
+      'POST /auth/otp/request': (_) => {'sent': true},
+      'POST /auth/customer/signup': (_) =>
+          const FakeError(409, 'mobile number already registered'),
+    });
+    await pumpScreen(tester);
+    await fillForm(tester);
+    await submitForm(tester);
+    await enterCode(tester, '123456');
+    await tester
+        .tap(find.widgetWithText(PrimaryCta, 'Verify & Create Account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Create Account.'), findsOneWidget);
+    final mobile = tester.widget<TextField>(
+        find.widgetWithText(TextField, '9876543210'));
+    expect(mobile.decoration!.errorText,
+        'This mobile number is already registered. Log in instead.');
   });
 
   testWidgets('shows an error when resending fails', (tester) async {
@@ -345,6 +369,6 @@ void main() {
     await tester.tap(find.text('Resend code'));
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.textContaining('Could not resend the OTP'), findsOneWidget);
+    expect(find.text('Slow down.'), findsOneWidget);
   });
 }

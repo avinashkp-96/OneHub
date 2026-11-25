@@ -13,17 +13,24 @@ class AddressDraft {
   String label = 'Home';
   SavedLocation? location;
 
-  /// The first thing missing or wrong, worded for the user; null when the
-  /// address is complete.
-  String? problem() {
-    if (location == null) return 'Set the address on the map: use GPS or pick your area.';
-    if (house.text.trim().isEmpty) return 'Enter the house or flat number.';
-    if (street.text.trim().isEmpty) return 'Enter the street and area.';
-    if (!RegExp(r'^[1-9][0-9]{5}$').hasMatch(pincode.text.trim())) {
-      return 'Enter a 6-digit PIN code.';
-    }
-    return null;
-  }
+  /// Everything missing or wrong, keyed by field (location, house, street,
+  /// pincode) and worded for the user; empty when the address is complete.
+  Map<String, String> problems() => {
+        if (location == null)
+          'location': 'Set the address on the map: use GPS or pick your area.',
+        if (house.text.trim().isEmpty) 'house': 'Enter the house or flat number.',
+        if (street.text.trim().isEmpty) 'street': 'Enter the street and area.',
+        if (!RegExp(r'^[1-9][0-9]{5}$').hasMatch(pincode.text.trim()))
+          'pincode': 'Enter a 6-digit PIN code.',
+      };
+
+  /// Which address field an API refusal is about, by its words.
+  static const apiFields = {
+    'house': ['house'],
+    'street': ['street'],
+    'pincode': ['pincode', 'pin code'],
+    'location': ['latitude', 'longitude'],
+  };
 
   JobAddress toAddress() => JobAddress(
         label: label,
@@ -54,6 +61,13 @@ class AddressFields extends StatefulWidget {
   final bool showLabel;
   final bool enabled;
 
+  /// Problems to show under each field (location, house, street, pincode).
+  final Map<String, String> errors;
+
+  /// Called with a field's name when the customer changes it, so its error
+  /// can be cleared.
+  final ValueChanged<String>? onEdited;
+
   /// Asks where the address is; tests pass one to skip the sheet and GPS.
   final LocationPicker? pickLocation;
   const AddressFields({
@@ -62,6 +76,8 @@ class AddressFields extends StatefulWidget {
     this.showLabel = false,
     this.enabled = true,
     this.pickLocation,
+    this.errors = const {},
+    this.onEdited,
   });
 
   @override
@@ -76,6 +92,7 @@ class _AddressFieldsState extends State<AddressFields> {
     final picked = await pick(context, widget.draft.location);
     if (picked != null && mounted) {
       setState(() => widget.draft.location = picked);
+      widget.onEdited?.call('location');
     }
   }
 
@@ -130,6 +147,7 @@ class _AddressFieldsState extends State<AddressFields> {
             ],
           ],
         ),
+        FieldError(widget.errors['location']),
         gap,
         const FieldLabel('HOUSE / FLAT NO. AND BUILDING', required: true, icon: OneHubIcons.home),
         inner,
@@ -137,7 +155,10 @@ class _AddressFieldsState extends State<AddressFields> {
           key: const Key('address-house'),
           controller: draft.house,
           enabled: widget.enabled,
-          decoration: const InputDecoration(hintText: 'e.g. 12B, Palm Grove Apartments'),
+          onChanged: (_) => widget.onEdited?.call('house'),
+          decoration: InputDecoration(
+              hintText: 'e.g. 12B, Palm Grove Apartments',
+              errorText: widget.errors['house']),
         ),
         gap,
         const FieldLabel('STREET AND AREA', required: true),
@@ -146,7 +167,10 @@ class _AddressFieldsState extends State<AddressFields> {
           key: const Key('address-street'),
           controller: draft.street,
           enabled: widget.enabled,
-          decoration: const InputDecoration(hintText: 'e.g. Changampuzha Nagar, Edappally'),
+          onChanged: (_) => widget.onEdited?.call('street'),
+          decoration: InputDecoration(
+              hintText: 'e.g. Changampuzha Nagar, Edappally',
+              errorText: widget.errors['street']),
         ),
         gap,
         const FieldLabel('LANDMARK (optional)'),
@@ -166,7 +190,11 @@ class _AddressFieldsState extends State<AddressFields> {
           enabled: widget.enabled,
           keyboardType: TextInputType.number,
           maxLength: 6,
-          decoration: const InputDecoration(hintText: '6 digits', counterText: ''),
+          onChanged: (_) => widget.onEdited?.call('pincode'),
+          decoration: InputDecoration(
+              hintText: '6 digits',
+              counterText: '',
+              errorText: widget.errors['pincode']),
         ),
         const SizedBox(height: 6),
         Text('Only the provider you choose sees the full address.',
@@ -190,7 +218,9 @@ class AddressFormScreen extends StatefulWidget {
 class _AddressFormScreenState extends State<AddressFormScreen> {
   final _draft = AddressDraft();
   bool _saving = false;
+  // A problem that belongs to no field, shown above the form.
   String? _error;
+  final Map<String, String> _fieldErrors = {};
 
   @override
   void dispose() {
@@ -199,11 +229,13 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
   }
 
   Future<void> _save() async {
-    final problem = _draft.problem();
-    if (problem != null) {
-      setState(() => _error = problem);
-      return;
-    }
+    final problems = _draft.problems();
+    setState(() {
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
+    });
+    if (problems.isNotEmpty) return;
     setState(() {
       _saving = true;
       _error = null;
@@ -215,8 +247,13 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
       Navigator.of(context).pop(JobAddress.tryParse(json));
     } catch (e) {
       if (!mounted) return;
+      final field = errorField(e, AddressDraft.apiFields);
       setState(() {
-        _error = 'Could not save the address: $e';
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = 'Could not save the address. ${userMessage(e)}';
+        }
         _saving = false;
       });
     }
@@ -256,7 +293,11 @@ class _AddressFormScreenState extends State<AddressFormScreen> {
                           draft: _draft,
                           showLabel: true,
                           enabled: !_saving,
-                          pickLocation: widget.pickLocation),
+                          pickLocation: widget.pickLocation,
+                          errors: _fieldErrors,
+                          onEdited: (f) {
+                            if (_fieldErrors.remove(f) != null) setState(() {});
+                          }),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       PrimaryCta(
                           onPressed: _saving ? null : _save,

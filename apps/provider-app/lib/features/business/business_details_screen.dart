@@ -45,7 +45,15 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
   bool _loading = true;
   bool _loadingSubServices = false;
   bool _saving = false;
+  // A problem that belongs to no field (no connection, a server fault).
   String? _error;
+  // Problems shown under their own field: experience, location, coverage,
+  // services.
+  final Map<String, String> _fieldErrors = {};
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
 
   @override
   void initState() {
@@ -85,7 +93,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load your business details: $e';
+        _error = 'Could not load your business details. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -119,7 +127,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load services: $e';
+        _error = 'Could not load services. ${userMessage(e)}';
         _loadingSubServices = false;
       });
     }
@@ -127,7 +135,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
 
   void _toggleService(String id) => setState(() {
         if (!_selectedIds.remove(id)) _selectedIds.add(id);
-        _error = null;
+        _fieldErrors.remove('services');
       });
 
   Future<void> _chooseLocation() async {
@@ -138,7 +146,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
     if (picked != null && mounted) {
       setState(() {
         _location = picked;
-        _error = null;
+        _fieldErrors.remove('location');
       });
     }
   }
@@ -149,26 +157,24 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
         experienceText.isEmpty ? null : int.tryParse(experienceText);
     final coverage = double.tryParse(_coverage.text.trim());
 
-    String? problem;
-    if (experienceText.isNotEmpty &&
-        (experience == null || experience < 0 || experience > 60)) {
-      problem = 'Experience must be a whole number from 0 to 60.';
-    } else if (_location == null) {
-      problem = 'Choose where your business is.';
-    } else if (coverage == null || coverage < 1 || coverage > 100) {
-      problem = 'Coverage must be between 1 and 100 km.';
-    } else if (_selectedIds.isEmpty) {
-      problem = 'Pick at least one service you offer.';
-    }
-    if (problem != null) {
-      setState(() => _error = problem);
-      return;
-    }
-
+    final problems = {
+      if (experienceText.isNotEmpty &&
+          (experience == null || experience < 0 || experience > 60))
+        'experience': 'Experience must be a whole number from 0 to 60.',
+      if (_location == null) 'location': 'Choose where your business is.',
+      if (coverage == null || coverage < 1 || coverage > 100)
+        'coverage': 'Coverage must be between 1 and 100 km.',
+      if (_selectedIds.isEmpty) 'services': 'Pick at least one service you offer.',
+    };
     setState(() {
-      _saving = true;
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
       _error = null;
     });
+    if (problems.isNotEmpty) return;
+
+    setState(() => _saving = true);
     try {
       final location = _location!;
       final before = _saved?.location;
@@ -195,8 +201,18 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
         ..showSnackBar(bar);
     } catch (e) {
       if (!mounted) return;
+      final field = errorField(e, const {
+        'experience': ['experience'],
+        'coverage': ['coverage'],
+        'location': ['latitude', 'longitude', 'business is'],
+        'services': ['sub-service', 'category'],
+      });
       setState(() {
-        _error = 'Could not save your business details: $e';
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = 'Could not save your business details. ${userMessage(e)}';
+        }
         _saving = false;
       });
     }
@@ -258,7 +274,10 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                         TextField(
                           controller: _experience,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: 'e.g. 5'),
+                          onChanged: (_) => _clear('experience'),
+                          decoration: InputDecoration(
+                              hintText: 'e.g. 5',
+                              errorText: _fieldErrors['experience']),
                         ),
                         const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('BUSINESS LOCATION',
@@ -267,6 +286,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                         LocationField(
                             location: _location,
                             onPressed: _saving ? null : _chooseLocation),
+                        FieldError(_fieldErrors['location']),
                         const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('COVERAGE RADIUS (km)',
                             required: true, icon: OneHubIcons.location),
@@ -275,8 +295,10 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                           controller: _coverage,
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
-                          decoration:
-                              const InputDecoration(hintText: 'e.g. 10'),
+                          onChanged: (_) => _clear('coverage'),
+                          decoration: InputDecoration(
+                              hintText: 'e.g. 10',
+                              errorText: _fieldErrors['coverage']),
                         ),
                       ],
                     ),
@@ -321,6 +343,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                       ],
                     ),
                 ],
+                FieldError(_fieldErrors['services']),
                 errorText,
                 const SizedBox(height: 32),
                 PrimaryCta(

@@ -54,39 +54,75 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  String? _validateForm() {
-    if (_fullName.text.trim().isEmpty) return 'Full name is required.';
-    if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
-      return 'Enter a valid 10-digit mobile number.';
-    }
-    if (_password.text.length < 6) {
-      return 'Password must be at least 6 characters.';
-    }
-    if (_password.text != _confirmPassword.text) {
-      return 'Password and confirmation must match.';
-    }
-    final addressProblem = _address.problem();
-    if (addressProblem != null) return addressProblem;
-    if (!_acceptedTerms) return 'Accept the Terms & Conditions to continue.';
-    return null;
+  // Problems shown under their own field on the form step: name, mobile,
+  // email, password, confirm, the address fields, terms. [_error] holds what
+  // belongs to no field, and on the code step, the code's problem.
+  final Map<String, String> _fieldErrors = {};
+
+  static const _apiFields = {
+    'mobile': ['mobile'],
+    'email': ['email'],
+    'confirm': ['match'],
+    'password': ['password'],
+    'name': ['fullname', 'name'],
+    ...AddressDraft.apiFields,
+  };
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
+
+  /// Every problem on the form, keyed by the field it belongs to.
+  Map<String, String> _validateForm() {
+    final email = _email.text.trim();
+    return {
+      if (_fullName.text.trim().isEmpty) 'name': 'Enter your full name.',
+      if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim()))
+        'mobile': 'Enter a 10-digit mobile number.',
+      if (email.isNotEmpty &&
+          !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email))
+        'email': 'Enter a valid email address.',
+      if (_password.text.length < 6)
+        'password': 'Password must be at least 6 characters.',
+      if (_password.text != _confirmPassword.text)
+        'confirm': 'The passwords do not match.',
+      ..._address.problems(),
+      if (!_acceptedTerms) 'terms': 'Accept the Terms & Conditions to continue.',
+    };
+  }
+
+  // Puts [e] under its field (back on the form step if it is about one),
+  // else on the current step.
+  void _fail(Object e) {
+    final onCode = errorField(e, const {'otp': ['otp', 'code']}) != null;
+    final field = onCode ? null : errorField(e, _apiFields);
+    setState(() {
+      if (field != null) {
+        _fieldErrors[field] = userMessage(e);
+        _step = _Step.form;
+        _error = null;
+      } else {
+        _error = userMessage(e);
+      }
+    });
   }
 
   Future<void> _submitForm() async {
-    final validationError = _validateForm();
-    if (validationError != null) {
-      setState(() => _error = validationError);
-      return;
-    }
+    final problems = _validateForm();
     setState(() {
-      _busy = true;
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
       _error = null;
     });
+    if (problems.isNotEmpty) return;
+    setState(() => _busy = true);
     try {
       await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
       setState(() => _step = _Step.otp);
       _startResendTimer();
     } catch (e) {
-      setState(() => _error = 'Could not send an OTP: $e');
+      _fail(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -111,13 +147,13 @@ class _SignupScreenState extends State<SignupScreen> {
       await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
       _startResendTimer();
     } catch (e) {
-      setState(() => _error = 'Could not resend the OTP: $e');
+      _fail(e);
     }
   }
 
   Future<void> _verifyAndCreateAccount() async {
     if (_otp.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code.');
+      setState(() => _error = 'Enter the 6-digit code we sent you.');
       return;
     }
     setState(() {
@@ -137,7 +173,7 @@ class _SignupScreenState extends State<SignupScreen> {
       _resendTimer?.cancel();
       setState(() => _step = _Step.success);
     } catch (e) {
-      setState(() => _error = 'Could not verify that code: $e');
+      _fail(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -173,13 +209,19 @@ class _SignupScreenState extends State<SignupScreen> {
                       setState(() => _obscurePassword = !_obscurePassword),
                   onToggleConfirmPassword: () => setState(
                       () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  fieldErrors: _fieldErrors,
+                  onEdited: _clear,
                   address: AddressFields(
                       draft: _address,
                       enabled: !_busy,
-                      pickLocation: widget.pickLocation),
+                      pickLocation: widget.pickLocation,
+                      errors: _fieldErrors,
+                      onEdited: _clear),
                   acceptedTerms: _acceptedTerms,
-                  onAcceptedTermsChanged: (v) =>
-                      setState(() => _acceptedTerms = v ?? false),
+                  onAcceptedTermsChanged: (v) => setState(() {
+                        _acceptedTerms = v ?? false;
+                        _fieldErrors.remove('terms');
+                      }),
                   error: _error,
                   busy: _busy,
                   onSubmit: _submitForm,
@@ -219,9 +261,13 @@ class _FormStep extends StatelessWidget {
   final ValueChanged<bool?> onAcceptedTermsChanged;
   final String? error;
   final Widget address;
+  final Map<String, String> fieldErrors;
+  final ValueChanged<String> onEdited;
 
   const _FormStep({
     required this.address,
+    required this.fieldErrors,
+    required this.onEdited,
     required this.fullName,
     required this.mobile,
     required this.email,
@@ -278,7 +324,9 @@ class _FormStep extends StatelessWidget {
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                     controller: fullName,
-                    decoration: const InputDecoration(hintText: 'John Doe')),
+                    onChanged: (_) => onEdited('name'),
+                    decoration: InputDecoration(
+                        hintText: 'John Doe', errorText: fieldErrors['name'])),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('MOBILE NUMBER',
                     required: true, icon: OneHubIcons.phone),
@@ -286,8 +334,10 @@ class _FormStep extends StatelessWidget {
                 TextField(
                   controller: mobile,
                   keyboardType: TextInputType.phone,
-                  decoration:
-                      const InputDecoration(hintText: '10-digit number'),
+                  onChanged: (_) => onEdited('mobile'),
+                  decoration: InputDecoration(
+                      hintText: '10-digit number',
+                      errorText: fieldErrors['mobile']),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('EMAIL ID (optional)',
@@ -296,8 +346,10 @@ class _FormStep extends StatelessWidget {
                 TextField(
                   controller: email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration:
-                      const InputDecoration(hintText: 'you@example.com'),
+                  onChanged: (_) => onEdited('email'),
+                  decoration: InputDecoration(
+                      hintText: 'you@example.com',
+                      errorText: fieldErrors['email']),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 const FieldLabel('PASSWORD',
@@ -306,8 +358,10 @@ class _FormStep extends StatelessWidget {
                 TextField(
                   controller: password,
                   obscureText: obscurePassword,
+                  onChanged: (_) => onEdited('password'),
                   decoration: InputDecoration(
                     hintText: 'Min. 6 chars',
+                    errorText: fieldErrors['password'],
                     suffixIcon: IconButton(
                       icon: Icon(obscurePassword
                           ? OneHubIcons.hide
@@ -323,8 +377,10 @@ class _FormStep extends StatelessWidget {
                 TextField(
                   controller: confirmPassword,
                   obscureText: obscureConfirmPassword,
+                  onChanged: (_) => onEdited('confirm'),
                   decoration: InputDecoration(
                     hintText: 'Re-enter',
+                    errorText: fieldErrors['confirm'],
                     suffixIcon: IconButton(
                       icon: Icon(obscureConfirmPassword
                           ? OneHubIcons.hide
@@ -357,6 +413,7 @@ class _FormStep extends StatelessWidget {
                         textColor: textSecondary, linkColor: primary),
                   ),
                 ),
+                FieldError(fieldErrors['terms']),
                 const SizedBox(height: 8),
                 PrimaryCta(
                     onPressed: busy ? null : onSubmit,
@@ -431,12 +488,8 @@ class _OtpStep extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (error != null)
-                  Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: Text(error!,
-                          style: TextStyle(color: context.statusDanger))),
                 OtpInput(onChanged: onChanged),
+                Center(child: FieldError(error)),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 Center(
                   child: resendSecondsLeft > 0

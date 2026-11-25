@@ -23,13 +23,17 @@ class _RatingScreenState extends State<RatingScreen> {
   int _stars = 0;
   final _feedback = TextEditingController();
   bool _busy = false;
+  // A submit that failed (no connection, already rated), shown above the
+  // Submit button.
   String? _error;
+  // "Select a star rating.", shown under the stars.
+  String? _starsError;
 
   static const _starLabels = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
 
   Future<void> _submit() async {
     if (_stars == 0) {
-      setState(() => _error = 'Select a star rating.');
+      setState(() => _starsError = 'Select a star rating.');
       return;
     }
     setState(() {
@@ -57,7 +61,7 @@ class _RatingScreenState extends State<RatingScreen> {
           ..showSnackBar(bar);
       }
     } catch (e) {
-      setState(() => _error = 'Could not submit your rating: $e');
+      setState(() => _error = 'Could not submit your rating. ${userMessage(e)}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -86,12 +90,6 @@ class _RatingScreenState extends State<RatingScreen> {
                 style: OneHubTextStyles.bodyText(textSecondary),
               ),
               const SizedBox(height: OneHubTheme.sectionGap),
-              if (_error != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(_error!,
-                      style: TextStyle(color: context.statusDanger)),
-                ),
               GlowCard(
                 child: Padding(
                   padding: const EdgeInsets.all(OneHubTheme.cardPadding),
@@ -112,13 +110,17 @@ class _RatingScreenState extends State<RatingScreen> {
                                         : OneHubIcons.starOutline,
                                     color: context.statusWarning,
                                   ),
-                                  onPressed: () => setState(() => _stars = i),
+                                  onPressed: () => setState(() {
+                                    _stars = i;
+                                    _starsError = null;
+                                  }),
                                 ),
                             ],
                           ),
                           if (_stars > 0)
                             Text(_starLabels[_stars],
                                 style: OneHubTextStyles.bodyText(textMuted)),
+                          FieldError(_starsError),
                         ],
                       ),
                       const SizedBox(height: OneHubTheme.sectionGap),
@@ -136,6 +138,12 @@ class _RatingScreenState extends State<RatingScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(_error!,
+                      style: TextStyle(color: context.statusDanger)),
+                ),
               PrimaryCta(
                 onPressed: _busy ? null : _submit,
                 child: _busy

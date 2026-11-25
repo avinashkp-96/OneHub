@@ -45,7 +45,7 @@ class _CategoryGridScreenState extends State<CategoryGridScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load categories: $e';
+        _error = 'Could not load categories. ${userMessage(e)}';
         _loading = false;
       });
     }

@@ -212,7 +212,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EditProfileScreen), findsOneWidget);
-    expect(find.text('Could not save your profile: email already in use'),
+    expect(find.text('Another account already uses this email.'),
         findsOneWidget);
     expect(customerProfile.value?.email, 'meera@example.com');
   });
@@ -243,7 +243,7 @@ void main() {
     await tester.tap(find.byKey(const Key('profile-avatar')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not save the photo: image must be 5 MB or smaller'),
+    expect(find.text('Could not save the photo. Image must be 5 MB or smaller.'),
         findsOneWidget);
     expect(customerProfile.value!.photoUrl, isNull);
   });

@@ -142,7 +142,7 @@ class ApiClient {
     final raw = _decode(res.body);
     final decoded = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
     if (res.statusCode >= 400) {
-      throw ApiException(res.statusCode, decoded['message']?.toString() ?? 'request failed');
+      throw ApiException(res.statusCode, _reason(decoded));
     }
     if (decoded['accessToken'] is String) await _saveTokens(decoded);
     return decoded;
@@ -218,11 +218,19 @@ class ApiClient {
     if (res.statusCode == 401) res = await _retryAfter401(res, once);
     final decoded = _decode(res.body);
     if (res.statusCode >= 400) {
-      final message = decoded is Map ? decoded['message']?.toString() : 'request failed';
-      throw ApiException(res.statusCode, message ?? 'request failed');
+      throw ApiException(res.statusCode, _reason(decoded));
     }
     return decoded;
   }
+}
+
+/// The API's reason from an error body. Validation errors carry a list of
+/// reasons; the first is the one to show.
+String _reason(Object? body) {
+  final message = body is Map ? body['message'] : null;
+  if (message is List && message.isNotEmpty) return message.first.toString();
+  if (message is String && message.isNotEmpty) return message;
+  return 'request failed';
 }
 
 class ApiException implements Exception {
@@ -230,6 +238,8 @@ class ApiException implements Exception {
   final String message;
   ApiException(this.statusCode, this.message);
 
+  /// Just the reason, so an error shown as text never reads as a class name
+  /// or status code. Screens word it with userMessage (errors.dart).
   @override
-  String toString() => 'ApiException($statusCode): $message';
+  String toString() => message;
 }

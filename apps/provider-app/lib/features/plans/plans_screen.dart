@@ -118,7 +118,7 @@ class _PlansScreenState extends State<PlansScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load your plan: $e';
+        _error = 'Could not load your plan. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -160,7 +160,7 @@ class _PlansScreenState extends State<PlansScreen> {
       showSuccessMessage(context, 'Plan changed to ${target.name}.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not change your plan: $e');
+      setState(() => _error = 'Could not change your plan. ${userMessage(e)}');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

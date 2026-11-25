@@ -25,21 +25,56 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
   String? _bidId;
   bool _contactUnlocked = false;
   bool _busy = false;
+  // A problem that belongs to no field (no connection, an expired request),
+  // shown above the form.
   String? _error;
+  // Problems under the min and max price fields.
+  final Map<String, String> _fieldErrors = {};
 
   ApiClient get _api => widget.client ?? api;
 
-  Future<void> _submitBid() async {
-    final min = double.tryParse(_min.text);
-    final max = double.tryParse(_max.text);
-    if (min == null || max == null) {
-      setState(() => _error = 'Enter a valid min and max price.');
-      return;
-    }
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
+
+  /// The two prices, or null after flagging what is wrong under each field.
+  (double, double)? _checkPrices() {
+    final min = double.tryParse(_min.text.trim());
+    final max = double.tryParse(_max.text.trim());
+    final problems = {
+      if (min == null || min < 0) 'min': 'Enter the lowest price you would charge.',
+      if (max == null || max < 0) 'max': 'Enter the highest price you would charge.',
+      if (min != null && max != null && max < min)
+        'max': 'The highest price cannot be below the lowest.',
+    };
     setState(() {
-      _busy = true;
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
       _error = null;
     });
+    return problems.isEmpty ? (min!, max!) : null;
+  }
+
+  void _fail(String action, Object e) {
+    final field = errorField(e, const {
+      'min': ['minprice'],
+      'max': ['maxprice'],
+    });
+    setState(() {
+      if (field != null) {
+        _fieldErrors[field] = userMessage(e);
+      } else {
+        _error = '$action ${userMessage(e)}';
+      }
+    });
+  }
+
+  Future<void> _submitBid() async {
+    final prices = _checkPrices();
+    if (prices == null) return;
+    final (min, max) = prices;
+    setState(() => _busy = true);
     try {
       final result = await _api.post(
         '/requirements/${widget.requirementId}/bids',
@@ -51,7 +86,7 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
       showSuccessMessage(context, 'Bid sent to the customer.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not submit bid: $e');
+      _fail('Could not send your price.', e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -74,7 +109,7 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
           context, 'Contact unlocked. You can now call the customer.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not unlock contact: $e');
+      _fail('Could not unlock the contact.', e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -82,16 +117,10 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
 
   Future<void> _updateRefinedBid() async {
     if (_bidId == null) return;
-    final min = double.tryParse(_min.text);
-    final max = double.tryParse(_max.text);
-    if (min == null || max == null) {
-      setState(() => _error = 'Enter a valid min and max price.');
-      return;
-    }
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
+    final prices = _checkPrices();
+    if (prices == null) return;
+    final (min, max) = prices;
+    setState(() => _busy = true);
     try {
       await _api.patch(
           '/bids/$_bidId/refine', {'minPrice': min, 'maxPrice': max},
@@ -106,7 +135,7 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not update bid: $e');
+      _fail('Could not update your price.', e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -158,7 +187,10 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
                       TextField(
                         controller: _min,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(hintText: 'e.g. 500'),
+                        onChanged: (_) => _clear('min'),
+                        decoration: InputDecoration(
+                            hintText: 'e.g. 500',
+                            errorText: _fieldErrors['min']),
                       ),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       const FieldLabel('MAX PRICE (₹)',
@@ -167,8 +199,10 @@ class _PriceRangeScreenState extends State<PriceRangeScreen> {
                       TextField(
                         controller: _max,
                         keyboardType: TextInputType.number,
-                        decoration:
-                            const InputDecoration(hintText: 'e.g. 1200'),
+                        onChanged: (_) => _clear('max'),
+                        decoration: InputDecoration(
+                            hintText: 'e.g. 1200',
+                            errorText: _fieldErrors['max']),
                       ),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       if (_bidId == null)

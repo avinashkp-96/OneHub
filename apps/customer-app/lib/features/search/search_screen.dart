@@ -214,7 +214,7 @@ class _SearchScreenState extends State<SearchScreen> {
     } catch (e) {
       if (!mounted || request != _request) return;
       setState(() {
-        _error = 'Search failed: $e';
+        _error = 'The search did not work. ${userMessage(e)}';
         _searching = false;
       });
     }

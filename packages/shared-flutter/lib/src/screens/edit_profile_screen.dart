@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../errors.dart';
 import '../theme/glow_card.dart';
 import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
@@ -56,8 +57,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late final _name = TextEditingController(text: widget.initial.name);
   late final _email = TextEditingController(text: widget.initial.email);
   late final _phone = TextEditingController(text: widget.initial.phone);
+  // A problem that belongs to no field (no connection, a server fault).
   String? _error;
+  // Problems shown under their own field: name, email.
+  final Map<String, String> _fieldErrors = {};
   bool _saving = false;
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -70,25 +78,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _save() async {
     final name = _name.text.trim();
     final email = _email.text.trim();
-    if (name.isEmpty) {
-      setState(() => _error = 'Enter a name.');
-      return;
-    }
-    if (email.isNotEmpty &&
-        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      setState(() => _error = 'Enter a valid email address.');
+    final problems = {
+      if (name.isEmpty) 'name': 'Enter a name.',
+      if (email.isNotEmpty &&
+          !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email))
+        'email': 'Enter a valid email address.',
+    };
+    if (problems.isNotEmpty) {
+      setState(() {
+        _fieldErrors
+          ..clear()
+          ..addAll(problems);
+      });
       return;
     }
     setState(() {
       _saving = true;
       _error = null;
+      _fieldErrors.clear();
     });
     try {
       await widget.onSave(name, email);
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not save your profile: $e';
+        final field = errorField(e, const {
+          'name': ['name'],
+          'email': ['email'],
+        });
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = 'Could not save your profile. ${userMessage(e)}';
+        }
         _saving = false;
       });
       return;
@@ -136,6 +158,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       const SizedBox(height: OneHubTheme.gapFieldInternals),
                       TextField(
                           controller: _name,
+                          onChanged: (_) => _clear('name'),
+                          decoration:
+                              InputDecoration(errorText: _fieldErrors['name']),
                           textCapitalization: TextCapitalization.words),
                       const SizedBox(height: OneHubTheme.sectionGap),
                       const _Label('MOBILE NUMBER', OneHubIcons.phone),
@@ -152,8 +177,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       TextField(
                         controller: _email,
                         keyboardType: TextInputType.emailAddress,
-                        decoration:
-                            const InputDecoration(hintText: 'you@example.com'),
+                        onChanged: (_) => _clear('email'),
+                        decoration: InputDecoration(
+                            hintText: 'you@example.com',
+                            errorText: _fieldErrors['email']),
                       ),
                     ],
                   ),

@@ -65,7 +65,10 @@ void main() {
     await pumpScreen(tester);
     await fillAndLogin(tester);
 
-    expect(find.textContaining('Could not log in'), findsOneWidget);
+    // A wrong password reads under the password field, in plain words.
+    expect(find.text('The mobile number, email or password is wrong.'),
+        findsOneWidget);
+    expect(find.textContaining('401'), findsNothing);
     expect(find.text('dashboard stub'), findsNothing);
   });
 

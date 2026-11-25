@@ -375,7 +375,7 @@ void main() {
 
       expect(
           find.text(
-              'Could not save your location: latitude must be a latitude string or number'),
+              'Could not save your location. Latitude must be a latitude string or number.'),
           findsOneWidget);
       expect(find.text('Edappally'), findsOneWidget);
     });

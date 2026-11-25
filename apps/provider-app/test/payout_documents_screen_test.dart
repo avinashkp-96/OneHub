@@ -161,7 +161,7 @@ void main() {
     await tester.tap(find.byKey(const Key('change-photo')));
     await tester.pumpAndSettle();
 
-    expect(find.text('Could not upload: too big'), findsOneWidget);
+    expect(find.text('Could not upload that photo. Too big.'), findsOneWidget);
     expect(find.text('Add photo'), findsOneWidget);
   });
 

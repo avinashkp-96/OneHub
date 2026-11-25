@@ -48,7 +48,9 @@ class AvailabilityScreen extends StatefulWidget {
 
 class _AvailabilityScreenState extends State<AvailabilityScreen> {
   late Availability _draft = providerAvailability.value;
-  String? _error;
+  // Under the working hours, and under the working days.
+  String? _hoursError;
+  String? _daysError;
 
   Future<void> _pickTime({required bool start}) async {
     final picked = await showTimePicker(
@@ -57,7 +59,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     setState(() {
       _draft =
           start ? _draft.copyWith(start: picked) : _draft.copyWith(end: picked);
-      _error = null;
+      _hoursError = null;
     });
   }
 
@@ -66,19 +68,19 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     days.contains(i) ? days.remove(i) : days.add(i);
     setState(() {
       _draft = _draft.copyWith(days: days);
-      _error = null;
+      _daysError = null;
     });
   }
 
   void _save() {
-    if (_draft.days.isEmpty) {
-      setState(() => _error = 'Pick at least one working day.');
-      return;
-    }
-    if (_minutes(_draft.end) <= _minutes(_draft.start)) {
-      setState(() => _error = 'Closing time must be after opening time.');
-      return;
-    }
+    setState(() {
+      _daysError =
+          _draft.days.isEmpty ? 'Pick at least one working day.' : null;
+      _hoursError = _minutes(_draft.end) <= _minutes(_draft.start)
+          ? 'Closing time must be after opening time.'
+          : null;
+    });
+    if (_daysError != null || _hoursError != null) return;
     providerAvailability.value = _draft;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
@@ -140,6 +142,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                                   onTap: () => _pickTime(start: false))),
                         ],
                       ),
+                      FieldError(_hoursError),
                     ],
                   ),
                 ),
@@ -157,10 +160,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     ),
                 ],
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 16),
-                Text(_error!, style: TextStyle(color: context.statusDanger)),
-              ],
+              FieldError(_daysError),
               const SizedBox(height: 32),
               PrimaryCta(onPressed: _save, child: const Text('Save changes')),
               const SizedBox(height: 12),

@@ -61,7 +61,18 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   final Set<String> _selectedProviderIds = {};
   bool _loading = true;
   bool _sending = false;
+  // A send that failed for no field's reason (no connection, a server
+  // fault), shown just above Send Request.
   String? _error;
+  // Why the provider list could not load, shown in that section.
+  String? _providersError;
+  // Problems shown at their own field: title, description, photos, address,
+  // providers.
+  final Map<String, String> _fieldErrors = {};
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
   final List<String> _photoUrls = [];
   int _uploading = 0;
 
@@ -88,6 +99,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
     setState(() {
       _address = a;
       _loading = true;
+      _providersError = null;
       _selectedProviderIds.clear();
     });
     _loadProviders();
@@ -104,14 +116,18 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   Future<void> _addPhoto() async {
     final photo = await widget.pickPhoto(context);
     if (photo == null || !mounted) return;
-    setState(() => _uploading++);
+    setState(() {
+      _uploading++;
+      _fieldErrors.remove('photos');
+    });
     try {
       final url = await api.upload('/uploads/photo', photo.bytes, photo.name);
       if (mounted) setState(() => _photoUrls.add(url));
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _error = 'Could not add the photo: ${e.message}');
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not add the photo: $e');
+      if (mounted) {
+        setState(() => _fieldErrors['photos'] =
+            'Could not add the photo. ${userMessage(e)}');
+      }
     } finally {
       if (mounted) setState(() => _uploading--);
     }
@@ -152,7 +168,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load providers: $e';
+        _providersError = 'Could not load providers. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -169,21 +185,22 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
   }
 
   Future<void> _sendRequest() async {
-    if (_title.text.trim().isEmpty ||
-        _description.text.trim().isEmpty ||
-        _selectedProviderIds.isEmpty) {
-      setState(() => _error =
-          'Add a title, describe the work and select at least one provider.');
-      return;
-    }
-    if (_address == null) {
-      setState(() => _error = 'Add the address for this job.');
-      return;
-    }
+    final problems = {
+      if (_title.text.trim().isEmpty) 'title': 'Add a title.',
+      if (_description.text.trim().isEmpty)
+        'description': 'Describe the work you need done.',
+      if (_address == null) 'address': 'Add the address for this job.',
+      if (_selectedProviderIds.isEmpty)
+        'providers': 'Select at least one provider.',
+    };
     setState(() {
-      _sending = true;
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
       _error = null;
     });
+    if (problems.isNotEmpty) return;
+    setState(() => _sending = true);
     try {
       await api.post(
           '/requirements',
@@ -211,7 +228,20 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
           ..showSnackBar(bar);
       }
     } catch (e) {
-      setState(() => _error = 'Could not send the request: $e');
+      final field = errorField(e, const {
+        'title': ['title'],
+        'description': ['description'],
+        'photos': ['photo'],
+        'address': ['address'],
+        'providers': ['provider'],
+      });
+      setState(() {
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = 'Could not send the request. ${userMessage(e)}';
+        }
+      });
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -246,12 +276,6 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                   style: OneHubTextStyles.bodyText(textSecondary),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(_error!,
-                        style: TextStyle(color: context.statusDanger)),
-                  ),
                 GlowCard(
                   child: Padding(
                     padding: const EdgeInsets.all(OneHubTheme.cardPadding),
@@ -266,8 +290,10 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                           controller: _title,
                           maxLength: requestTitleMaxLength,
                           textCapitalization: TextCapitalization.sentences,
-                          decoration: const InputDecoration(
-                              hintText: 'e.g. Ceiling fan repair'),
+                          onChanged: (_) => _clear('title'),
+                          decoration: InputDecoration(
+                              hintText: 'e.g. Ceiling fan repair',
+                              errorText: _fieldErrors['title']),
                         ),
                         const SizedBox(height: OneHubTheme.gapFieldInternals),
                         const FieldLabel('WHAT DO YOU NEED DONE?',
@@ -277,9 +303,11 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                           key: const Key('request-description'),
                           controller: _description,
                           maxLines: 4,
-                          decoration: const InputDecoration(
+                          onChanged: (_) => _clear('description'),
+                          decoration: InputDecoration(
                               hintText:
-                                  'e.g. The fan makes a rattling noise at high speed'),
+                                  'e.g. The fan makes a rattling noise at high speed',
+                              errorText: _fieldErrors['description']),
                         ),
                         const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('PREFERRED DATE/TIME (OPTIONAL)',
@@ -343,6 +371,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                               ),
                           ],
                         ),
+                        FieldError(_fieldErrors['photos']),
                         const SizedBox(height: 6),
                         Text(
                             'Up to $maxRequestPhotos. Providers see them before they send a price.',
@@ -385,6 +414,7 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                     label: const Text('Add address'),
                   ),
                 ),
+                FieldError(_fieldErrors['address']),
                 const SizedBox(height: 26),
                 Text('Select providers',
                     style: OneHubTextStyles.pageHeading(textPrimary)
@@ -414,6 +444,9 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                     padding: EdgeInsets.symmetric(vertical: 24),
                     child: Center(child: CircularProgressIndicator()),
                   )
+                else if (_providersError != null)
+                  Text(_providersError!,
+                      style: TextStyle(color: context.statusDanger))
                 else if (_providers.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -431,9 +464,17 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                         if (!_selectedProviderIds.remove(p.id)) {
                           _selectedProviderIds.add(p.id);
                         }
+                        _fieldErrors.remove('providers');
                       }),
                     ),
+                FieldError(_fieldErrors['providers']),
                 const SizedBox(height: 20),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(_error!,
+                        style: TextStyle(color: context.statusDanger)),
+                  ),
                 PrimaryCta(
                   onPressed:
                       _sending || _uploading > 0 ? null : _sendRequest,

@@ -56,7 +56,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load incoming requests: $e';
+        _error = 'Could not load incoming requests. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -84,7 +84,7 @@ class _IncomingRequestsScreenState extends State<IncomingRequestsScreen> {
       showSuccessMessage(context, 'Request rejected.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not reject: $e');
+      setState(() => _error = 'Could not reject. ${userMessage(e)}');
     }
   }
 
@@ -276,7 +276,7 @@ Future<void> openIncomingById(BuildContext context, String requirementId,
         await api_.patch('/requirements/${r.id}/reject', {}, auth: true);
         if (context.mounted) showSuccessMessage(context, 'Request rejected.');
       } catch (e) {
-        if (context.mounted) say('Could not reject: $e');
+        if (context.mounted) say('Could not reject. ${userMessage(e)}');
       }
     },
     onSendPrice: () => Navigator.of(context).push(MaterialPageRoute(

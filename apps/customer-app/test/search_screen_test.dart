@@ -275,7 +275,8 @@ void main() {
 
     await searchFor(tester, 'fan');
 
-    expect(find.textContaining('Search failed'), findsOneWidget);
+    expect(find.textContaining('The search did not work.'), findsOneWidget);
+    expect(find.textContaining('500'), findsNothing);
   });
 
   testWidgets('tapping a service or provider opens Post a Requirement for it',

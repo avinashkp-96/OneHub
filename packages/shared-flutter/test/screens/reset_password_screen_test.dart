@@ -76,8 +76,12 @@ void main() {
     await tester.tap(resetPasswordCta());
     await tester.pumpAndSettle();
 
-    expect(
-        find.text('New password and confirmation must match.'), findsOneWidget);
+    // Each problem sits under its own field.
+    expect(find.text('The passwords do not match.'), findsOneWidget);
+    expect(find.text('Enter the code we sent you.'), findsOneWidget);
+    final confirm = tester.widget<TextField>(
+        find.widgetWithText(TextField, 'Re-enter'));
+    expect(confirm.decoration!.errorText, 'The passwords do not match.');
   });
 
   testWidgets(

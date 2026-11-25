@@ -47,7 +47,10 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
   bool _uploadingId = false;
   bool _clearPayout = false;
   bool _saving = false;
+  // A problem that belongs to no field (no connection, nothing to save).
   String? _error;
+  // Problems under their own control: photo, idProof, payout.
+  final Map<String, String> _fieldErrors = {};
 
   @override
   void dispose() {
@@ -55,15 +58,17 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
     super.dispose();
   }
 
-  Future<String?> _upload(String path) async {
+  // Uploads a picked image; a failure shows under [field]'s button.
+  Future<String?> _upload(String path, String field) async {
     final photo = await widget.pickPhoto(context);
     if (photo == null || !mounted) return null;
     try {
       return await _api.upload(path, photo.bytes, photo.name);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _error = 'Could not upload: ${e.message}');
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not upload: $e');
+      if (mounted) {
+        setState(() => _fieldErrors[field] =
+            'Could not upload that photo. ${userMessage(e)}');
+      }
     }
     return null;
   }
@@ -71,9 +76,9 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
   Future<void> _changePhoto() async {
     setState(() {
       _uploadingPhoto = true;
-      _error = null;
+      _fieldErrors.remove('photo');
     });
-    final url = await _upload('/uploads/photo');
+    final url = await _upload('/uploads/photo', 'photo');
     if (!mounted) return;
     setState(() {
       if (url != null) _photo = url;
@@ -84,9 +89,9 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
   Future<void> _uploadIdProof() async {
     setState(() {
       _uploadingId = true;
-      _error = null;
+      _fieldErrors.remove('idProof');
     });
-    final ref = await _upload('/uploads/id-proof');
+    final ref = await _upload('/uploads/id-proof', 'idProof');
     if (!mounted) return;
     setState(() {
       if (ref != null) _newIdProof = ref;
@@ -97,8 +102,8 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
   Future<void> _save() async {
     final payout = _payout.text.trim();
     if (payout.length > 120) {
-      setState(() =>
-          _error = 'Bank or UPI details must be 120 characters or fewer.');
+      setState(() => _fieldErrors['payout'] =
+          'Bank or UPI details must be 120 characters or fewer.');
       return;
     }
 
@@ -140,8 +145,17 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
         ..showSnackBar(bar);
     } catch (e) {
       if (!mounted) return;
+      final field = errorField(e, const {
+        'idProof': ['idproof', 'id proof'],
+        'payout': ['bankorupi', 'bank', 'upi'],
+        'photo': ['photo'],
+      });
       setState(() {
-        _error = 'Could not save: $e';
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = 'Could not save. ${userMessage(e)}';
+        }
         _saving = false;
       });
     }
@@ -228,6 +242,7 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
                           ),
                         ],
                       ),
+                      FieldError(_fieldErrors['photo']),
                       const SizedBox(height: 6),
                       Text('Without a photo your initial is shown.',
                           style: hintStyle),
@@ -256,6 +271,7 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
                             ? 'Upload a new ID proof'
                             : 'Choose a different one'),
                       ),
+                      FieldError(_fieldErrors['idProof']),
                       const SizedBox(height: 6),
                       Text(
                           'A photo of your Aadhaar or PAN. Only OneHub sees '
@@ -270,10 +286,16 @@ class _PayoutDocumentsScreenState extends State<PayoutDocumentsScreen> {
                         key: const Key('payout-field'),
                         controller: _payout,
                         enabled: !_clearPayout,
+                        onChanged: (_) {
+                          if (_fieldErrors.remove('payout') != null) {
+                            setState(() {});
+                          }
+                        },
                         decoration: InputDecoration(
                             hintText: masked == null
                                 ? 'name@bank or account number'
-                                : 'On file: $masked'),
+                                : 'On file: $masked',
+                            errorText: _fieldErrors['payout']),
                       ),
                       const SizedBox(height: 6),
                       Text(

@@ -187,7 +187,7 @@ class _TopRowState extends State<_TopRow> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Could not save your location: $e')));
+            SnackBar(content: Text('Could not save your location. ${userMessage(e)}')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);

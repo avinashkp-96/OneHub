@@ -74,7 +74,46 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _loadingCategories = true;
   bool _loadingSubServices = false;
   bool _created = false;
+  // A problem that belongs to no field (no connection, a server fault),
+  // shown above the form.
   String? _error;
+  // Problems shown under their own field, keyed by field name.
+  final Map<String, String> _fieldErrors = {};
+
+  // Which step each field is on, so a refusal at Create Account can take the
+  // user back to the field it is about.
+  static const _fieldStep = {
+    'name': 0, 'mobile': 0, 'otp': 0, 'email': 0, 'password': 0, 'confirm': 0,
+    'services': 1,
+  };
+  static const _apiFields = {
+    'otp': ['otp', 'code'],
+    'mobile': ['mobile'],
+    'email': ['email'],
+    'confirm': ['match'],
+    'password': ['password'],
+    'location': ['business is'],
+    'services': ['sub-service', 'category'],
+    'idProof': ['id proof', 'idproof', 'image', 'jpeg'],
+  };
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
+
+  // Shows [e] under its field (moving to that field's step), else above the
+  // form.
+  void _fail(Object e) {
+    final field = errorField(e, _apiFields);
+    setState(() {
+      if (field == null) {
+        _error = userMessage(e);
+      } else {
+        _fieldErrors[field] = userMessage(e);
+        _step = _fieldStep[field] ?? _step;
+      }
+    });
+  }
 
   ApiClient get _api => widget.client ?? api;
 
@@ -86,7 +125,7 @@ class _SignupScreenState extends State<SignupScreen> {
     if (picked != null && mounted) {
       setState(() {
         _location = picked;
-        _error = null;
+        _fieldErrors.remove('location');
       });
     }
   }
@@ -96,15 +135,17 @@ class _SignupScreenState extends State<SignupScreen> {
     if (photo == null || !mounted) return;
     setState(() {
       _uploadingId = true;
-      _error = null;
+      _fieldErrors.remove('idProof');
     });
     try {
       final ref = await _api.upload('/uploads/id-proof', photo.bytes, photo.name,
           auth: false);
       if (mounted) setState(() => _idProof = ref);
     } catch (e) {
-      final message = e is ApiException ? e.message : '$e';
-      if (mounted) setState(() => _error = 'Could not upload the ID proof: $message');
+      if (mounted) {
+        setState(() => _fieldErrors['idProof'] =
+            'Could not upload that photo. ${userMessage(e)}');
+      }
     } finally {
       if (mounted) setState(() => _uploadingId = false);
     }
@@ -129,7 +170,7 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load service categories: $e';
+        _error = 'Could not load the service categories. ${userMessage(e)}';
         _loadingCategories = false;
       });
     }
@@ -157,7 +198,7 @@ class _SignupScreenState extends State<SignupScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load sub-services: $e';
+        _error = 'Could not load the services. ${userMessage(e)}';
         _loadingSubServices = false;
       });
     }
@@ -165,12 +206,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
   Future<void> _sendOtp() async {
     if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
-      setState(() => _error = 'Enter a valid 10-digit mobile number.');
+      setState(() => _fieldErrors['mobile'] = 'Enter a 10-digit mobile number.');
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors.remove('mobile');
     });
     try {
       await _api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
@@ -178,58 +220,60 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _otpSent = true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not send an OTP: $e');
+      _fail(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  String? _validateStep(int step) {
+  /// Every problem on [step], keyed by the field it belongs to.
+  Map<String, String> _validateStep(int step) {
     switch (step) {
       case 0:
-        if (_businessName.text.trim().isEmpty) {
-          return 'Enter your name or business name.';
-        }
-        if (!RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim())) {
-          return 'Enter a valid 10-digit mobile number.';
-        }
-        if (!_otpSent) return 'Tap Send OTP to verify your mobile number.';
-        if (_otp.text.trim().length != 6) return 'Enter the 6-digit code.';
-        if (_password.text.length < 6) {
-          return 'Password must be at least 6 characters.';
-        }
-        if (_password.text != _confirmPassword.text) {
-          return 'Password and confirmation must match.';
-        }
-        return null;
+        final mobileOk = RegExp(r'^[0-9]{10}$').hasMatch(_mobile.text.trim());
+        final email = _email.text.trim();
+        return {
+          if (_businessName.text.trim().isEmpty)
+            'name': 'Enter your name or business name.',
+          if (!mobileOk) 'mobile': 'Enter a 10-digit mobile number.',
+          if (mobileOk && !_otpSent)
+            'otp': 'Tap Send OTP to get a code on this number.',
+          if (_otpSent && _otp.text.trim().length != 6)
+            'otp': 'Enter the 6-digit code.',
+          if (email.isNotEmpty &&
+              !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email))
+            'email': 'Enter a valid email address.',
+          if (_password.text.length < 6)
+            'password': 'Password must be at least 6 characters.',
+          if (_password.text != _confirmPassword.text)
+            'confirm': 'The passwords do not match.',
+        };
       case 1:
-        if (_selectedCategoryId == null || _selectedSubServiceIds.isEmpty) {
-          return 'Select a service category and at least one service.';
-        }
-        return null;
+        return {
+          if (_selectedCategoryId == null)
+            'services': 'Choose your service category.'
+          else if (_selectedSubServiceIds.isEmpty)
+            'services': 'Choose at least one service you offer.',
+        };
       default:
-        if (_location == null) {
-          return 'Choose where your business is.';
-        }
-        if (_idProof == null) {
-          return 'Upload a photo of your ID proof for verification.';
-        }
-        if (!_acceptedTerms) {
-          return 'Accept the Terms & Conditions to continue.';
-        }
-        return null;
+        return {
+          if (_location == null) 'location': 'Choose where your business is.',
+          if (_idProof == null)
+            'idProof': 'Upload a photo of your ID proof for verification.',
+          if (!_acceptedTerms)
+            'terms': 'Accept the Terms & Conditions to continue.',
+        };
     }
   }
 
   void _next() {
-    final error = _validateStep(_step);
-    if (error != null) {
-      setState(() => _error = error);
-      return;
-    }
+    final problems = _validateStep(_step);
     setState(() {
-      _step += 1;
+      _fieldErrors
+        ..clear()
+        ..addAll(problems);
       _error = null;
+      if (problems.isEmpty) _step += 1;
     });
   }
 
@@ -241,18 +285,24 @@ class _SignupScreenState extends State<SignupScreen> {
     setState(() {
       _step -= 1;
       _error = null;
+      _fieldErrors.clear();
     });
   }
 
   Future<void> _createAccount() async {
-    final error = _validateStep(2);
-    if (error != null) {
-      setState(() => _error = error);
+    final problems = _validateStep(2);
+    if (problems.isNotEmpty) {
+      setState(() {
+        _fieldErrors
+          ..clear()
+          ..addAll(problems);
+      });
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors.clear();
     });
     try {
       await _api.post('/auth/provider/signup', {
@@ -278,7 +328,7 @@ class _SignupScreenState extends State<SignupScreen> {
       setState(() => _created = true);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not create your account: $e');
+      _fail(e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -351,20 +401,25 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(height: OneHubTheme.gapFieldInternals),
             TextField(
                 controller: _businessName,
-                decoration: const InputDecoration(hintText: 'John Doe')),
+                onChanged: (_) => _clear('name'),
+                decoration: InputDecoration(
+                    hintText: 'John Doe', errorText: _fieldErrors['name'])),
             const SizedBox(height: OneHubTheme.sectionGap),
             const FieldLabel('MOBILE NUMBER',
                 required: true, icon: OneHubIcons.phone),
             const SizedBox(height: OneHubTheme.gapFieldInternals),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: TextField(
                     controller: _mobile,
                     keyboardType: TextInputType.phone,
                     enabled: !_otpSent,
-                    decoration:
-                        const InputDecoration(hintText: '10-digit number'),
+                    onChanged: (_) => _clear('mobile'),
+                    decoration: InputDecoration(
+                        hintText: '10-digit number',
+                        errorText: _fieldErrors['mobile']),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -383,9 +438,11 @@ class _SignupScreenState extends State<SignupScreen> {
               enabled: _otpSent,
               keyboardType: TextInputType.number,
               maxLength: 6,
+              onChanged: (_) => _clear('otp'),
               decoration: InputDecoration(
                 hintText: _otpSent ? '6-digit code' : 'Tap Send OTP first',
                 counterText: '',
+                errorText: _fieldErrors['otp'],
               ),
             ),
             const SizedBox(height: OneHubTheme.sectionGap),
@@ -394,7 +451,10 @@ class _SignupScreenState extends State<SignupScreen> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(hintText: 'you@example.com'),
+              onChanged: (_) => _clear('email'),
+              decoration: InputDecoration(
+                  hintText: 'you@example.com',
+                  errorText: _fieldErrors['email']),
             ),
             const SizedBox(height: OneHubTheme.sectionGap),
             const FieldLabel('PASSWORD',
@@ -403,8 +463,10 @@ class _SignupScreenState extends State<SignupScreen> {
             TextField(
               controller: _password,
               obscureText: _obscurePassword,
+              onChanged: (_) => _clear('password'),
               decoration: InputDecoration(
                 hintText: 'Min. 6 chars',
+                errorText: _fieldErrors['password'],
                 suffixIcon: IconButton(
                   icon: Icon(
                       _obscurePassword ? OneHubIcons.hide : OneHubIcons.show),
@@ -420,8 +482,10 @@ class _SignupScreenState extends State<SignupScreen> {
             TextField(
               controller: _confirmPassword,
               obscureText: _obscureConfirmPassword,
+              onChanged: (_) => _clear('confirm'),
               decoration: InputDecoration(
                 hintText: 'Re-enter',
+                errorText: _fieldErrors['confirm'],
                 suffixIcon: IconButton(
                   icon: Icon(_obscureConfirmPassword
                       ? OneHubIcons.hide
@@ -498,12 +562,13 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (!_selectedSubServiceIds.remove(s.id)) {
                         _selectedSubServiceIds.add(s.id);
                       }
-                      _error = null;
+                      _fieldErrors.remove('services');
                     }),
                   ),
               ],
             ),
         ],
+        FieldError(_fieldErrors['services']),
         const SizedBox(height: OneHubTheme.sectionGap),
         PrimaryCta(onPressed: _next, child: const Text('Continue')),
       ],
@@ -534,6 +599,7 @@ class _SignupScreenState extends State<SignupScreen> {
             LocationField(
                 location: _location,
                 onPressed: _busy ? null : _chooseLocation),
+            FieldError(_fieldErrors['location']),
             const SizedBox(height: 6),
             Text('Distances to customers are measured from here.',
                 style: OneHubTextStyles.fieldLabel(textSecondary)
@@ -572,6 +638,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ],
             ),
+            FieldError(_fieldErrors['idProof']),
             const SizedBox(height: 6),
             Text('Only OneHub sees it, to verify your account.',
                 style: OneHubTextStyles.fieldLabel(textSecondary)
@@ -589,7 +656,10 @@ class _SignupScreenState extends State<SignupScreen> {
               children: [
                 Checkbox(
                   value: _acceptedTerms,
-                  onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                  onChanged: (v) => setState(() {
+                    _acceptedTerms = v ?? false;
+                    _fieldErrors.remove('terms');
+                  }),
                 ),
                 Expanded(
                   child: TermsAgreementText(
@@ -600,6 +670,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 ),
               ],
             ),
+            FieldError(_fieldErrors['terms']),
             const SizedBox(height: 8),
             PrimaryCta(
                 onPressed: _busy ? null : _createAccount,

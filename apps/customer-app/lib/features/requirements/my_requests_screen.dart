@@ -149,7 +149,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load your requests: $e';
+        _error = 'Could not load your requests. ${userMessage(e)}';
         _loading = false;
       });
     }

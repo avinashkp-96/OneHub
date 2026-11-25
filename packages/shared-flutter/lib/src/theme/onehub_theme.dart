@@ -121,6 +121,8 @@ abstract final class OneHubTheme {
       // Style guide's "Input fields" radius = 12px, "Padding X (field)" = 14px.
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
+        // A field's error wraps rather than being cut off next to a button.
+        errorMaxLines: 3,
         fillColor:
             dark ? OneHubColors.inputFillDark : OneHubColors.inputFillLight,
         border: OutlineInputBorder(

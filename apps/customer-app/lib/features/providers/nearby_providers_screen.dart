@@ -59,7 +59,7 @@ class _NearbyProvidersScreenState extends State<NearbyProvidersScreen> {
       final list = await loadNearbyProviders();
       if (mounted) setState(() => _providers = list);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not load providers: $e');
+      if (mounted) setState(() => _error = 'Could not load providers. ${userMessage(e)}');
     }
   }
 

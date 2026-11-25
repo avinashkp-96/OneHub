@@ -46,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(content: Text('Could not save the photo: $e')));
+          ..showSnackBar(SnackBar(content: Text('Could not save the photo. ${userMessage(e)}')));
       }
     } finally {
       if (mounted) setState(() => _savingPhoto = false);

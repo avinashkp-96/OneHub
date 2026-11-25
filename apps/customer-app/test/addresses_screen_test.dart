@@ -99,7 +99,9 @@ void main() {
     await tester.tap(find.text('Save address'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Could not save the address'), findsOneWidget);
+    // The API's reason shows under the PIN code, not as a banner.
+    expect(find.text('Enter a 6-digit PIN code.'), findsOneWidget);
+    expect(find.textContaining('Could not save'), findsNothing);
     expect(find.text('Save address'), findsOneWidget);
   });
 
@@ -138,7 +140,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
-    expect(find.text('Could not delete it: keep at least one address'), findsOneWidget);
+    expect(find.text('Could not delete it. Keep at least one address.'), findsOneWidget);
   });
 
   testWidgets('says so when the addresses cannot load', (tester) async {

@@ -1217,6 +1217,34 @@ matching service with that provider already ticked (`preselectedProviderId`).
 Checked in the browser: the card, the list (Kochi Plumbing 3.4 km, Rajesh
 6.7 km) and a pre-ticked provider. Customer tests: 188 (99.2%).
 
+2026-11-25 (inline field errors): forms showed raw errors in a banner, such as
+"Could not send an OTP: ApiException(404): request failed" (that 404 came from
+opening the provider app on the Flutter dev server, localhost:18082, which
+cannot answer API calls; use the gateway, localhost:8082 and :8081). Per the
+user, errors now sit under the field they belong to, in plain words.
+Shared `errors.dart`: `userMessage(e)` gives the API's own reason as a
+sentence (common ones reworded, e.g. "This mobile number is already
+registered. Log in instead."), `serverTroubleMessage` for a 5xx or a reply with
+no reason, `offlineMessage` when the request never arrived, and never a status
+code or class name; `errorField(e, {...})` picks the field an API reason is
+about by its words; `FieldError` is the red line under a control that is not a
+text field (pickers, choice grids, checkboxes). `ApiException.toString` is now
+just the reason, and the client takes the first reason from Nest's
+validation list instead of printing "[...]". The theme lets field errors wrap
+(`errorMaxLines: 3`). Every form checks all its fields at once and shows each
+problem at its field, and puts an API refusal under the field it names (going
+back to that step in the provider signup, or to the form from the customer's
+code step); only problems that belong to no field (no connection, a server
+fault) show above the form or above its button. Forms covered: both logins,
+both signups (customer address fields included), reset password, edit
+profile, add address, post a request, rating, business details, price range,
+payout and documents, availability. Every other screen's load or action
+error uses `userMessage`. Checked in the browser: provider signup step 1 shows
+name, mobile and password errors under their fields. Found while checking: the
+provider app has no `/signup` route, so opening localhost:8082/#/signup
+directly shows a blank page (the Sign up link works); not fixed here. Tests:
+shared 168 (97.4%), customer 189 (98.7%), provider 202 (95.9%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

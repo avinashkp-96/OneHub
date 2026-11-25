@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
+import '../errors.dart';
 import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
 import '../theme/onehub_theme.dart';
@@ -36,36 +37,73 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   bool _busy = false;
   bool _obscureNewPassword = true;
   bool _obscureConfirmNewPassword = true;
+  // A problem that belongs to no field (no connection, a server fault).
   String? _error;
+  // Problems shown under their own field: contact, otp, password, confirm.
+  final Map<String, String> _fieldErrors = {};
+
+  static const _fields = {
+    'contact': ['mobile', 'email', 'account'],
+    'otp': ['otp', 'code'],
+    'password': ['newpassword must', 'password must'],
+    'confirm': ['match'],
+  };
+
+  void _fail(Object e) => setState(() {
+        final field = errorField(e, _fields);
+        if (field != null) {
+          _fieldErrors[field] = userMessage(e);
+        } else {
+          _error = userMessage(e);
+        }
+      });
+
+  void _clear(String field) {
+    if (_fieldErrors.remove(field) != null) setState(() {});
+  }
 
   Future<void> _requestOtp() async {
     if (_mobileOrEmail.text.trim().isEmpty) {
-      setState(() => _error = 'Enter your registered mobile number or email.');
+      setState(() => _fieldErrors['contact'] =
+          'Enter your registered mobile number or email.');
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors.clear();
     });
     try {
       await widget.client
           .post('/auth/otp/request', {'mobile': _mobileOrEmail.text.trim()});
       setState(() => _step = _Step.enterOtpAndPassword);
     } catch (e) {
-      setState(() => _error = 'Could not send an OTP: $e');
+      _fail(e);
     } finally {
       setState(() => _busy = false);
     }
   }
 
   Future<void> _reset() async {
-    if (_newPassword.text != _confirmNewPassword.text) {
-      setState(() => _error = 'New password and confirmation must match.');
+    final problems = {
+      if (_otp.text.trim().isEmpty) 'otp': 'Enter the code we sent you.',
+      if (_newPassword.text.length < 6)
+        'password': 'Password must be at least 6 characters.',
+      if (_newPassword.text != _confirmNewPassword.text)
+        'confirm': 'The passwords do not match.',
+    };
+    if (problems.isNotEmpty) {
+      setState(() {
+        _fieldErrors
+          ..clear()
+          ..addAll(problems);
+      });
       return;
     }
     setState(() {
       _busy = true;
       _error = null;
+      _fieldErrors.clear();
     });
     try {
       await widget.client.post('/auth/password/reset', {
@@ -76,7 +114,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       });
       setState(() => _step = _Step.done);
     } catch (e) {
-      setState(() => _error = 'Could not reset your password: $e');
+      _fail(e);
     } finally {
       setState(() => _busy = false);
     }
@@ -152,8 +190,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: _mobileOrEmail,
-                  decoration: const InputDecoration(
-                      hintText: '10-digit number or email'),
+                  onChanged: (_) => _clear('contact'),
+                  decoration: InputDecoration(
+                      hintText: '10-digit number or email',
+                      errorText: _fieldErrors['contact']),
                 ),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 PrimaryCta(
@@ -192,16 +232,20 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                     controller: _otp,
-                    decoration:
-                        const InputDecoration(hintText: '6-digit code')),
+                    onChanged: (_) => _clear('otp'),
+                    decoration: InputDecoration(
+                        hintText: '6-digit code',
+                        errorText: _fieldErrors['otp'])),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 const _FieldLabel('NEW PASSWORD', icon: OneHubIcons.lock),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),
                 TextField(
                   controller: _newPassword,
                   obscureText: _obscureNewPassword,
+                  onChanged: (_) => _clear('password'),
                   decoration: InputDecoration(
                     hintText: 'Min. 6 chars',
+                    errorText: _fieldErrors['password'],
                     suffixIcon: IconButton(
                       icon: Icon(_obscureNewPassword
                           ? OneHubIcons.hide
@@ -218,8 +262,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 TextField(
                   controller: _confirmNewPassword,
                   obscureText: _obscureConfirmNewPassword,
+                  onChanged: (_) => _clear('confirm'),
                   decoration: InputDecoration(
                     hintText: 'Re-enter',
+                    errorText: _fieldErrors['confirm'],
                     suffixIcon: IconButton(
                       icon: Icon(_obscureConfirmNewPassword
                           ? OneHubIcons.hide

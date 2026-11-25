@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../errors.dart';
 import '../api_client.dart';
 import '../theme/glow_card.dart';
 import '../theme/onehub_colors.dart';
@@ -148,7 +149,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load notifications: $e';
+        _error = 'Could not load notifications. ${userMessage(e)}';
         _loading = false;
       });
     }

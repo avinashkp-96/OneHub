@@ -279,13 +279,16 @@ void main() {
     await pumpScreen(tester);
 
     await send(tester);
-    expect(find.text('Add a title, describe the work and select at least one provider.'),
-        findsOneWidget);
+    // Each problem shows at its own field.
+    expect(find.text('Add a title.'), findsOneWidget);
+    expect(find.text('Describe the work you need done.'), findsOneWidget);
+    expect(find.text('Select at least one provider.'), findsOneWidget);
 
     await describe(tester);
     await send(tester);
-    expect(find.text('Add a title, describe the work and select at least one provider.'),
-        findsOneWidget);
+    expect(find.text('Add a title.'), findsNothing);
+    expect(find.text('Describe the work you need done.'), findsNothing);
+    expect(find.text('Select at least one provider.'), findsOneWidget);
     expect(fake.calls.where((c) => c.startsWith('POST')), isEmpty);
   });
 
@@ -297,10 +300,10 @@ void main() {
     await tester.tap(find.text('Asha Electricals'));
     await send(tester);
 
-    expect(
-        find.text(
-            'Add a title, describe the work and select at least one provider.'),
-        findsOneWidget);
+    final title =
+        tester.widget<TextField>(find.byKey(const Key('request-title')));
+    expect(title.decoration!.errorText, 'Add a title.');
+    expect(find.text('Select at least one provider.'), findsNothing);
     expect(fake.calls.where((c) => c.startsWith('POST')), isEmpty);
   });
 
@@ -483,7 +486,7 @@ void main() {
 
       expect(
           find.text(
-              'Could not add the photo: only JPEG, PNG or WebP images can be uploaded'),
+              'Could not add the photo. Only JPEG, PNG or WebP images can be uploaded.'),
           findsOneWidget);
       expect(find.byType(PhotoThumb), findsNothing);
     });

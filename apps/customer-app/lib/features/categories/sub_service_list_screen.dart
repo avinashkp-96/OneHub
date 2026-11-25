@@ -42,7 +42,7 @@ class _SubServiceListScreenState extends State<SubServiceListScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load services: $e';
+        _error = 'Could not load services. ${userMessage(e)}';
         _loading = false;
       });
     }

@@ -329,9 +329,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(BusinessDetailsScreen), findsOneWidget);
-    expect(find.textContaining('Could not save your business details'),
+    // The API's reason is about the services, so it shows under them.
+    expect(find.text('Sub-services must all belong to one category.'),
         findsOneWidget);
-    expect(find.textContaining('one category'), findsOneWidget);
+    expect(find.textContaining('Could not save'), findsNothing);
     expect(find.text('Save changes'), findsOneWidget);
   });
 

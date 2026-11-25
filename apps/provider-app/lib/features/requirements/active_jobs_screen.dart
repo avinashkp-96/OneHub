@@ -63,7 +63,7 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load active jobs: $e';
+        _error = 'Could not load active jobs. ${userMessage(e)}';
         _loading = false;
       });
     }
@@ -81,7 +81,7 @@ class _ActiveJobsScreenState extends State<ActiveJobsScreen> {
       showSuccessMessage(context, 'Job marked as completed.');
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not mark this job complete: $e');
+      setState(() => _error = 'Could not mark this job complete. ${userMessage(e)}');
     } finally {
       if (mounted) setState(() => _completing.remove(r.id));
     }

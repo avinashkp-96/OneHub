@@ -98,7 +98,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       final list = await loadAddresses();
       if (mounted) setState(() => _addresses = list);
     } catch (e) {
-      if (mounted) setState(() => _error = 'Could not load your addresses: $e');
+      if (mounted) setState(() => _error = 'Could not load your addresses. ${userMessage(e)}');
     }
   }
 
@@ -137,7 +137,7 @@ class _AddressesScreenState extends State<AddressesScreen> {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-            SnackBar(content: Text('Could not delete it: ${e.message}')));
+            SnackBar(content: Text('Could not delete it. ${userMessage(e)}')));
     }
   }
 

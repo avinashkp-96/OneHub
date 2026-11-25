@@ -145,16 +145,17 @@ void main() {
     await pumpScreen(tester);
 
     await next(tester);
+    // Every problem on the step shows at once, each under its field.
     expect(find.text('Enter your name or business name.'), findsOneWidget);
+    expect(find.text('Enter a 10-digit mobile number.'), findsOneWidget);
+    expect(find.text('Password must be at least 6 characters.'), findsOneWidget);
 
     await tester.enterText(find.widgetWithText(TextField, 'John Doe'), 'Asha');
-    await next(tester);
-    expect(find.text('Enter a valid 10-digit mobile number.'), findsOneWidget);
-
     await tester.enterText(
         find.widgetWithText(TextField, '10-digit number'), '9876543210');
     await next(tester);
-    expect(find.text('Tap Send OTP to verify your mobile number.'),
+    expect(find.text('Enter your name or business name.'), findsNothing);
+    expect(find.text('Tap Send OTP to get a code on this number.'),
         findsOneWidget);
   });
 
@@ -167,7 +168,9 @@ void main() {
     await tester.tap(find.widgetWithText(OutlinedButton, 'Send OTP'));
     await tester.pump();
 
-    expect(find.text('Enter a valid 10-digit mobile number.'), findsOneWidget);
+    final mobile =
+        tester.widget<TextField>(find.widgetWithText(TextField, '123'));
+    expect(mobile.decoration!.errorText, 'Enter a 10-digit mobile number.');
   });
 
   testWidgets('step 1 checks the code and the passwords', (tester) async {
@@ -178,13 +181,14 @@ void main() {
         find.widgetWithText(TextField, '6-digit code'), '12');
     await next(tester);
     expect(find.text('Enter the 6-digit code.'), findsOneWidget);
+    expect(find.text('STEP 1 OF 3'), findsOneWidget);
 
     await tester.enterText(
         find.widgetWithText(TextField, '6-digit code'), '123456');
     await tester.enterText(
         find.widgetWithText(TextField, 'Re-enter'), 'different');
     await next(tester);
-    expect(find.text('Password and confirmation must match.'), findsOneWidget);
+    expect(find.text('The passwords do not match.'), findsOneWidget);
   });
 
   testWidgets('both password fields toggle visibility independently',
@@ -233,14 +237,12 @@ void main() {
     await next(tester);
 
     await next(tester);
-    expect(find.text('Select a service category and at least one service.'),
-        findsOneWidget);
+    expect(find.text('Choose your service category.'), findsOneWidget);
 
     await tester.tap(find.text('Electrician'));
     await tester.pumpAndSettle();
     await next(tester);
-    expect(find.text('Select a service category and at least one service.'),
-        findsOneWidget);
+    expect(find.text('Choose at least one service you offer.'), findsOneWidget);
   });
 
   testWidgets('switching category clears the selected services',
@@ -254,8 +256,7 @@ void main() {
     await tester.pumpAndSettle();
     await next(tester);
 
-    expect(find.text('Select a service category and at least one service.'),
-        findsOneWidget);
+    expect(find.text('Choose at least one service you offer.'), findsOneWidget);
   });
 
   testWidgets('back returns to the previous step and keeps what was typed',
@@ -353,7 +354,39 @@ void main() {
     await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Mobile already registered'), findsOneWidget);
+    // The refusal is about the mobile number, so it goes back to step 1
+    // and shows under that field.
+    expect(find.text('STEP 1 OF 3'), findsOneWidget);
+    final mobile = tester.widget<TextField>(
+        find.widgetWithText(TextField, '9876543210'));
+    expect(mobile.decoration!.errorText, 'Mobile already registered.');
     expect(find.text('Account Created!'), findsNothing);
+  });
+
+  testWidgets('a Send OTP that fails shows a plain message, never a code',
+      (tester) async {
+    // What the app saw when opened on the Flutter dev server instead of the
+    // gateway: a 404 with no reason.
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(MaterialApp(
+        theme: OneHubTheme.dark(),
+        home: SignupScreen(
+            client: ApiClient(
+                baseUrl: 'https://example.test',
+                httpClient: MockClient(
+                    (_) async => http.Response('Not Found', 404))))));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.widgetWithText(TextField, '10-digit number'), '9876543210');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Send OTP'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(serverTroubleMessage), findsOneWidget);
+    expect(find.textContaining('404'), findsNothing);
+    expect(find.textContaining('ApiException'), findsNothing);
   });
 }

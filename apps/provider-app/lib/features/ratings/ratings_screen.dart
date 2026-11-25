@@ -83,7 +83,7 @@ class _RatingsScreenState extends State<RatingsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = 'Could not load your ratings: $e';
+        _error = 'Could not load your ratings. ${userMessage(e)}';
         _loading = false;
       });
     }

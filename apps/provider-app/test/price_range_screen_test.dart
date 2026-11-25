@@ -84,13 +84,29 @@ void main() {
     expect(find.text('Update Bid'), findsNothing);
   });
 
+  testWidgets('a highest price below the lowest shows under the highest',
+      (tester) async {
+    await pumpScreen(tester, fakeClient());
+
+    await tester.enterText(find.widgetWithText(TextField, 'e.g. 500'), '900');
+    await tester.enterText(find.widgetWithText(TextField, 'e.g. 1200'), '400');
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Submit Bid'));
+    await tester.pump();
+
+    final max = tester.widget<TextField>(find.widgetWithText(TextField, '400'));
+    expect(max.decoration!.errorText,
+        'The highest price cannot be below the lowest.');
+    expect(calls, isEmpty);
+  });
+
   testWidgets('rejects a bid with missing prices', (tester) async {
     await pumpScreen(tester, fakeClient());
 
     await tester.tap(find.widgetWithText(PrimaryCta, 'Submit Bid'));
     await tester.pump();
 
-    expect(find.text('Enter a valid min and max price.'), findsOneWidget);
+    expect(find.text('Enter the lowest price you would charge.'), findsOneWidget);
+    expect(find.text('Enter the highest price you would charge.'), findsOneWidget);
     expect(calls, isEmpty);
   });
 
@@ -132,7 +148,8 @@ void main() {
     await tester.tap(find.text('Pay ₹50 to Contact Customer'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Could not unlock contact'), findsOneWidget);
+    expect(find.text('Could not unlock the contact. Payment failed.'),
+        findsOneWidget);
     expect(find.text('Pay ₹50 to Contact Customer'), findsOneWidget);
   });
 
