@@ -218,20 +218,12 @@ void main() {
     expect(find.byType(SearchScreen), findsOneWidget);
   });
 
-  testWidgets('the hero button and nearby prompt open category browsing',
-      (tester) async {
+  testWidgets('the hero button opens category browsing', (tester) async {
     await pumpScreen(tester, {});
 
-    for (final tap in [
-      find.text('Post requirement'),
-      find.text('Browse a category'),
-    ]) {
-      await tester.tap(tap);
-      await tester.pumpAndSettle();
-      expect(find.byType(CategoryGridScreen), findsOneWidget);
-      await tester.tap(find.byType(BackButton));
-      await tester.pumpAndSettle();
-    }
+    await tester.tap(find.text('Post requirement'));
+    await tester.pumpAndSettle();
+    expect(find.byType(CategoryGridScreen), findsOneWidget);
   });
 
   testWidgets(

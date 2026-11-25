@@ -1201,6 +1201,22 @@ one Home is set to checked, plus Add new address, which opens the Add address
 form; the chosen address is saved as the account location. GPS and the area
 list remain only for an address's map position. Customer tests: 183.
 
+2026-11-25 (nearby providers): the customer Home page's Nearby providers
+card ("Browse a category") and its See all opened the category grid. Per the
+user, Home keeps a single card of the same style, now "Find providers near
+you" with "Rated providers around <area>" (the area of the address Home is set
+to, following the location chip), and both the card and See all open a new
+`NearbyProvidersScreen` (`features/providers/nearby_providers_screen.dart`).
+A first pass listed the three nearest providers on Home; the user preferred
+the card. The list uses `GET /search` with no keyword, which already returns
+every active provider with distanceKm and a `sort=distance`, so there is no
+API change; without a Home address it is best rated first and says so. Its
+cards are search's provider card, now public as `ProviderHitCard`. Tapping a
+provider (here or in search) opens Post a Requirement for their first
+matching service with that provider already ticked (`preselectedProviderId`).
+Checked in the browser: the card, the list (Kochi Plumbing 3.4 km, Rajesh
+6.7 km) and a pre-ticked provider. Customer tests: 188 (99.2%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

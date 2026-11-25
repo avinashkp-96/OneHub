@@ -50,16 +50,35 @@ void main() {
     // The dashboard is much taller than the default test viewport now (header,
     // search, hero, services, requests, providers, promo) — without a tall
     // enough surface, ListView's lazy sliver never builds the below-the-fold
-    // cards (e.g. the Nearby Providers prompt), and the InkWell search below
+    // cards (e.g. the Nearby providers cards), and the InkWell search below
     // silently comes back empty instead of actually failing on a bad radius.
     tester.view.physicalSize = const Size(800, 3000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    // One nearby provider, so the section has a real card to check.
+    installFakeApi({
+      'GET /search': (_) => {
+            'services': [],
+            'providers': [
+              {
+                'id': 'p1',
+                'name': 'Rajesh Electricals',
+                'averageRating': 4.5,
+                'ratingCount': 2,
+                'categories': ['Electrician'],
+                'services': [
+                  {'id': 's1', 'name': 'Fan Installation'}
+                ],
+              }
+            ],
+          },
+    });
     await tester.pumpWidget(
       MaterialApp(theme: OneHubTheme.light(), home: const DashboardScreen()),
     );
+    await tester.pumpAndSettle();
 
     // Scoped to the section-card InkWells specifically — PrimaryCta (the
     // "Post a Requirement" button) has its own InkWell with the CTA button's

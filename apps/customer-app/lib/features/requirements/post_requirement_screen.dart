@@ -30,11 +30,16 @@ class PostRequirementScreen extends StatefulWidget {
 
   /// Passed on to Add address; tests use it to skip the sheet and GPS.
   final LocationPicker? pickLocation;
+
+  /// A provider to tick from the start (the one tapped in search or Nearby
+  /// providers), if they are in the list for this job.
+  final String? preselectedProviderId;
   const PostRequirementScreen(
       {super.key,
       required this.subServiceId,
       this.pickPhoto = choosePhoto,
-      this.pickLocation});
+      this.pickLocation,
+      this.preselectedProviderId});
 
   @override
   State<PostRequirementScreen> createState() => _PostRequirementScreenState();
@@ -138,6 +143,10 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
         _providers = json
             .map((p) => ProviderSummary.fromJson(p as Map<String, dynamic>))
             .toList();
+        final wanted = widget.preselectedProviderId;
+        if (wanted != null && _providers.any((p) => p.id == wanted)) {
+          _selectedProviderIds.add(wanted);
+        }
         _loading = false;
       });
     } catch (e) {

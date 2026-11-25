@@ -6,6 +6,7 @@ import '../categories/category_grid_screen.dart';
 import '../categories/sub_service_list_screen.dart';
 import '../home/home_shell.dart';
 import '../profile/profile_state.dart';
+import '../providers/nearby_providers_screen.dart';
 import '../requirements/my_requests_screen.dart';
 import '../search/search_screen.dart';
 
@@ -19,10 +20,8 @@ import '../search/search_screen.dart';
 // GET /categories; "See all" opens the full CategoryGridScreen. Active
 // Requests stays wired to the real
 // /requirements/mine endpoint (unaffected by that screenshot, which didn't
-// show this section). Nearby Providers has no matching generic endpoint
-// (providers.controller.ts only supports GET /providers?subServiceId=...,
-// scoped to one sub-service) — kept as a prompt into category browsing
-// instead of inventing example providers.
+// show this section). Nearby providers is one card that, like See all, opens
+// the Nearby providers list (nearby_providers_screen.dart).
 //
 // The bottom bar lives in HomeShell, which shows this screen as its Home tab
 // and passes [onOpenTab] so the shortcuts to My requests and categories
@@ -97,6 +96,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     void openMyRequests() => openTab != null
         ? openTab(HomeTab.requests)
         : openThenRefresh(const MyRequestsScreen());
+    void openNearbyProviders() =>
+        openThenRefresh(const NearbyProvidersScreen());
 
     return Scaffold(
       body: PageGlow(
@@ -143,9 +144,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _SectionHeader(
                     title: 'Nearby providers',
                     actionLabel: 'See all',
-                    onAction: openCategories),
+                    onAction: openNearbyProviders),
                 const SizedBox(height: 12),
-                _NearbyProvidersPrompt(onTap: openCategories),
+                _NearbyProvidersCard(onTap: openNearbyProviders),
                 const SizedBox(height: 22),
                 const _PromoBanner(),
               ],
@@ -851,11 +852,13 @@ class _ActiveRequestCard extends StatelessWidget {
   }
 }
 
-// --- Nearby providers: no generic endpoint yet, so this is a prompt ----------
+// --- Nearby providers: one card into the list ------------------------------
 
-class _NearbyProvidersPrompt extends StatelessWidget {
+// The subtitle names the area of the address Home is set to, and follows the
+// location chip.
+class _NearbyProvidersCard extends StatelessWidget {
   final VoidCallback onTap;
-  const _NearbyProvidersPrompt({required this.onTap});
+  const _NearbyProvidersCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -867,6 +870,7 @@ class _NearbyProvidersPrompt extends StatelessWidget {
 
     return Card(
       child: InkWell(
+        key: const Key('nearby-providers-card'),
         onTap: onTap,
         borderRadius: BorderRadius.circular(OneHubTheme.radiusFormCard),
         child: Padding(
@@ -887,13 +891,19 @@ class _NearbyProvidersPrompt extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Browse a category',
+                    Text('Find providers near you',
                         style: OneHubTextStyles.bodyText(textPrimary)
                             .copyWith(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 2),
-                    Text('See rated providers near you for that service',
-                        style: OneHubTextStyles.fieldLabel(textMuted)
-                            .copyWith(letterSpacing: 0)),
+                    ValueListenableBuilder<SavedLocation?>(
+                      valueListenable: customerLocation,
+                      builder: (_, near, __) => Text(
+                          near == null
+                              ? 'Rated providers for every service'
+                              : 'Rated providers around ${near.city}',
+                          style: OneHubTextStyles.fieldLabel(textMuted)
+                              .copyWith(letterSpacing: 0)),
+                    ),
                   ],
                 ),
               ),

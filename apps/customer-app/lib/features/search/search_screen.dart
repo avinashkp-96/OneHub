@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../profile/profile_state.dart';
+import '../providers/nearby_providers_screen.dart';
 import '../requirements/post_requirement_screen.dart';
 
 // docx 4.2 "Search", opened from the dashboard's search bar. Type a service,
@@ -413,8 +414,8 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (_providers.isNotEmpty) ...[
                   section('Providers'),
                   for (final p in _providers)
-                    _ProviderCard(
-                        hit: p, onTap: () => _openService(p.services.first.id)),
+                    ProviderHitCard(
+                        hit: p, onTap: () => openProviderRequest(context, p)),
                 ],
               ],
             ],
@@ -479,10 +480,13 @@ class _ServiceCard extends StatelessWidget {
   }
 }
 
-class _ProviderCard extends StatelessWidget {
+/// A provider result: name, rating, certified badge, categories (and
+/// distance when known), services and starting price. Search and the Nearby
+/// providers list both use it.
+class ProviderHitCard extends StatelessWidget {
   final ProviderHit hit;
   final VoidCallback onTap;
-  const _ProviderCard({required this.hit, required this.onTap});
+  const ProviderHitCard({super.key, required this.hit, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
