@@ -23,6 +23,7 @@ export 'src/widgets/photos.dart';
 export 'src/widgets/request_card.dart';
 export 'src/widgets/success_snack_bar.dart';
 export 'src/widgets/terms_agreement.dart';
+export 'src/widgets/test_code.dart';
 export 'src/theme/glow_card.dart';
 export 'src/theme/onehub_colors.dart';
 export 'src/theme/onehub_icons.dart';

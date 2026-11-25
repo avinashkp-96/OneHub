@@ -77,7 +77,7 @@ void main() {
   }
 
   FakeApi okApi() => installFakeApi({
-        'POST /auth/otp/request': (_) => {'sent': true},
+        'POST /auth/otp/request': (_) => {'sent': true, 'devOnlyOtp': '482913'},
         'POST /auth/customer/signup': (_) => {'ok': true},
       });
 
@@ -167,6 +167,19 @@ void main() {
       'latitude': 10.0261,
       'longitude': 76.3125,
     });
+  });
+
+  testWidgets('the code step shows the test code the API sent back',
+      (tester) async {
+    okApi();
+    await pumpScreen(tester);
+    await fillForm(tester);
+    await submitForm(tester);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Phone Verification'), findsOneWidget);
+    expect(find.textContaining('Test code: 482913', findRichText: true),
+        findsOneWidget);
   });
 
   testWidgets('the Terms link opens the Terms & privacy page', (tester) async {

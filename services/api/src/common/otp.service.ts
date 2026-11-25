@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomInt } from 'crypto';
 
 interface OtpEntry {
   code: string;
@@ -15,7 +16,9 @@ export class OtpService {
   constructor(private readonly config: ConfigService) {}
 
   generate(mobile: string): string {
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Six digits, matching both apps' code fields; from a secure random
+    // source, since a guessable code would let someone claim a number.
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     const ttlSeconds = Number(this.config.get('OTP_TTL_SECONDS') ?? 300);
     this.store.set(mobile, { code, expiresAt: Date.now() + ttlSeconds * 1000 });
     // TODO: send via SMS provider instead of returning it to the caller.

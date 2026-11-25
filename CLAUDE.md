@@ -1245,6 +1245,23 @@ provider app has no `/signup` route, so opening localhost:8082/#/signup
 directly shows a blank page (the Sign up link works); not fixed here. Tests:
 shared 168 (97.4%), customer 189 (98.7%), provider 202 (95.9%).
 
+2026-11-25 (OTP test code): sign-up could not be finished in preview. No SMS
+is sent, and the API made 4-digit codes while both apps (and reset password)
+ask for 6. `OtpService` now makes 6-digit codes with `crypto.randomInt`
+(leading zeros kept). `POST /auth/otp/request` returns the code as
+`devOnlyOtp` only outside production; with `NODE_ENV=production` it returns
+just `{ sent: true }`, so nobody can verify a number they do not hold, and
+sign-ups there wait for an SMS provider. Shared `test_code.dart`:
+`testCodeFrom(reply)` and `TestCodeHint`, "Test code: 482913 (no SMS is sent
+in this test version)" under the code field in customer signup, provider
+signup and reset password; it never shows in production because the API sends
+nothing. The user asked whether the OTP is needed alongside the password and
+chose to keep it: it proves the person holds the number, which providers pay
+to unlock and password reset relies on. Checked: the provider code field shows
+"Test code: 019310" after Send OTP; through the gateway a wrong code is refused
+and the test code creates a customer account. Tests: API 347 (100% lines),
+shared 171, customer 190, provider 203.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

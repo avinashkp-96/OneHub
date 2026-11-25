@@ -9,9 +9,9 @@ describe('OtpService', () => {
 
   afterEach(() => jest.useRealTimers());
 
-  it('generates a 4-digit code', () => {
-    const code = build().generate('9876543210');
-    expect(code).toMatch(/^[0-9]{4}$/);
+  it('generates a 6-digit code, keeping leading zeros', () => {
+    const codes = Array.from({ length: 200 }, (_, i) => build().generate(`98765432${String(i).padStart(2, '0')}`));
+    for (const code of codes) expect(code).toMatch(/^[0-9]{6}$/);
   });
 
   it('verifies the code it generated, once', () => {

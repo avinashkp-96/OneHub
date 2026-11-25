@@ -79,6 +79,8 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _error;
   // Problems shown under their own field, keyed by field name.
   final Map<String, String> _fieldErrors = {};
+  // The code the API sent back while no SMS is sent (never in production).
+  String? _testCode;
 
   // Which step each field is on, so a refusal at Create Account can take the
   // user back to the field it is about.
@@ -215,9 +217,14 @@ class _SignupScreenState extends State<SignupScreen> {
       _fieldErrors.remove('mobile');
     });
     try {
-      await _api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
+      final reply =
+          await _api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
       if (!mounted) return;
-      setState(() => _otpSent = true);
+      setState(() {
+        _otpSent = true;
+        _testCode = testCodeFrom(reply);
+        _fieldErrors.remove('otp');
+      });
     } catch (e) {
       if (!mounted) return;
       _fail(e);
@@ -445,6 +452,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 errorText: _fieldErrors['otp'],
               ),
             ),
+            TestCodeHint(_testCode),
             const SizedBox(height: OneHubTheme.sectionGap),
             const FieldLabel('EMAIL ID (optional)', icon: OneHubIcons.email),
             const SizedBox(height: OneHubTheme.gapFieldInternals),

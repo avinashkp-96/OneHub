@@ -63,6 +63,10 @@ void main() {
           return http.Response(
               jsonEncode({'message': 'Mobile already registered'}), 409);
         }
+        if (path == '/auth/otp/request') {
+          return http.Response(
+              jsonEncode({'sent': true, 'devOnlyOtp': '482913'}), 201);
+        }
         return http.Response(jsonEncode({'ok': true}), 200);
       }),
     );
@@ -157,6 +161,25 @@ void main() {
     expect(find.text('Enter your name or business name.'), findsNothing);
     expect(find.text('Tap Send OTP to get a code on this number.'),
         findsOneWidget);
+  });
+
+  testWidgets('Send OTP unlocks the code field and shows the test code',
+      (tester) async {
+    await pumpScreen(tester);
+    expect(find.byKey(const Key('test-code')), findsNothing);
+
+    await tester.enterText(
+        find.widgetWithText(TextField, '10-digit number'), '9876543210');
+    await tester.tap(find.widgetWithText(OutlinedButton, 'Send OTP'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Test code: 482913', findRichText: true),
+        findsOneWidget);
+    expect(
+        tester
+            .widget<TextField>(find.widgetWithText(TextField, '6-digit code'))
+            .enabled,
+        isTrue);
   });
 
   testWidgets('rejects an invalid mobile number when sending the OTP',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../errors.dart';
+import '../widgets/test_code.dart';
 import '../theme/onehub_colors.dart';
 import '../theme/onehub_icons.dart';
 import '../theme/onehub_theme.dart';
@@ -41,6 +42,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   String? _error;
   // Problems shown under their own field: contact, otp, password, confirm.
   final Map<String, String> _fieldErrors = {};
+  // The code the API sent back while no SMS is sent (never in production).
+  String? _testCode;
 
   static const _fields = {
     'contact': ['mobile', 'email', 'account'],
@@ -74,9 +77,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _fieldErrors.clear();
     });
     try {
-      await widget.client
+      final reply = await widget.client
           .post('/auth/otp/request', {'mobile': _mobileOrEmail.text.trim()});
-      setState(() => _step = _Step.enterOtpAndPassword);
+      setState(() {
+        _testCode = testCodeFrom(reply);
+        _step = _Step.enterOtpAndPassword;
+      });
     } catch (e) {
       _fail(e);
     } finally {
@@ -236,6 +242,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     decoration: InputDecoration(
                         hintText: '6-digit code',
                         errorText: _fieldErrors['otp'])),
+                TestCodeHint(_testCode),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 const _FieldLabel('NEW PASSWORD', icon: OneHubIcons.lock),
                 const SizedBox(height: OneHubTheme.gapFieldInternals),

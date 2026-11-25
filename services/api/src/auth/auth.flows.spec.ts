@@ -185,6 +185,18 @@ describe('AuthService.requestOtp', () => {
     expect(otp.generate).toHaveBeenCalledWith('9876543210');
     expect(result).toEqual({ sent: true, devOnlyOtp: '4321' });
   });
+
+  it('never returns the code in production', () => {
+    const { service, otp } = build();
+    const before = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    try {
+      expect(service.requestOtp('9876543210')).toEqual({ sent: true });
+      expect(otp.generate).toHaveBeenCalledWith('9876543210');
+    } finally {
+      process.env.NODE_ENV = before;
+    }
+  });
 });
 
 describe('AuthService.resetPassword', () => {

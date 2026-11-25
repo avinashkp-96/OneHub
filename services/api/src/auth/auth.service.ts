@@ -124,9 +124,13 @@ export class AuthService {
   }
 
   // docx 2.5
+  // No SMS provider is connected yet. Outside production the code comes back
+  // as devOnlyOtp so the apps can show it as a test code; in production it
+  // never leaves the server, so nobody can verify a number they do not hold.
+  // Sign-ups there wait for the SMS provider (see Integrations in CLAUDE.md).
   requestOtp(mobile: string) {
     const code = this.otp.generate(mobile);
-    // TODO: dispatch via SMS provider; returned here only until that integration exists.
+    if (process.env.NODE_ENV === 'production') return { sent: true };
     return { sent: true, devOnlyOtp: code };
   }
 

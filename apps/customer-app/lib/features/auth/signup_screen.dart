@@ -58,6 +58,8 @@ class _SignupScreenState extends State<SignupScreen> {
   // email, password, confirm, the address fields, terms. [_error] holds what
   // belongs to no field, and on the code step, the code's problem.
   final Map<String, String> _fieldErrors = {};
+  // The code the API sent back while no SMS is sent (never in production).
+  String? _testCode;
 
   static const _apiFields = {
     'mobile': ['mobile'],
@@ -118,8 +120,12 @@ class _SignupScreenState extends State<SignupScreen> {
     if (problems.isNotEmpty) return;
     setState(() => _busy = true);
     try {
-      await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
-      setState(() => _step = _Step.otp);
+      final reply =
+          await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
+      setState(() {
+        _testCode = testCodeFrom(reply);
+        _step = _Step.otp;
+      });
       _startResendTimer();
     } catch (e) {
       _fail(e);
@@ -144,7 +150,9 @@ class _SignupScreenState extends State<SignupScreen> {
   Future<void> _resendOtp() async {
     if (_resendSecondsLeft > 0) return;
     try {
-      await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
+      final reply =
+          await api.post('/auth/otp/request', {'mobile': _mobile.text.trim()});
+      setState(() => _testCode = testCodeFrom(reply));
       _startResendTimer();
     } catch (e) {
       _fail(e);
@@ -233,6 +241,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   resendSecondsLeft: _resendSecondsLeft,
                   onResend: _resendOtp,
                   error: _error,
+                  testCode: _testCode,
                   busy: _busy,
                   onVerify: _verifyAndCreateAccount,
                 ),
@@ -445,10 +454,12 @@ class _OtpStep extends StatelessWidget {
   final int resendSecondsLeft;
   final VoidCallback onResend;
   final String? error;
+  final String? testCode;
   final bool busy;
   final VoidCallback onVerify;
 
   const _OtpStep({
+    required this.testCode,
     required this.mobile,
     required this.onChanged,
     required this.resendSecondsLeft,
@@ -490,6 +501,7 @@ class _OtpStep extends StatelessWidget {
               children: [
                 OtpInput(onChanged: onChanged),
                 Center(child: FieldError(error)),
+                Center(child: TestCodeHint(testCode)),
                 const SizedBox(height: OneHubTheme.sectionGap),
                 Center(
                   child: resendSecondsLeft > 0
