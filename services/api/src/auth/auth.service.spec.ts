@@ -20,6 +20,7 @@ describe('AuthService.signupCustomer', () => {
         findUnique: jest.fn().mockResolvedValue(overrides.userExists ? { id: 'u1' } : null),
         create: jest.fn().mockResolvedValue({ id: 'u1' }),
       },
+      refreshToken: { create: jest.fn().mockResolvedValue({}) },
     } as unknown as PrismaService;
     const otp = { verify: jest.fn().mockReturnValue(overrides.otpValid ?? true) } as unknown as OtpService;
     const jwt = { sign: jest.fn().mockReturnValue('signed-token') } as unknown as JwtService;
@@ -46,6 +47,6 @@ describe('AuthService.signupCustomer', () => {
   it('issues a token on success', async () => {
     const service = build({});
     const result = await service.signupCustomer(baseDto);
-    expect(result).toEqual({ accessToken: 'signed-token' });
+    expect(result).toEqual({ accessToken: 'signed-token', refreshToken: expect.any(String) });
   });
 });

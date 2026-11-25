@@ -26,6 +26,10 @@ function build(o: Overrides = {}) {
       create: jest.fn().mockResolvedValue({ id: 'u1', provider: { status: 'PENDING_VERIFICATION' } }),
       update: jest.fn().mockResolvedValue({}),
     },
+    refreshToken: {
+      create: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
   };
   const otp = {
     verify: jest.fn().mockReturnValue(o.otpValid ?? true),
@@ -146,7 +150,7 @@ describe('AuthService.login', () => {
     const result = await service.login({ mobileOrEmail: 'a@b.co', password: 'ok' });
 
     expect(jwt.sign).toHaveBeenCalledWith({ sub: 'u7', role: 'PROVIDER' });
-    expect(result).toEqual({ accessToken: 'signed-token' });
+    expect(result).toEqual({ accessToken: 'signed-token', refreshToken: expect.any(String) });
   });
 
   it('looks the user up by mobile or email', async () => {

@@ -23,7 +23,7 @@ PostgreSQL via Prisma. Schema at `services/api/prisma/schema.prisma`: User, Prov
 
 ## **Auth**
 
-JWT (access token only, no refresh token yet), mobile OTP for signup and password reset. Role stored on the JWT payload (CUSTOMER / PROVIDER / ADMIN) and checked with a `RolesGuard`.
+JWT access token (1 hour) renewed with a rotating 30-day refresh token (see the 2026-11-25 entry), mobile OTP for signup and password reset. Role stored on the JWT payload (CUSTOMER / PROVIDER / ADMIN) and checked with a `RolesGuard`.
 Role checks alone are not enough: every route that acts on a record alsochecks the caller owns it (2026-10-12 fix). A provider may only unlock, refineor complete their own bids and jobs; a customer may only confirm bids on,list bids for and rate their own requests; notifications and subscriptionsare scoped to the signed-in user. `PATCH /users/me` takes a whitelisted`UpdateProfileDto` (name, email, photo), so `role` and `passwordHash` cannotbe set. Bid lists and the public provider search select provider fieldsexplicitly and never return the ID proof URL or bank/UPI details. GET and
 PATCH `/users/me` also select fields explicitly (2026-10-29 fix): both used to
 return the whole user row, password hash included, and now leave out the
@@ -1072,6 +1072,25 @@ padding 18 to 14px, and every gap tightened; a card with buttons is now about
 Active jobs and Next job, customer My requests, and the top of both detail
 pages. The Reject and Send price buttons keep the 48px height of the
 outdoor/gloved-use rule. Tests: shared 111, customer 155, provider 192.
+
+2026-11-25 (stay signed in): users had to log in again whenever the access
+token expired (7 days). Login now also returns a refresh token: 32 random
+bytes, stored only as a SHA-256 hash in the new `RefreshToken` table
+(migration `20261125090000_refresh_tokens`), valid 30 days
+(`REFRESH_TOKEN_DAYS`). `POST /auth/refresh` uses the token up and returns a
+new access and refresh pair, so a user who opens the app at least monthly stays
+signed in. A used-up token presented again means it was copied, so every
+sign-in of that user is revoked. `POST /auth/logout` revokes one token, a
+password reset revokes all of them, and a provider back in pending
+verification cannot renew. Access tokens now last 1 hour (`JWT_EXPIRES_IN`,
+.env and .env.example). `ApiClient` stores both tokens; on a 401 from a
+signed-in call it renews once (parallel calls share one renewal) and sends the
+call again. Only a refused renewal ends the sign-in (`onSessionExpired`, the
+login screen); an unreachable API or a 5xx keeps it. `logout()` revokes the
+refresh token on the API (best effort, so offline logout still works here).
+Customer signup returns both tokens like login. Checked live with 30-second
+access tokens: 401, refresh, retry, no login screen. Tests: API 276 (100% lines), shared 121, customer 155,
+provider 192.
 
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width

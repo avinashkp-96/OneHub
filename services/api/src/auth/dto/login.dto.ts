@@ -9,6 +9,12 @@ export class LoginDto {
   password: string;
 }
 
+// Renewing or ending a sign-in names the refresh token it holds.
+export class RefreshTokenDto {
+  @IsString()
+  refreshToken: string;
+}
+
 export class RequestOtpDto {
   @IsString()
   mobile: string;

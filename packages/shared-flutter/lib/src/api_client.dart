@@ -13,33 +13,99 @@ class ApiClient {
       : _http = httpClient ?? http.Client(),
         _storage = storage ?? const FlutterSecureStorage();
 
-  /// Called once when a signed-in request comes back 401: the token expired
-  /// (it lasts `JWT_EXPIRES_IN`, 7 days by default) or was never stored. The
-  /// token is already deleted by then; each app sends the user to login.
-  /// Several screens load at once, so later 401s from the same session are
-  /// ignored until a new token is saved.
+  static const _accessKey = 'access_token';
+  static const _refreshKey = 'refresh_token';
+
+  /// Called once when the sign-in has ended: a signed-in request came back
+  /// 401 and the refresh token could not renew it (30 days unused, revoked by
+  /// a password reset or logout elsewhere, or never stored). Both tokens are
+  /// already deleted by then; each app sends the user to login. Several
+  /// screens load at once, so later 401s are ignored until a new sign-in.
   void Function()? onSessionExpired;
   bool _expiryReported = false;
 
-  Future<void> _saveToken(String token) {
+  // One renewal at a time: screens that hit the expired access token together
+  // all wait on the same refresh call, since each refresh token works once.
+  Future<bool?>? _renewing;
+
+  // Login, signup and refresh answers carry an access token, and from login
+  // and refresh a refresh token too.
+  Future<void> _saveTokens(Map<String, dynamic> body) async {
     _expiryReported = false;
-    return _storage.write(key: 'access_token', value: token);
+    await _storage.write(key: _accessKey, value: body['accessToken'] as String);
+    final refresh = body['refreshToken'];
+    if (refresh is String) await _storage.write(key: _refreshKey, value: refresh);
   }
 
-  Future<String?> get token => _storage.read(key: 'access_token');
+  Future<String?> get token => _storage.read(key: _accessKey);
 
-  // Only signed-in calls count: a 401 from login itself means a wrong
-  // password, not an expired session.
-  Future<void> _checkSession(int statusCode, bool signedIn) async {
-    if (statusCode != 401 || !signedIn || _expiryReported) return;
+  /// True when the access token was renewed, false when the API refused the
+  /// refresh token (the sign-in is over), null when the API could not be
+  /// reached (the sign-in may be fine, so it is kept).
+  Future<bool?> _renew() =>
+      _renewing ??= _doRenew().whenComplete(() => _renewing = null);
+
+  Future<bool?> _doRenew() async {
+    final refresh = await _storage.read(key: _refreshKey);
+    if (refresh == null) return false;
+    final http.Response res;
+    try {
+      res = await _http.post(Uri.parse('$baseUrl/auth/refresh'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'refreshToken': refresh}));
+    } catch (_) {
+      return null;
+    }
+    final body = _decode(res.body);
+    if (res.statusCode < 400 &&
+        body is Map<String, dynamic> &&
+        body['accessToken'] is String) {
+      await _saveTokens(body);
+      return true;
+    }
+    return res.statusCode >= 500 ? null : false;
+  }
+
+  // A signed-in call was refused with [res]: renew and send it again once
+  // through [again]. When the sign-in is over, forget it and tell the app.
+  Future<http.Response> _retryAfter401(
+      http.Response res, Future<http.Response> Function() again) async {
+    final renewed = await _renew();
+    if (renewed == true) {
+      final retried = await again();
+      if (retried.statusCode == 401) await _expire();
+      return retried;
+    }
+    if (renewed == false) await _expire();
+    return res;
+  }
+
+  Future<void> _expire() async {
+    if (_expiryReported) return;
     _expiryReported = true;
-    await logout();
+    await _forget();
     onSessionExpired?.call();
   }
 
-  // Signs out locally by forgetting the stored token; there is no server-side
-  // session to end, since requests authenticate with the bearer token alone.
-  Future<void> logout() => _storage.delete(key: 'access_token');
+  Future<void> _forget() async {
+    await _storage.delete(key: _accessKey);
+    await _storage.delete(key: _refreshKey);
+  }
+
+  /// Ends this sign-in: asks the API to revoke the refresh token, then forgets
+  /// both tokens. Revoking is best effort, so logging out offline still signs
+  /// out on this device.
+  Future<void> logout() async {
+    final refresh = await _storage.read(key: _refreshKey);
+    if (refresh != null) {
+      try {
+        await _http.post(Uri.parse('$baseUrl/auth/logout'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refreshToken': refresh}));
+      } catch (_) {}
+    }
+    await _forget();
+  }
 
   Future<Map<String, dynamic>> post(String path, Map<String, dynamic> body, {bool auth = false}) =>
       _send(_http.post, path, body, auth);
@@ -56,21 +122,25 @@ class ApiClient {
     Map<String, dynamic> body,
     bool auth,
   ) async {
-    final headers = {'Content-Type': 'application/json'};
-    if (auth) {
-      final t = await token;
-      if (t != null) headers['Authorization'] = 'Bearer $t';
+    Future<http.Response> once() async {
+      final headers = {'Content-Type': 'application/json'};
+      if (auth) {
+        final t = await token;
+        if (t != null) headers['Authorization'] = 'Bearer $t';
+      }
+      return method(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
     }
-    final res = await method(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body));
+
+    var res = await once();
+    // Only signed-in calls renew: a 401 from login itself means a wrong
+    // password, not an expired sign-in.
+    if (res.statusCode == 401 && auth) res = await _retryAfter401(res, once);
     final raw = _decode(res.body);
     final decoded = raw is Map<String, dynamic> ? raw : <String, dynamic>{};
     if (res.statusCode >= 400) {
-      await _checkSession(res.statusCode, auth);
       throw ApiException(res.statusCode, decoded['message']?.toString() ?? 'request failed');
     }
-    if (decoded.containsKey('accessToken')) {
-      await _saveToken(decoded['accessToken'] as String);
-    }
+    if (decoded['accessToken'] is String) await _saveTokens(decoded);
     return decoded;
   }
 
@@ -89,16 +159,20 @@ class ApiClient {
   }
 
   Future<dynamic> get(String path) async {
-    final t = await token;
-    final res = await _http.get(
-      Uri.parse('$baseUrl$path'),
-      headers: {if (t != null) 'Authorization': 'Bearer $t'},
-    );
+    Future<http.Response> once() async {
+      final t = await token;
+      return _http.get(
+        Uri.parse('$baseUrl$path'),
+        headers: {if (t != null) 'Authorization': 'Bearer $t'},
+      );
+    }
+
+    var res = await once();
+    // Every GET is a signed-in call or a public one that never answers 401,
+    // so a 401 here means the access token needs renewing, token or not.
+    if (res.statusCode == 401) res = await _retryAfter401(res, once);
     final decoded = _decode(res.body);
     if (res.statusCode >= 400) {
-      // Every GET is a signed-in call or a public one that never answers 401,
-      // so a 401 here means no valid session, token or not.
-      await _checkSession(res.statusCode, true);
       final message = decoded is Map ? decoded['message']?.toString() : 'request failed';
       throw ApiException(res.statusCode, message ?? 'request failed');
     }

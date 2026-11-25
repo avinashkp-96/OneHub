@@ -232,4 +232,169 @@ void main() {
       );
     });
   });
+
+  group('staying signed in', () {
+    // A fake API whose access token "old" has expired and "new" works.
+    // /auth/refresh answers with [refreshStatus] (or throws when null is
+    // given for [reachable]); every request is recorded in [log].
+    late List<String> log;
+    late List<String?> bearers;
+    late List<Map<String, dynamic>> refreshBodies;
+
+    ApiClient signedIn(
+        {int refreshStatus = 200,
+        bool reachable = true,
+        bool newTokenWorks = true}) {
+      log = [];
+      bearers = [];
+      refreshBodies = [];
+      return ApiClient(
+        baseUrl: 'https://example.test',
+        httpClient: MockClient((request) async {
+          final path = request.url.path;
+          log.add('${request.method} $path');
+          if (path == '/auth/refresh') {
+            if (!reachable) throw http.ClientException('offline');
+            refreshBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+            if (refreshStatus != 200) {
+              return http.Response(
+                  jsonEncode({'message': 'sign-in expired'}), refreshStatus);
+            }
+            return http.Response(
+                jsonEncode({'accessToken': 'new', 'refreshToken': 'r2'}), 200);
+          }
+          if (path == '/auth/logout') {
+            if (!reachable) throw http.ClientException('offline');
+            refreshBodies.add(jsonDecode(request.body) as Map<String, dynamic>);
+            return http.Response(jsonEncode({'loggedOut': true}), 200);
+          }
+          if (path == '/auth/login') {
+            return http.Response(
+                jsonEncode({'accessToken': 'old', 'refreshToken': 'r1'}), 200);
+          }
+          final bearer = request.headers['Authorization'];
+          bearers.add(bearer);
+          if (bearer == 'Bearer new' && newTokenWorks) {
+            return http.Response(jsonEncode({'ok': path}), 200);
+          }
+          return http.Response(jsonEncode({'message': 'Unauthorized'}), 401);
+        }),
+      );
+    }
+
+    setUp(() {
+      stored['access_token'] = 'old';
+      stored['refresh_token'] = 'r1';
+    });
+
+    test('login stores the refresh token as well', () async {
+      stored.clear();
+      final api = signedIn();
+
+      await api.post('/auth/login', {});
+
+      expect(stored, {'access_token': 'old', 'refresh_token': 'r1'});
+    });
+
+    test('an expired access token is renewed and the call sent again',
+        () async {
+      var expired = 0;
+      final api = signedIn()..onSessionExpired = () => expired++;
+
+      expect(await api.get('/providers/me'), {'ok': '/providers/me'});
+
+      expect(log, ['GET /providers/me', 'POST /auth/refresh', 'GET /providers/me']);
+      expect(refreshBodies.single, {'refreshToken': 'r1'});
+      expect(bearers, ['Bearer old', 'Bearer new']);
+      expect(stored, {'access_token': 'new', 'refresh_token': 'r2'});
+      expect(expired, 0);
+    });
+
+    test('a signed-in POST renews too', () async {
+      final api = signedIn();
+
+      expect(await api.patch('/users/me', {'fullName': 'A'}, auth: true),
+          {'ok': '/users/me'});
+      expect(log.where((l) => l == 'POST /auth/refresh'), hasLength(1));
+    });
+
+    test('calls that fail together share one renewal', () async {
+      final api = signedIn();
+
+      final results = await Future.wait(
+          [api.get('/a'), api.get('/b'), api.get('/c')]);
+
+      expect(results, [
+        {'ok': '/a'},
+        {'ok': '/b'},
+        {'ok': '/c'}
+      ]);
+      expect(log.where((l) => l == 'POST /auth/refresh'), hasLength(1));
+    });
+
+    test('a refused refresh ends the sign-in once and forgets both tokens',
+        () async {
+      var expired = 0;
+      final api = signedIn(refreshStatus: 401)..onSessionExpired = () => expired++;
+
+      await expectLater(api.get('/a'), throwsA(isA<ApiException>()));
+      await expectLater(api.get('/b'), throwsA(isA<ApiException>()));
+
+      expect(expired, 1);
+      expect(stored, isEmpty);
+    });
+
+    test('an unreachable API keeps the sign-in', () async {
+      var expired = 0;
+      final api = signedIn(reachable: false)..onSessionExpired = () => expired++;
+
+      await expectLater(
+          api.get('/a'),
+          throwsA(isA<ApiException>()
+              .having((e) => e.statusCode, 'statusCode', 401)));
+
+      expect(expired, 0);
+      expect(stored, {'access_token': 'old', 'refresh_token': 'r1'});
+    });
+
+    test('a server error while renewing keeps the sign-in', () async {
+      var expired = 0;
+      final api = signedIn(refreshStatus: 503)..onSessionExpired = () => expired++;
+
+      await expectLater(api.get('/a'), throwsA(isA<ApiException>()));
+
+      expect(expired, 0);
+      expect(stored['refresh_token'], 'r1');
+    });
+
+    test('a call still refused after renewing ends the sign-in', () async {
+      var expired = 0;
+      final api = signedIn(newTokenWorks: false)
+        ..onSessionExpired = () => expired++;
+
+      await expectLater(api.get('/a'), throwsA(isA<ApiException>()));
+
+      expect(expired, 1);
+      expect(stored, isEmpty);
+    });
+
+    test('logout revokes the refresh token on the API and forgets both',
+        () async {
+      final api = signedIn();
+
+      await api.logout();
+
+      expect(log, ['POST /auth/logout']);
+      expect(refreshBodies.single, {'refreshToken': 'r1'});
+      expect(stored, isEmpty);
+    });
+
+    test('logout offline still signs out on this device', () async {
+      final api = signedIn(reachable: false);
+
+      await api.logout();
+
+      expect(stored, isEmpty);
+    });
+  });
 }
