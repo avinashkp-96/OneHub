@@ -2,13 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
+import '../profile/profile_state.dart';
 import '../requirements/post_requirement_screen.dart';
 
 // docx 4.2 "Search", opened from the dashboard's search bar. Type a service,
 // category or provider name; suggestions appear after two letters and the
 // search runs on submit or on picking a suggestion. Filters (category,
-// minimum rating, maximum starting price) and sort (top rated or lowest
-// price) are in a sheet behind the filter button.
+// minimum rating, maximum starting price) and sort (top rated, lowest price,
+// or nearest once the customer has saved a location) are in a sheet behind
+// the filter button. With a saved location each provider shows its distance.
 //
 // Results come in two lists from GET /search: services, and providers with
 // their matching services and starting price. Either opens Post a
@@ -16,8 +18,8 @@ import '../requirements/post_requirement_screen.dart';
 // providers from there.
 //
 // Recent searches are kept in memory for this session ([recentSearches]);
-// nothing persists them yet. Distance ("nearest first", radius) and "available
-// now" are not offered: provider locations and online status are not stored.
+// nothing persists them yet. "Available now" is not offered: online status
+// is not stored.
 
 /// The last few searches, newest first, for this session only.
 final recentSearches = ValueNotifier<List<String>>(const []);
@@ -38,22 +40,29 @@ class SearchFilters {
   final double? minRating;
   final int? maxPrice;
   final bool sortByPrice;
+  final bool sortByDistance;
   const SearchFilters({
     this.categoryId,
     this.categoryName,
     this.minRating,
     this.maxPrice,
     this.sortByPrice = false,
+    this.sortByDistance = false,
   });
 
   bool get isEmpty =>
-      categoryId == null && minRating == null && maxPrice == null && !sortByPrice;
+      categoryId == null &&
+      minRating == null &&
+      maxPrice == null &&
+      !sortByPrice &&
+      !sortByDistance;
 
   Map<String, String> get query => {
         if (categoryId != null) 'categoryId': categoryId!,
         if (minRating != null) 'minRating': '$minRating',
         if (maxPrice != null) 'maxPrice': '$maxPrice',
         if (sortByPrice) 'sort': 'price',
+        if (sortByDistance) 'sort': 'distance',
       };
 
   /// Short labels for the active filters, shown under the search box.
@@ -62,6 +71,7 @@ class SearchFilters {
         if (minRating != null) '${_ratingLabel(minRating!)}★ and up',
         if (maxPrice != null) 'Up to ₹$maxPrice',
         if (sortByPrice) 'Lowest price first',
+        if (sortByDistance) 'Nearest first',
       ];
 }
 
@@ -94,8 +104,10 @@ class ProviderHit {
   final List<String> categories;
   final List<({String id, String name})> services;
   final double? startingPrice;
+  final double? distanceKm;
   const ProviderHit(this.id, this.name, this.averageRating, this.ratingCount,
-      this.certified, this.categories, this.services, this.startingPrice);
+      this.certified, this.categories, this.services, this.startingPrice,
+      [this.distanceKm]);
 
   factory ProviderHit.fromJson(Map<String, dynamic> j) => ProviderHit(
         j['id'] as String,
@@ -112,6 +124,7 @@ class ProviderHit {
             )
         ],
         (j['startingPrice'] as num?)?.toDouble(),
+        (j['distanceKm'] as num?)?.toDouble(),
       );
 }
 
@@ -175,7 +188,13 @@ class _SearchScreenState extends State<SearchScreen> {
       _error = null;
     });
     try {
-      final params = {if (q.isNotEmpty) 'q': q, ..._filters.query};
+      final near = customerLocation.value;
+      final params = {
+        if (q.isNotEmpty) 'q': q,
+        ..._filters.query,
+        if (near != null) 'latitude': '${near.latitude}',
+        if (near != null) 'longitude': '${near.longitude}',
+      };
       final query = Uri(queryParameters: params).query;
       final json = await api.get(query.isEmpty ? '/search' : '/search?$query')
           as Map<String, dynamic>;
@@ -506,7 +525,11 @@ class _ProviderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(hit.categories.join(', '),
+              Text(
+                  [
+                    hit.categories.join(', '),
+                    if (hit.distanceKm != null) distanceLabel(hit.distanceKm!),
+                  ].join(' · '),
                   style: OneHubTextStyles.fieldLabel(textMuted)
                       .copyWith(letterSpacing: 0)),
               const SizedBox(height: 8),
@@ -543,6 +566,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   late double? _minRating = widget.initial.minRating;
   late int? _maxPrice = widget.initial.maxPrice;
   late bool _sortByPrice = widget.initial.sortByPrice;
+  late bool _sortByDistance = widget.initial.sortByDistance;
   List<ServiceCategory> _categories = [];
 
   static const _ratings = [3.0, 4.0, 4.5];
@@ -623,12 +647,25 @@ class _FilterSheetState extends State<_FilterSheet> {
             ]),
             heading('SORT BY'),
             Wrap(spacing: 8, runSpacing: 8, children: [
-              _chip('Top rated', !_sortByPrice, () => _sortByPrice = false),
-              _chip('Lowest price', _sortByPrice, () => _sortByPrice = true),
+              _chip('Top rated', !_sortByPrice && !_sortByDistance, () {
+                _sortByPrice = false;
+                _sortByDistance = false;
+              }),
+              _chip('Lowest price', _sortByPrice, () {
+                _sortByPrice = true;
+                _sortByDistance = false;
+              }),
+              if (customerLocation.value != null)
+                _chip('Nearest', _sortByDistance, () {
+                  _sortByDistance = true;
+                  _sortByPrice = false;
+                }),
             ]),
             const SizedBox(height: 10),
             Text(
-                'Distance and "available now" filters need provider locations and online status, which are not saved yet.',
+                customerLocation.value == null
+                    ? 'Set your location on Home to sort by distance. "Available now" needs online status, which is not saved yet.'
+                    : '"Available now" needs online status, which is not saved yet.',
                 style: OneHubTextStyles.fieldLabel(textMuted)
                     .copyWith(letterSpacing: 0, fontSize: 12)),
             const SizedBox(height: 20),
@@ -651,6 +688,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       minRating: _minRating,
                       maxPrice: _maxPrice,
                       sortByPrice: _sortByPrice,
+                      sortByDistance: _sortByDistance,
                     )),
                     child: const Text('Apply'),
                   ),

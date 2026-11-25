@@ -15,6 +15,7 @@ export 'src/screens/reset_password_screen.dart';
 export 'src/session_expiry.dart';
 export 'src/theme/curved_nav_bar.dart';
 export 'src/widgets/link_tile.dart';
+export 'src/widgets/location.dart';
 export 'src/widgets/notification_bell.dart';
 export 'src/widgets/photos.dart';
 export 'src/widgets/request_card.dart';

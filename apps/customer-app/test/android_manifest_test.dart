@@ -12,6 +12,11 @@ void main() {
     expect(manifest('main'), contains('android.permission.INTERNET'));
   });
 
+  test('every build may ask for the location', () {
+    expect(manifest('main'), contains('android.permission.ACCESS_COARSE_LOCATION'));
+    expect(manifest('main'), contains('android.permission.ACCESS_FINE_LOCATION'));
+  });
+
   test('debug builds may call a plain http dev API', () {
     expect(manifest('debug'), contains('android:usesCleartextTraffic="true"'));
   });

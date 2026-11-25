@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, Injectable } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateSettingsDto } from './dto/update-settings.dto';
+import { UpdateLocationDto } from './dto/update-location.dto';
+import { placeName } from '../locations/areas';
 import { Role, settingsFor } from './settings';
 
 // What a user gets back about their own account, from GET and PATCH
@@ -73,6 +75,18 @@ export class UsersService {
       profilePhotoUrl: dto.profilePhotoUrl,
     };
     return this.prisma.user.update({ where: { id: userId }, data, select: SELF_SELECT });
+  }
+
+  // Where the customer wants work done, or where the provider's business is.
+  // Both apps set it from GPS or a picked area; a blank city is named from the
+  // coordinates.
+  updateLocation(userId: string, dto: UpdateLocationDto) {
+    const city = dto.city?.trim() || placeName(dto.latitude, dto.longitude);
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { latitude: dto.latitude, longitude: dto.longitude, city },
+      select: SELF_SELECT,
+    });
   }
 
   // The caller's notification switches, defaults filled in.

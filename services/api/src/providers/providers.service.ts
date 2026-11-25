@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateBusinessDto } from './dto/update-business.dto';
+import { byDistance, distanceKm } from '../locations/geo';
 
 // Fields read for the provider's own profile. The ID proof link and bank/UPI
 // details are read only to work out "on file" and a masked value: toBusiness
@@ -14,7 +15,17 @@ const BUSINESS_SELECT = {
   idProofUrl: true,
   idProofNeedsReview: true,
   bankOrUpiDetails: true,
-  user: { select: { fullName: true, mobile: true, email: true, profilePhotoUrl: true } },
+  user: {
+    select: {
+      fullName: true,
+      mobile: true,
+      email: true,
+      profilePhotoUrl: true,
+      city: true,
+      latitude: true,
+      longitude: true,
+    },
+  },
   subServices: {
     select: {
       subService: {
@@ -33,7 +44,15 @@ type BusinessRow = {
   idProofUrl: string | null;
   idProofNeedsReview: boolean;
   bankOrUpiDetails: string | null;
-  user: { fullName: string; mobile: string; email: string | null; profilePhotoUrl: string | null };
+  user: {
+    fullName: string;
+    mobile: string;
+    email: string | null;
+    profilePhotoUrl: string | null;
+    city: string | null;
+    latitude: number | null;
+    longitude: number | null;
+  };
   subServices: { subService: { id: string; name: string; category: { id: string; name: string } } }[];
 };
 
@@ -42,14 +61,18 @@ export class ProvidersService {
   constructor(private readonly prisma: PrismaService) {}
 
   // docx 4.2 "Search" results list + 4.3 "Provider Selection". Filters to
-  // providers offering the given sub-service. Distance/radius filtering needs
-  // a geo query (PostGIS or a haversine calc) — left as a follow-up; for now
-  // this returns everyone active for the sub-service, nearest-first is a TODO.
+  // providers offering the given sub-service, best rated first. Given the
+  // customer's position, each provider gets a distanceKm, providers whose
+  // coverage radius does not reach the customer are left out, and the list is
+  // nearest first (providers with no saved location last). The distance is
+  // worked out in memory, fine at MVP size; move it into the query (PostGIS)
+  // when the provider count grows.
   //
   // This route is public, so it selects fields explicitly: the full provider
-  // row also holds the ID proof URL and bank/UPI details.
-  async findForSubService(subServiceId: string) {
-    return this.prisma.provider.findMany({
+  // row also holds the ID proof URL and bank/UPI details. Provider
+  // coordinates are read for the distance but never returned.
+  async findForSubService(subServiceId: string, near?: { latitude: number; longitude: number }) {
+    const rows = await this.prisma.provider.findMany({
       where: {
         status: 'ACTIVE',
         subServices: { some: { subServiceId } },
@@ -62,10 +85,17 @@ export class ProvidersService {
         averageRating: true,
         ratingCount: true,
         certified: true,
-        user: { select: { fullName: true, city: true } },
+        user: { select: { fullName: true, city: true, latitude: true, longitude: true } },
       },
       orderBy: { averageRating: 'desc' },
     });
+    const listed = rows.map(({ user: { latitude, longitude, ...user }, ...p }) => ({
+      ...p,
+      user,
+      distanceKm: near ? distanceKm(near, { latitude, longitude }) : null,
+    }));
+    if (!near) return listed;
+    return listed.filter((p) => p.distanceKm === null || p.distanceKm <= p.coverageRadiusKm).sort(byDistance);
   }
 
   // docx 5.2. Always looked up by the caller's own user id, so a provider can
@@ -142,6 +172,10 @@ function toBusiness(row: BusinessRow) {
     status: row.status,
     yearsExperience: row.yearsExperience,
     coverageRadiusKm: row.coverageRadiusKm,
+    location:
+      row.user.latitude != null && row.user.longitude != null
+        ? { city: row.user.city, latitude: row.user.latitude, longitude: row.user.longitude }
+        : null,
     category: services[0]?.category ?? null,
     subServices: services.map(({ id, name }) => ({ id, name })),
     idProofOnFile: !!row.idProofUrl,

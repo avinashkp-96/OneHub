@@ -5,11 +5,15 @@ class ProviderSummary {
   final double averageRating;
   final bool certified;
 
+  /// Straight-line distance to the customer, when both locations are known.
+  final double? distanceKm;
+
   const ProviderSummary({
     required this.id,
     required this.name,
     required this.averageRating,
     required this.certified,
+    this.distanceKm,
   });
 
   factory ProviderSummary.fromJson(Map<String, dynamic> json) => ProviderSummary(
@@ -17,5 +21,6 @@ class ProviderSummary {
         name: (json['businessName'] as String?) ?? (json['user']?['fullName'] as String? ?? 'Provider'),
         averageRating: (json['averageRating'] as num).toDouble(),
         certified: json['certified'] as bool,
+        distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       );
 }

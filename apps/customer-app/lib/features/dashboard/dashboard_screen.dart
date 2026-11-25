@@ -28,7 +28,10 @@ import '../search/search_screen.dart';
 // switch tabs. Without it (e.g. in a test), they push the screen instead.
 class DashboardScreen extends StatefulWidget {
   final ValueChanged<int>? onOpenTab;
-  const DashboardScreen({super.key, this.onOpenTab});
+
+  /// Asks where the customer is; tests pass one to skip the sheet and GPS.
+  final LocationPicker? pickLocation;
+  const DashboardScreen({super.key, this.onOpenTab, this.pickLocation});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -103,7 +106,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.fromLTRB(
                   OneHubTheme.pageMargin, 20, OneHubTheme.pageMargin, 100),
               children: [
-                _TopRow(),
+                _TopRow(pickLocation: widget.pickLocation),
                 const SizedBox(height: 20),
                 _Headline(),
                 const SizedBox(height: OneHubTheme.sectionGap),
@@ -155,52 +158,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // --- Header row: location chip + notification bell -------------------------
 
-// Dummy service areas: geolocation and an areas endpoint don't exist yet, so
-// the chip opens a picker over this fixed list. Replace with detected /
-// fetched locations later.
-const dummyServiceAreas = [
-  'Edappally, Kochi',
-  'Kakkanad, Kochi',
-  'Vyttila, Kochi',
-  'Fort Kochi',
-  'Aluva',
-];
-
+// The chip shows the customer's saved area (customerLocation, from
+// GET /users/me) or "Set your location". Tapping it offers GPS or the service
+// areas, and the choice is saved on the account.
 class _TopRow extends StatefulWidget {
+  final LocationPicker? pickLocation;
+  const _TopRow({this.pickLocation});
+
   @override
   State<_TopRow> createState() => _TopRowState();
 }
 
 class _TopRowState extends State<_TopRow> {
-  String _location = dummyServiceAreas.first;
+  bool _saving = false;
 
   Future<void> _pickLocation() async {
-    final picked = await showModalBottomSheet<String>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 8),
-              child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text('Choose your area')),
-            ),
-            for (final area in dummyServiceAreas)
-              ListTile(
-                title: Text(area),
-                trailing: area == _location
-                    ? const Icon(OneHubIcons.successCheck,
-                        size: 18, color: OneHubColors.primary)
-                    : null,
-                onTap: () => Navigator.of(ctx).pop(area),
-              ),
-          ],
-        ),
-      ),
-    );
-    if (picked != null && mounted) setState(() => _location = picked);
+    final pick = widget.pickLocation ??
+        (BuildContext context, SavedLocation? current) =>
+            chooseLocation(context, api, current: current);
+    final picked = await pick(context, customerLocation.value);
+    if (picked == null || !mounted) return;
+    setState(() => _saving = true);
+    try {
+      await saveCustomerLocation(picked);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Could not save your location: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -219,8 +207,9 @@ class _TopRowState extends State<_TopRow> {
       children: [
         InkWell(
           borderRadius: BorderRadius.circular(OneHubTheme.radiusPillBadge),
-          onTap: _pickLocation,
+          onTap: _saving ? null : _pickLocation,
           child: Container(
+            key: const Key('location-chip'),
             padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
             decoration: BoxDecoration(
               color: cardFill,
@@ -233,10 +222,12 @@ class _TopRowState extends State<_TopRow> {
                 const Icon(OneHubIcons.location,
                     size: 16, color: OneHubColors.primary),
                 const SizedBox(width: 6),
-                // Starts on a dummy area — geolocation isn't wired up yet,
-                // but the reference screenshot calls for a real-looking
-                // value here rather than a generic "Set your location".
-                Text(_location, style: OneHubTextStyles.linkText(textPrimary)),
+                ValueListenableBuilder<SavedLocation?>(
+                  valueListenable: customerLocation,
+                  builder: (_, location, __) => Text(
+                      location?.city ?? 'Set your location',
+                      style: OneHubTextStyles.linkText(textPrimary)),
+                ),
                 const SizedBox(width: 2),
                 Icon(OneHubIcons.chevronDown, size: 14, color: textMuted),
               ],

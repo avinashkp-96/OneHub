@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
+import '../profile/profile_state.dart';
 
 // docx 4.3 — Post a Requirement. `subServiceId` is carried over from category
 // browsing (docx 4.1 "Service Categories" -> sub-service list), which isn't
@@ -75,8 +76,12 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
 
   Future<void> _loadProviders() async {
     try {
-      final json = await api
-          .get('/providers?subServiceId=${widget.subServiceId}') as List;
+      // With a saved location the API lists providers nearest first and
+      // leaves out those whose coverage does not reach the customer.
+      final near = customerLocation.value;
+      final json = await api.get(
+              '/providers?subServiceId=${widget.subServiceId}${near == null ? '' : '&${near.query}'}')
+          as List;
       if (!mounted) return;
       setState(() {
         _providers = json
@@ -292,6 +297,18 @@ class _PostRequirementScreenState extends State<PostRequirementScreen> {
                   style: OneHubTextStyles.fieldLabel(textMuted)
                       .copyWith(letterSpacing: 0),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  switch (customerLocation.value) {
+                    final SavedLocation l =>
+                      'Nearest first, from ${l.city}.',
+                    null =>
+                      'Set your location on Home to see the nearest first.',
+                  },
+                  key: const Key('providers-near'),
+                  style: OneHubTextStyles.fieldLabel(textMuted)
+                      .copyWith(letterSpacing: 0),
+                ),
                 const SizedBox(height: 12),
                 if (_loading)
                   const Padding(
@@ -458,6 +475,12 @@ class _ProviderTile extends StatelessWidget {
                           const SizedBox(width: 6),
                           const TintedBadge(
                               label: 'CERTIFIED', color: OneHubColors.success),
+                        ],
+                        if (provider.distanceKm != null) ...[
+                          const SizedBox(width: 8),
+                          Text(distanceLabel(provider.distanceKm!),
+                              style: OneHubTextStyles.fieldLabel(textMuted)
+                                  .copyWith(letterSpacing: 0, fontSize: 12)),
                         ],
                       ],
                     ),

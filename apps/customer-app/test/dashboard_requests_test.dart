@@ -1,9 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:onehub_customer/features/categories/category_grid_screen.dart';
 import 'package:onehub_customer/features/dashboard/dashboard_screen.dart';
 import 'package:onehub_customer/features/home/home_shell.dart';
+import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_customer/features/requirements/my_requests_screen.dart';
 import 'package:onehub_customer/features/search/search_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
@@ -11,8 +13,11 @@ import 'package:onehub_shared/onehub_shared.dart';
 import 'support/fake_api.dart';
 
 void main() {
+  setUp(() => customerLocation.value = null);
+
   Future<void> pumpScreen(WidgetTester tester,
-      Map<String, Object? Function(http.Request)> routes) async {
+      Map<String, Object? Function(http.Request)> routes,
+      {LocationPicker? pickLocation}) async {
     installFakeApi({
       'GET /categories': (_) => [],
       'GET /requirements/mine': (_) => [],
@@ -27,7 +32,9 @@ void main() {
     // (and so reloads from the new fake API) instead of reusing the old one.
     await tester.pumpWidget(const SizedBox());
     await tester.pumpWidget(
-      MaterialApp(theme: OneHubTheme.dark(), home: const DashboardScreen()),
+      MaterialApp(
+          theme: OneHubTheme.dark(),
+          home: DashboardScreen(pickLocation: pickLocation)),
     );
     await tester.pumpAndSettle();
   }
@@ -299,33 +306,103 @@ void main() {
     expect(find.byType(CategoryGridScreen), findsNothing);
   });
 
-  testWidgets('the location chip opens an area picker and shows the choice',
-      (tester) async {
-    await pumpScreen(tester, {});
+  group('location chip', () {
+    const kakkanad =
+        SavedLocation(city: 'Kakkanad', latitude: 10.0159, longitude: 76.3419);
+    Map<String, Object? Function(http.Request)> me({String? city}) => {
+          'GET /users/me': (_) => {
+                'fullName': 'Meera Nair',
+                'mobile': '9000000001',
+                if (city != null) ...{
+                  'city': city,
+                  'latitude': 10.0261,
+                  'longitude': 76.3125
+                },
+              },
+        };
 
-    await tester.tap(find.text('Edappally, Kochi'));
-    await tester.pumpAndSettle();
-    expect(find.text('Choose your area'), findsOneWidget);
+    testWidgets('shows the saved area, or asks for one', (tester) async {
+      await pumpScreen(tester, me(city: 'Edappally'));
+      expect(find.text('Edappally'), findsOneWidget);
 
-    await tester.tap(find.text('Kakkanad, Kochi'));
-    await tester.pumpAndSettle();
+      customerLocation.value = null;
+      await pumpScreen(tester, me());
+      expect(find.text('Set your location'), findsOneWidget);
+    });
 
-    expect(find.text('Choose your area'), findsNothing);
-    expect(find.text('Kakkanad, Kochi'), findsOneWidget);
-    expect(find.text('Edappally, Kochi'), findsNothing);
-  });
+    testWidgets('a picked location is saved on the account and shown',
+        (tester) async {
+      SavedLocation? offered;
+      final routes = {
+        ...me(city: 'Edappally'),
+        'PUT /users/me/location': (http.Request r) => {
+              'fullName': 'Meera Nair',
+              ...jsonDecode(r.body) as Map<String, dynamic>,
+            },
+      };
+      await pumpScreen(tester, routes, pickLocation: (_, current) async {
+        offered = current;
+        return kakkanad;
+      });
+      final fake = installFakeApi({
+        'GET /categories': (_) => [],
+        'GET /requirements/mine': (_) => [],
+        ...routes,
+      });
 
-  testWidgets('dismissing the area picker keeps the current area',
-      (tester) async {
-    await pumpScreen(tester, {});
+      await tester.tap(find.byKey(const Key('location-chip')));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Edappally, Kochi'));
-    await tester.pumpAndSettle();
-    await tester.tapAt(const Offset(10, 10));
-    await tester.pumpAndSettle();
+      expect(offered?.city, 'Edappally');
+      expect(fake.bodies.single,
+          {'city': 'Kakkanad', 'latitude': 10.0159, 'longitude': 76.3419});
+      expect(find.text('Kakkanad'), findsOneWidget);
+      expect(customerLocation.value?.latitude, 10.0159);
+    });
 
-    expect(find.text('Choose your area'), findsNothing);
-    expect(find.text('Edappally, Kochi'), findsOneWidget);
+    testWidgets('backing out saves nothing', (tester) async {
+      await pumpScreen(tester, me(city: 'Edappally'),
+          pickLocation: (_, __) async => null);
+      final fake = installFakeApi(me(city: 'Edappally'));
+
+      await tester.tap(find.byKey(const Key('location-chip')));
+      await tester.pumpAndSettle();
+
+      expect(fake.calls, isEmpty);
+      expect(find.text('Edappally'), findsOneWidget);
+    });
+
+    testWidgets('a location that cannot be saved says so', (tester) async {
+      await pumpScreen(tester, {
+        ...me(city: 'Edappally'),
+        'PUT /users/me/location': (_) => const FakeError(400, 'latitude must be a latitude string or number'),
+      }, pickLocation: (_, __) async => kakkanad);
+
+      await tester.tap(find.byKey(const Key('location-chip')));
+      await tester.pumpAndSettle();
+
+      expect(
+          find.text(
+              'Could not save your location: latitude must be a latitude string or number'),
+          findsOneWidget);
+      expect(find.text('Edappally'), findsOneWidget);
+    });
+
+    testWidgets('without a test picker the chip opens the location sheet',
+        (tester) async {
+      await pumpScreen(tester, {
+        ...me(city: 'Edappally'),
+        'GET /locations/areas': (_) => [
+              {'name': 'Edappally', 'latitude': 10.0261, 'longitude': 76.3125},
+            ],
+      });
+
+      await tester.tap(find.byKey(const Key('location-chip')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose your location'), findsOneWidget);
+      expect(find.byKey(const Key('area-Edappally')), findsOneWidget);
+    });
   });
 
   testWidgets(

@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { placeName } from '../locations/areas';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
@@ -57,6 +58,10 @@ export class AuthService {
     if (dto.password !== dto.confirmPassword) {
       throw new BadRequestException('password and confirmPassword must match');
     }
+    // 0, 0 is what the app sent before it asked for a location.
+    if (dto.latitude === 0 && dto.longitude === 0) {
+      throw new BadRequestException('choose where your business is');
+    }
     if (!this.otp.verify(dto.mobile, dto.otp)) {
       throw new BadRequestException('invalid or expired OTP');
     }
@@ -73,6 +78,9 @@ export class AuthService {
         mobileVerifiedAt: new Date(),
         email: dto.email,
         passwordHash,
+        latitude: dto.latitude,
+        longitude: dto.longitude,
+        city: dto.city?.trim() || placeName(dto.latitude, dto.longitude),
         provider: {
           create: {
             businessName: dto.fullNameOrBusinessName,

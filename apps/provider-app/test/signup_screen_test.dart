@@ -80,7 +80,9 @@ void main() {
           home: SignupScreen(
               client: client ?? fakeClient(),
               pickPhoto: (_) async =>
-                  PickedPhoto(Uint8List.fromList([1, 2, 3]), 'id.jpg'))),
+                  PickedPhoto(Uint8List.fromList([1, 2, 3]), 'id.jpg'),
+              pickLocation: (_, __) async => const SavedLocation(
+                  city: 'Kadavanthra', latitude: 9.9667, longitude: 76.2999))),
     );
     await tester.pumpAndSettle();
   }
@@ -285,6 +287,14 @@ void main() {
 
     await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));
     await tester.pump();
+    expect(find.text('Choose where your business is.'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('choose-location')));
+    await tester.pumpAndSettle();
+    expect(find.text('Kadavanthra'), findsOneWidget);
+    expect(find.text('Change'), findsOneWidget);
+    await tester.tap(find.widgetWithText(PrimaryCta, 'Create Account'));
+    await tester.pump();
     expect(find.text('Upload a photo of your ID proof for verification.'),
         findsOneWidget);
 
@@ -306,6 +316,9 @@ void main() {
     expect(find.text('Account Created!'), findsOneWidget);
     expect(posted, contains('/auth/provider/signup'));
     expect(signupBody!['idProofUrl'], 'upload:id-proofs/abc.jpg');
+    expect(signupBody!['latitude'], 9.9667);
+    expect(signupBody!['longitude'], 76.2999);
+    expect(signupBody!['city'], 'Kadavanthra');
   });
 
   testWidgets('shows the server error on step 3 when sign-up fails',
@@ -316,6 +329,8 @@ void main() {
     await completeStepTwo(tester);
     await next(tester);
 
+    await tester.tap(find.byKey(const Key('choose-location')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const Key('upload-id-proof')));
     await tester.pumpAndSettle();
     await tester.tap(find.byType(Checkbox));

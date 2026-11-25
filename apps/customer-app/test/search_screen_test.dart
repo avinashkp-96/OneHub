@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_customer/features/requirements/post_requirement_screen.dart';
 import 'package:onehub_customer/features/search/search_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
@@ -8,7 +9,10 @@ import 'package:onehub_shared/onehub_shared.dart';
 import 'support/fake_api.dart';
 
 void main() {
-  setUp(() => recentSearches.value = const []);
+  setUp(() {
+    recentSearches.value = const [];
+    customerLocation.value = null;
+  });
 
   Map<String, dynamic> results() => {
         'services': [
@@ -204,6 +208,56 @@ void main() {
     await tester.tap(find.text('Reset'));
     await tester.pumpAndSettle();
     expect(searches.last.queryParameters, {'q': 'repair'});
+  });
+
+  testWidgets('without a saved location there is no Nearest sort',
+      (tester) async {
+    await pumpScreen(tester);
+    await searchFor(tester, 'repair');
+
+    await tester.tap(find.byKey(const Key('filter-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(ChoiceChip, 'Nearest'), findsNothing);
+    expect(find.textContaining('Set your location on Home to sort by distance'),
+        findsOneWidget);
+    expect(searches.last.queryParameters.containsKey('latitude'), isFalse);
+  });
+
+  testWidgets('with a saved location: distances, and Nearest first',
+      (tester) async {
+    customerLocation.value = const SavedLocation(
+        city: 'Edappally', latitude: 10.0261, longitude: 76.3125);
+    await pumpScreen(tester, onSearch: (_) {
+      final r = results();
+      (r['providers'] as List)[0]['distanceKm'] = 6.7;
+      return r;
+    });
+    await searchFor(tester, 'repair');
+
+    expect(searches.last.queryParameters,
+        {'q': 'repair', 'latitude': '10.0261', 'longitude': '76.3125'});
+    expect(find.text('Electrician · 6.7 km away'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('filter-button')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Set your location on Home'), findsNothing);
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Lowest price'));
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Nearest'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+
+    expect(searches.last.queryParameters['sort'], 'distance');
+    expect(find.widgetWithText(TintedBadge, 'Nearest first'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('filter-button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Top rated'));
+    await tester.pump();
+    await tester.tap(find.text('Apply'));
+    await tester.pumpAndSettle();
+    expect(searches.last.queryParameters.containsKey('sort'), isFalse);
   });
 
   testWidgets('shows the empty state when nothing matches', (tester) async {

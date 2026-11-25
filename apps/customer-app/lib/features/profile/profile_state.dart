@@ -8,6 +8,16 @@ import '../../core/api.dart';
 // account never sees the previous one's details.
 final customerProfile = ValueNotifier<ProfileDetails?>(null);
 
+// Where the customer wants work done, from the same GET /users/me; null until
+// loaded, or when none is saved. Set from the Home location chip; the request
+// form and search measure provider distances from it.
+final customerLocation = ValueNotifier<SavedLocation?>(null);
+
+void _apply(Map<String, dynamic> json) {
+  customerProfile.value = _fromJson(json);
+  customerLocation.value = SavedLocation.fromJson(json);
+}
+
 ProfileDetails _fromJson(Map<String, dynamic> json) => ProfileDetails(
       name: json['fullName'] as String? ?? '',
       phone: phoneLabel(json['mobile'] as String? ?? ''),
@@ -25,7 +35,7 @@ String phoneLabel(String mobile) => mobile.length == 10
 
 Future<void> loadCustomerProfile() async {
   final json = await api.get('/users/me') as Map<String, dynamic>;
-  customerProfile.value = _fromJson(json);
+  _apply(json);
 }
 
 /// Saves the name and email; an empty email clears it. Throws the API's
@@ -35,7 +45,17 @@ Future<void> saveCustomerProfile(String name, String email) async {
     final json = await api.patch(
         '/users/me', {'fullName': name, 'email': email.isEmpty ? null : email},
         auth: true);
-    customerProfile.value = _fromJson(json);
+    _apply(json);
+  } on ApiException catch (e) {
+    throw e.message;
+  }
+}
+
+/// Saves where the customer wants work done. Throws a message the Home screen
+/// can show.
+Future<void> saveCustomerLocation(SavedLocation location) async {
+  try {
+    customerLocation.value = await saveMyLocation(api, location);
   } on ApiException catch (e) {
     throw e.message;
   }
@@ -48,7 +68,7 @@ Future<void> saveCustomerPhoto(PickedPhoto photo) async {
     final url = await api.upload('/uploads/photo', photo.bytes, photo.name);
     final json =
         await api.patch('/users/me', {'profilePhotoUrl': url}, auth: true);
-    customerProfile.value = _fromJson(json);
+    _apply(json);
   } on ApiException catch (e) {
     throw e.message;
   }

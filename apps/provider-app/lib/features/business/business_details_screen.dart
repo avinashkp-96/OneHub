@@ -2,23 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
+import '../../core/widgets/location_field.dart';
 import '../../core/widgets/service_tile.dart';
 import 'business_details.dart';
 
 // docx 5.2 "Profile & Service Mapping": edit the services offered,
-// experience and coverage radius after signup. Reached from the Business card
+// experience, business location and coverage radius after signup. Reached from the Business card
 // on Profile. Same shell as the other provider screens (PageGlow, page title in the AppBar, one GlowCard), and the same category and
 // service tiles as signup step 2.
 //
 // Real endpoints: GET /providers/me to load, GET /categories and
-// /categories/:id/sub-services for the choices, PATCH /providers/me to save.
+// /categories/:id/sub-services for the choices, PATCH /providers/me to save,
+// and PUT /users/me/location first when the location changed.
 // The API only accepts services from one category, matching signup.
 
 /// Takes an optional [client], like the other provider screens, so tests can
 /// use a fake API. Pops with `true` after a successful save.
 class BusinessDetailsScreen extends StatefulWidget {
   final ApiClient? client;
-  const BusinessDetailsScreen({super.key, this.client});
+
+  /// Asks where the business is; tests pass one to skip the sheet and GPS.
+  final LocationPicker? pickLocation;
+  const BusinessDetailsScreen({super.key, this.client, this.pickLocation});
 
   @override
   State<BusinessDetailsScreen> createState() => _BusinessDetailsScreenState();
@@ -35,6 +40,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
   List<SubService> _subServices = [];
   String? _categoryId;
   final Set<String> _selectedIds = {};
+  SavedLocation? _location;
 
   bool _loading = true;
   bool _loadingSubServices = false;
@@ -73,6 +79,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
         _selectedIds.addAll(saved.services.map((s) => s.id));
         _experience.text = saved.yearsExperience?.toString() ?? '';
         _coverage.text = formatKm(saved.coverageRadiusKm);
+        _location = saved.location;
         _loading = false;
       });
     } catch (e) {
@@ -123,6 +130,19 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
         _error = null;
       });
 
+  Future<void> _chooseLocation() async {
+    final pick = widget.pickLocation ??
+        (BuildContext context, SavedLocation? current) =>
+            chooseLocation(context, _api, current: current);
+    final picked = await pick(context, _location);
+    if (picked != null && mounted) {
+      setState(() {
+        _location = picked;
+        _error = null;
+      });
+    }
+  }
+
   Future<void> _save() async {
     final experienceText = _experience.text.trim();
     final experience =
@@ -133,6 +153,8 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
     if (experienceText.isNotEmpty &&
         (experience == null || experience < 0 || experience > 60)) {
       problem = 'Experience must be a whole number from 0 to 60.';
+    } else if (_location == null) {
+      problem = 'Choose where your business is.';
     } else if (coverage == null || coverage < 1 || coverage > 100) {
       problem = 'Coverage must be between 1 and 100 km.';
     } else if (_selectedIds.isEmpty) {
@@ -148,6 +170,14 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
       _error = null;
     });
     try {
+      final location = _location!;
+      final before = _saved?.location;
+      if (before == null ||
+          before.latitude != location.latitude ||
+          before.longitude != location.longitude ||
+          before.city != location.city) {
+        await saveMyLocation(_api, location);
+      }
       await _api.patch(
           '/providers/me',
           {
@@ -205,7 +235,7 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
             padding: const EdgeInsets.symmetric(
                 horizontal: OneHubTheme.pageMargin, vertical: 8),
             children: [
-              Text('What you offer and how far you travel.',
+              Text('What you offer, where you are and how far you travel.',
                   style: OneHubTextStyles.bodyText(textSecondary)),
               const SizedBox(height: OneHubTheme.sectionGap),
               if (_loading)
@@ -230,6 +260,13 @@ class _BusinessDetailsScreenState extends State<BusinessDetailsScreen> {
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(hintText: 'e.g. 5'),
                         ),
+                        const SizedBox(height: OneHubTheme.sectionGap),
+                        const FieldLabel('BUSINESS LOCATION',
+                            required: true, icon: OneHubIcons.location),
+                        const SizedBox(height: OneHubTheme.gapFieldInternals),
+                        LocationField(
+                            location: _location,
+                            onPressed: _saving ? null : _chooseLocation),
                         const SizedBox(height: OneHubTheme.sectionGap),
                         const FieldLabel('COVERAGE RADIUS (km)',
                             required: true, icon: OneHubIcons.location),

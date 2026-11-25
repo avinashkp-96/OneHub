@@ -1,4 +1,4 @@
-import { IsArray, IsEmail, IsNumber, IsOptional, IsString, Matches, MinLength } from 'class-validator';
+import { IsArray, IsEmail, IsLatitude, IsLongitude, IsNumber, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 // docx 2.3 Provider — Sign Up
 export class SignupProviderDto {
@@ -34,11 +34,19 @@ export class SignupProviderDto {
   @IsNumber()
   coverageRadiusKm: number;
 
-  @IsNumber()
+  // Where the business is, from GPS or a picked area. Distances to customers
+  // and the coverage radius are measured from here.
+  @IsLatitude()
   latitude: number;
 
-  @IsNumber()
+  @IsLongitude()
   longitude: number;
+
+  // The area's name; named from the coordinates when left out.
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  city?: string;
 
   @IsOptional()
   @IsString()

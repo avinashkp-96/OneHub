@@ -34,14 +34,22 @@ void main() {
 
   late Map<String, dynamic> saved;
   late List<Map<String, dynamic>> patches;
+  late List<Map<String, dynamic>> locationPuts;
+  const kadavanthra = {
+    'city': 'Kadavanthra',
+    'latitude': 9.9667,
+    'longitude': 76.2999
+  };
 
   // A fake backend that remembers what PATCH /providers/me saved, so the
   // Profile card can be checked after it reloads.
-  ApiClient fakeClient({bool failLoad = false, bool failSave = false}) {
+  ApiClient fakeClient(
+      {bool failLoad = false, bool failSave = false, bool noLocation = false}) {
     saved = {
       'id': 'p1',
       'yearsExperience': 8,
       'coverageRadiusKm': 10,
+      'location': noLocation ? null : kadavanthra,
       'category': {'id': 'c1', 'name': 'Electrician'},
       'subServices': [
         {'id': 's1', 'name': 'Fan Installation'},
@@ -49,10 +57,17 @@ void main() {
       ],
     };
     patches = [];
+    locationPuts = [];
     return ApiClient(
       baseUrl: 'https://example.test',
       httpClient: MockClient((request) async {
         final path = request.url.path;
+        if (path == '/users/me/location' && request.method == 'PUT') {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          locationPuts.add(body);
+          saved = {...saved, 'location': body};
+          return http.Response(jsonEncode({'id': 'u1', ...body}), 200);
+        }
         if (path == '/providers/me') {
           if (request.method == 'PATCH') {
             if (failSave) {
@@ -68,6 +83,7 @@ void main() {
             final categoryId = chosen.first['categoryId'];
             saved = {
               'id': 'p1',
+              'location': saved['location'],
               'yearsExperience': body['yearsExperience'],
               'coverageRadiusKm': body['coverageRadiusKm'],
               'category': {
@@ -112,7 +128,8 @@ void main() {
 
   // Opens the screen on top of a stand-in so Save (which pops) has somewhere
   // to go and its message has a Scaffold to show on.
-  Future<void> pumpScreen(WidgetTester tester, ApiClient client) async {
+  Future<void> pumpScreen(WidgetTester tester, ApiClient client,
+      {LocationPicker? pickLocation}) async {
     tallView(tester);
     await tester.pumpWidget(MaterialApp(
       theme: OneHubTheme.dark(),
@@ -120,7 +137,8 @@ void main() {
         builder: (context) => Scaffold(
           body: TextButton(
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => BusinessDetailsScreen(client: client))),
+                builder: (_) => BusinessDetailsScreen(
+                    client: client, pickLocation: pickLocation))),
             child: const Text('open'),
           ),
         ),
@@ -174,6 +192,48 @@ void main() {
     expect((patches.single['subServiceIds'] as List).toSet(), {'s1', 's3'});
     expect(find.byType(BusinessDetailsScreen), findsNothing);
     expect(find.text('Business details saved.'), findsOneWidget);
+    expect(locationPuts, isEmpty, reason: 'the location did not change');
+  });
+
+  testWidgets('shows the saved location, and saves a new one first',
+      (tester) async {
+    SavedLocation? offered;
+    await pumpScreen(tester, fakeClient(), pickLocation: (_, current) async {
+      offered = current;
+      return const SavedLocation(
+          city: 'Kakkanad', latitude: 10.0159, longitude: 76.3419);
+    });
+    expect(find.byKey(const Key('location-name')), findsOneWidget);
+    expect(find.text('Kadavanthra'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('choose-location')));
+    await tester.pumpAndSettle();
+    expect(offered?.city, 'Kadavanthra');
+    expect(find.text('Kakkanad'), findsOneWidget);
+
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(locationPuts.single,
+        {'city': 'Kakkanad', 'latitude': 10.0159, 'longitude': 76.3419});
+    expect(patches, hasLength(1));
+    expect(find.byType(BusinessDetailsScreen), findsNothing);
+  });
+
+  testWidgets('a provider with no saved location must choose one',
+      (tester) async {
+    await pumpScreen(tester, fakeClient(noLocation: true),
+        pickLocation: (_, __) async => null);
+    expect(find.text('Choose location'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('choose-location')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save changes'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose where your business is.'), findsOneWidget);
+    expect(patches, isEmpty);
+    expect(locationPuts, isEmpty);
   });
 
   testWidgets('a blank experience is sent as cleared', (tester) async {
@@ -293,6 +353,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('8 years'), findsOneWidget);
     expect(find.text('2 services'), findsOneWidget);
+    expect(find.text('10 km around Kadavanthra'), findsOneWidget);
 
     await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();

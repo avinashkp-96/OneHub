@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:onehub_customer/features/profile/profile_state.dart';
 import 'package:onehub_customer/features/requirements/post_requirement_screen.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 
@@ -85,6 +86,48 @@ void main() {
     expect(find.text('4.5 ★'), findsOneWidget);
     expect(find.text('CERTIFIED'), findsOneWidget);
     expect(find.widgetWithText(PrimaryCta, 'Send Request'), findsOneWidget);
+  });
+
+  group('distance', () {
+    tearDown(() => customerLocation.value = null);
+
+    testWidgets('asks the API for providers near the saved location',
+        (tester) async {
+      customerLocation.value = const SavedLocation(
+          city: 'Edappally', latitude: 10.0261, longitude: 76.3125);
+      String? query;
+      installFakeApi({
+        'GET /providers': (r) {
+          query = r.url.query;
+          return [
+            {...providers[0], 'distanceKm': 3.4},
+            {...providers[1], 'distanceKm': 0.6},
+          ];
+        },
+      });
+      await pumpScreen(tester);
+
+      expect(query, 'subServiceId=sub-1&latitude=10.0261&longitude=76.3125');
+      expect(find.text('Nearest first, from Edappally.'), findsOneWidget);
+      expect(find.text('3.4 km away'), findsOneWidget);
+      expect(find.text('600 m away'), findsOneWidget);
+    });
+
+    testWidgets('without a location it says where to set one', (tester) async {
+      String? query;
+      installFakeApi({
+        'GET /providers': (r) {
+          query = r.url.query;
+          return providers;
+        },
+      });
+      await pumpScreen(tester);
+
+      expect(query, 'subServiceId=sub-1');
+      expect(find.text('Set your location on Home to see the nearest first.'),
+          findsOneWidget);
+      expect(find.textContaining('away'), findsNothing);
+    });
   });
 
   testWidgets('shows a loading spinner for the providers only', (tester) async {

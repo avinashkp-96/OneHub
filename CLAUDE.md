@@ -1143,6 +1143,27 @@ browser pane; tests cover it. iOS would need camera and photo library usage
 strings in Info.plist; iOS is not set up. Tests: API 298 (100% lines), shared
 137, customer 163 (99.2%), provider 195 (96.5%).
 
+2026-11-25 (location): GPS plus a fixed list of service areas
+(`src/locations/areas.ts`, 11 Kochi areas; no geocoding service). Public
+`GET /locations/areas` and `GET /locations/place` (names a position after the
+nearest area within 8 km, else "Your location"). `PUT /users/me/location`
+saves latitude, longitude and city for either role. Provider signup now stores
+the location it was sent (it was dropped before) and refuses 0, 0.
+`GET /providers` takes the customer's position: distanceKm, nearest first,
+providers whose coverage does not reach the customer left out, coordinates
+never returned. `GET /search` adds distanceKm and `sort=distance`. The
+haversine helper moved to `src/locations/geo.ts`. Shared `location.dart`:
+`SavedLocation`, the `chooseLocation` sheet (Use my current location via
+geolocator, or pick an area), `saveMyLocation` and `distanceLabel`. Customer:
+the Home chip shows and saves the area (dummy list gone), the request form
+lists nearest first with distances, search shows distances and a Nearest sort.
+Provider: signup step 3 and Business details have a required BUSINESS
+LOCATION; Profile shows "10 km around Kadavanthra". Android manifests ask for
+location. Customer signup still has no location field; the Home chip prompts
+instead. Checked live through the gateway (distances, sort, save, Home chip);
+the GPS sheet in the browser was not driven. Tests: API 318 (100% lines),
+shared 148, customer 171 (99.2%), provider 198 (96.4%).
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

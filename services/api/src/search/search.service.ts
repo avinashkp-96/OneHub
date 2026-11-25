@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { distanceKm } from '../locations/geo';
 
 // docx 4.2 "Search". A keyword is matched, case-insensitively, against
 // provider names, service names and category names. Results come back in two
@@ -9,18 +10,21 @@ import { PrismaService } from '../prisma/prisma.service';
 // Filters: category, minimum rating and maximum starting price. Providers set
 // no prices up front, so a provider's "starting price" is the lowest suggested
 // price among the services they offer that match. Sort: highest rated (the
-// default) or lowest price.
+// default), lowest price, or nearest (given the customer's position, which
+// also gives each provider a distanceKm; providers with no saved location go
+// last).
 //
-// Not supported yet: nearest first and the distance filter (provider
-// locations are not captured at signup), and "available now" (online status
-// is not saved). Filtering happens in memory over active providers, which is
-// fine for the MVP's size; move it into the query when the catalogue grows.
+// Not supported yet: "available now" (online status is not saved).
+// Filtering happens in memory over active providers, which is fine for the
+// MVP's size; move it into the query when the catalogue grows.
 export interface SearchQuery {
   q?: string;
   categoryId?: string;
   minRating?: number;
   maxPrice?: number;
-  sort?: 'rating' | 'price';
+  sort?: 'rating' | 'price' | 'distance';
+  latitude?: number;
+  longitude?: number;
 }
 
 type Service = {
@@ -45,7 +49,11 @@ export class SearchService {
 
   async search(query: SearchQuery) {
     const words = normalise(query.q);
-    const sort = query.sort === 'price' ? 'price' : 'rating';
+    const near =
+      query.latitude !== undefined && query.longitude !== undefined
+        ? { latitude: query.latitude, longitude: query.longitude }
+        : null;
+    const sort = query.sort === 'price' ? 'price' : query.sort === 'distance' && near ? 'distance' : 'rating';
 
     const services = (await this.prisma.subService.findMany({ select: SERVICE_SELECT })) as Service[];
     const serviceMatches = (s: Service) =>
@@ -63,7 +71,7 @@ export class SearchService {
         averageRating: true,
         ratingCount: true,
         certified: true,
-        user: { select: { fullName: true } },
+        user: { select: { fullName: true, latitude: true, longitude: true } },
         subServices: { select: { subService: { select: SERVICE_SELECT } } },
       },
     });
@@ -88,15 +96,20 @@ export class SearchService {
           categories: [...new Set(relevant.map((s) => s.category.name))],
           services: relevant.map((s) => ({ id: s.id, name: s.name })),
           startingPrice: prices.length ? Math.min(...prices) : null,
+          distanceKm: near ? distanceKm(near, p.user) : null,
         };
       })
       .filter((p) => p.services.length > 0)
       .filter((p) => query.maxPrice === undefined || (p.startingPrice !== null && p.startingPrice <= query.maxPrice));
 
+    const byRating = (a: (typeof providerResults)[number], b: (typeof providerResults)[number]) =>
+      b.averageRating - a.averageRating || b.ratingCount - a.ratingCount;
     providerResults.sort((a, b) =>
       sort === 'price'
         ? (a.startingPrice ?? Infinity) - (b.startingPrice ?? Infinity) || b.averageRating - a.averageRating
-        : b.averageRating - a.averageRating || b.ratingCount - a.ratingCount,
+        : sort === 'distance'
+          ? (a.distanceKm ?? Infinity) - (b.distanceKm ?? Infinity) || byRating(a, b)
+          : byRating(a, b),
     );
 
     const serviceResults = services

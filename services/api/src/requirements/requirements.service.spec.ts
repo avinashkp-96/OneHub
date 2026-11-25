@@ -1,5 +1,6 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { RequirementsService, distanceKm } from './requirements.service';
+import { RequirementsService } from './requirements.service';
+import { distanceKm } from '../locations/geo';
 import { NotificationsService } from '../notifications/notifications.service';
 
 // These reads never notify anyone.

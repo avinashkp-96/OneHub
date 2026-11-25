@@ -170,8 +170,8 @@ expect(prisma.provider.findMany).toHaveBeenCalledWith(      expect.objectContain
     const providers = { findForSubService: jest.fn().mockResolvedValue('found') };
     const controller = new ProvidersController(providers as unknown as ProvidersService);
 
-    expect(await controller.search('s1')).toBe('found');
-    expect(providers.findForSubService).toHaveBeenCalledWith('s1');
+    expect(await controller.search({ subServiceId: 's1' })).toBe('found');
+    expect(providers.findForSubService).toHaveBeenCalledWith('s1', undefined);
   });
 });
 
@@ -218,6 +218,7 @@ describe('Provider business details (providers/me)', () => {
       status: 'ACTIVE',
       yearsExperience: 8,
       coverageRadiusKm: 10,
+      location: null,
       category: { id: 'c1', name: 'Electrician' },
       subServices: [
         { id: 's1', name: 'Fan Installation' },

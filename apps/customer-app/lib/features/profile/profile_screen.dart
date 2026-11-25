@@ -99,6 +99,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (confirmed != true || !mounted) return;
     await api.logout();
     customerProfile.value = null;
+    customerLocation.value = null;
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }

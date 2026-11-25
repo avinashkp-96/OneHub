@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:onehub_shared/onehub_shared.dart';
 import '../../core/api.dart';
 import '../../core/widgets/field_label.dart';
+import '../../core/widgets/location_field.dart';
 import '../../core/widgets/service_tile.dart';
 
 // docx 2.3 — Provider Sign Up. Profile photo upload isn't built (no file
@@ -17,7 +18,14 @@ class SignupScreen extends StatefulWidget {
   /// Asks for the ID proof photo; tests pass a fake. Defaults to the camera or
   /// gallery.
   final PhotoPicker pickPhoto;
-  const SignupScreen({super.key, this.client, this.pickPhoto = choosePhoto});
+
+  /// Asks where the business is; tests pass one to skip the sheet and GPS.
+  final LocationPicker? pickLocation;
+  const SignupScreen(
+      {super.key,
+      this.client,
+      this.pickPhoto = choosePhoto,
+      this.pickLocation});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -48,6 +56,7 @@ class _SignupScreenState extends State<SignupScreen> {
   // route is open because the account does not exist yet; the file is
   // private and never served.
   String? _idProof;
+  SavedLocation? _location;
   bool _uploadingId = false;
   final _bankOrUpiDetails = TextEditingController();
 
@@ -68,6 +77,19 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _error;
 
   ApiClient get _api => widget.client ?? api;
+
+  Future<void> _chooseLocation() async {
+    final pick = widget.pickLocation ??
+        (BuildContext context, SavedLocation? current) =>
+            chooseLocation(context, _api, current: current);
+    final picked = await pick(context, _location);
+    if (picked != null && mounted) {
+      setState(() {
+        _location = picked;
+        _error = null;
+      });
+    }
+  }
 
   Future<void> _uploadIdProof() async {
     final photo = await widget.pickPhoto(context);
@@ -186,6 +208,9 @@ class _SignupScreenState extends State<SignupScreen> {
         }
         return null;
       default:
+        if (_location == null) {
+          return 'Choose where your business is.';
+        }
         if (_idProof == null) {
           return 'Upload a photo of your ID proof for verification.';
         }
@@ -242,10 +267,9 @@ class _SignupScreenState extends State<SignupScreen> {
         if (_yearsExperience.text.trim().isNotEmpty)
           'yearsExperience': int.tryParse(_yearsExperience.text.trim()),
         'coverageRadiusKm': double.tryParse(_coverageRadiusKm.text.trim()) ?? 5,
-        // TODO: capture real GPS coordinates instead of a fixed placeholder
-        // once location permission handling is built.
-        'latitude': 0,
-        'longitude': 0,
+        'latitude': _location!.latitude,
+        'longitude': _location!.longitude,
+        'city': _location!.city,
         'idProofUrl': _idProof,
         if (_bankOrUpiDetails.text.trim().isNotEmpty)
           'bankOrUpiDetails': _bankOrUpiDetails.text.trim(),
@@ -503,6 +527,17 @@ class _SignupScreenState extends State<SignupScreen> {
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(hintText: 'e.g. 5'),
             ),
+            const SizedBox(height: OneHubTheme.sectionGap),
+            const FieldLabel('BUSINESS LOCATION',
+                required: true, icon: OneHubIcons.location),
+            const SizedBox(height: OneHubTheme.gapFieldInternals),
+            LocationField(
+                location: _location,
+                onPressed: _busy ? null : _chooseLocation),
+            const SizedBox(height: 6),
+            Text('Distances to customers are measured from here.',
+                style: OneHubTextStyles.fieldLabel(textSecondary)
+                    .copyWith(letterSpacing: 0, fontSize: 11)),
             const SizedBox(height: OneHubTheme.sectionGap),
             const FieldLabel('COVERAGE RADIUS (km)',
                 icon: OneHubIcons.location),

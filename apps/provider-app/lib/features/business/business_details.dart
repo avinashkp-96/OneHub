@@ -2,6 +2,8 @@
 // (docx 5.2): one service category, the services offered under it,
 // experience and coverage radius.
 
+import 'package:onehub_shared/onehub_shared.dart';
+
 class OfferedService {
   final String id;
   final String name;
@@ -14,6 +16,9 @@ class BusinessDetails {
   final List<OfferedService> services;
   final int? yearsExperience;
   final double coverageRadiusKm;
+
+  /// Where the business is; distances and coverage are measured from here.
+  final SavedLocation? location;
 
   // Account and documents (docx 5.2). The API never sends the ID proof link
   // or raw bank details back: only whether an ID is on file, whether a new
@@ -33,6 +38,7 @@ class BusinessDetails {
     required this.services,
     required this.yearsExperience,
     required this.coverageRadiusKm,
+    this.location,
     this.businessName = '',
     this.mobile = '',
     this.email = '',
@@ -55,6 +61,7 @@ class BusinessDetails {
       ],
       yearsExperience: (json['yearsExperience'] as num?)?.toInt(),
       coverageRadiusKm: (json['coverageRadiusKm'] as num).toDouble(),
+      location: SavedLocation.fromJson(json['location'] as Map<String, dynamic>?),
       businessName: json['businessName'] as String? ?? '',
       mobile: json['mobile'] as String? ?? '',
       email: json['email'] as String? ?? '',
@@ -77,7 +84,9 @@ class BusinessDetails {
         final y => '$y years',
       };
 
-  String get coverageLabel => '${formatKm(coverageRadiusKm)} km radius';
+  String get coverageLabel => location == null
+      ? '${formatKm(coverageRadiusKm)} km radius'
+      : '${formatKm(coverageRadiusKm)} km around ${location!.city}';
 
   String get servicesLabel =>
       services.length == 1 ? '1 service' : '${services.length} services';
