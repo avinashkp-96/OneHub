@@ -162,6 +162,29 @@ describe('AuthService.login', () => {
     expect(result).toEqual({ accessToken: 'signed-token', refreshToken: expect.any(String) });
   });
 
+  it('refuses an account in the other kind of app as invalid credentials', async () => {
+    compare.mockResolvedValue(true);
+    const customer = build({ loginUser: { id: 'u1', role: 'CUSTOMER', passwordHash: 'h' } });
+    await expect(
+      customer.service.login({ mobileOrEmail: '9000000001', password: 'ok' }, 'PROVIDER'),
+    ).rejects.toThrow('invalid credentials');
+
+    const provider = build({
+      loginUser: { id: 'u2', role: 'PROVIDER', passwordHash: 'h', provider: { status: 'ACTIVE' } },
+    });
+    await expect(
+      provider.service.login({ mobileOrEmail: '9000000002', password: 'ok' }, 'CUSTOMER'),
+    ).rejects.toThrow('invalid credentials');
+    expect(provider.jwt.sign).not.toHaveBeenCalled();
+  });
+
+  it('signs in an account in its own app', async () => {
+    compare.mockResolvedValue(true);
+    const { service } = build({ loginUser: { id: 'u1', role: 'CUSTOMER', passwordHash: 'h' } });
+    const result = await service.login({ mobileOrEmail: '9000000001', password: 'ok' }, 'CUSTOMER');
+    expect(result.accessToken).toBe('signed-token');
+  });
+
   it('looks the user up by mobile or email', async () => {
     compare.mockResolvedValue(true);
     const { service, prisma } = build({ loginUser: { id: 'u1', role: 'CUSTOMER', passwordHash: 'h' } });

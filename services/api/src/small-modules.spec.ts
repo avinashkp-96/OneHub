@@ -557,6 +557,8 @@ describe('AuthController', () => {
     expect(await controller.signupProvider({} as never)).toBe('prov');
     expect(await controller.loginCustomer({ mobileOrEmail: 'a', password: 'b' })).toBe('token');
     expect(await controller.loginProvider({ mobileOrEmail: 'a', password: 'b' })).toBe('token');
+    // Each app's route only signs in its own kind of account.
+    expect(auth.login.mock.calls.map((c) => c[1])).toEqual(['CUSTOMER', 'PROVIDER']);
     expect(await controller.resetPassword({} as never)).toBe('reset');
   });
 });

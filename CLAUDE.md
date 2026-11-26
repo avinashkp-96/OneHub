@@ -1293,6 +1293,21 @@ Checked live through the gateway: a new provider with services in two
 categories signed up ACTIVE, logged in at once, shows the ID under review, and
 appears in customer search. Tests: API 347 (100% lines), provider 206.
 
+2026-11-26 (login checks the app): the provider Profile showed "Could not load
+your profile" and "Could not load your business details", and every provider
+route answered 403. The provider app had been logged in with a customer
+account: `/auth/provider/login` and `/auth/customer/login` shared one `login`
+that never checked the role. `AuthService.login(dto, role)` now refuses an
+account of the other kind with the same "invalid credentials" as a wrong
+password (per the user: no message naming the account type), so a login never
+reveals that a number is registered, or as what; the app shows "The mobile
+number, email or password is wrong." under the password. On the provider Profile, Edit profile and Payout & documents
+used to do nothing when the details had not loaded; they now say "Your profile
+has not loaded yet. Pull down to try again." Checked in the browser: a customer
+number in the provider app gets the wrong-password message, and the demo
+provider's Home and Profile load fully. Tests: API 349 (100% lines), shared 171,
+customer 190, provider 206.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

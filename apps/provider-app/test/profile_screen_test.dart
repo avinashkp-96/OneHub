@@ -244,6 +244,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(EditProfileScreen), findsNothing);
     expect(find.byType(PayoutDocumentsScreen), findsNothing);
+    // Tapping them says why, rather than doing nothing.
+    expect(find.text('Your profile has not loaded yet. Pull down to try again.'),
+        findsOneWidget);
   });
 
   testWidgets('pulling down loads the profile again', (tester) async {

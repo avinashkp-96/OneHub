@@ -20,7 +20,7 @@ export class AuthController {
 
   @Post('customer/login')
   loginCustomer(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+    return this.auth.login(dto, 'CUSTOMER');
   }
 
   @Post('provider/signup')
@@ -30,7 +30,7 @@ export class AuthController {
 
   @Post('provider/login')
   loginProvider(@Body() dto: LoginDto) {
-    return this.auth.login(dto);
+    return this.auth.login(dto, 'PROVIDER');
   }
 
   // Swaps a refresh token for a new access and refresh token pair. Public:

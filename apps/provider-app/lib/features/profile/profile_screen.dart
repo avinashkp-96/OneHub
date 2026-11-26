@@ -124,6 +124,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (saved == true && mounted) _load();
   }
 
+  // Edit profile and Payout & documents start from the loaded details.
+  void _notLoadedYet() => ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(const SnackBar(
+        content:
+            Text('Your profile has not loaded yet. Pull down to try again.')));
+
   Future<void> _editProfile(BusinessDetails d) async {
     await Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => EditProfileScreen(
@@ -201,7 +208,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Edit profile',
                   subtitle: 'Business name and email',
                   onTap: () {
-                    if (d != null) _editProfile(d);
+                    if (d != null) {
+                      _editProfile(d);
+                    } else {
+                      _notLoadedYet();
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
@@ -216,6 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               details: d,
                               client: client,
                               pickPhoto: widget.pickPhoto));
+                    } else {
+                      _notLoadedYet();
                     }
                   },
                 ),

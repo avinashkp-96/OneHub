@@ -109,7 +109,12 @@ export class AuthService {
   }
 
   // docx 2.2 / 2.4
-  async login(dto: LoginDto) {
+  // Each app's login route passes the role it serves, so a customer account
+  // cannot sign in to the provider app (where every provider route would then
+  // refuse it) or the other way round. The other kind of account gets the
+  // same answer as a wrong password, so a login never tells anyone that a
+  // number is registered, or as what.
+  async login(dto: LoginDto, role?: 'CUSTOMER' | 'PROVIDER') {
     const user = await this.prisma.user.findFirst({
       where: { OR: [{ mobile: dto.mobileOrEmail }, { email: dto.mobileOrEmail }] },
       include: { provider: true },
@@ -118,6 +123,8 @@ export class AuthService {
 
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('invalid credentials');
+
+    if (role && user.role !== role) throw new UnauthorizedException('invalid credentials');
 
     // A provider still pending verification may log in: there is no
     // approval flow yet.
