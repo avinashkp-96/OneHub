@@ -52,14 +52,11 @@ class _LoginScreenState extends State<LoginScreen> {
         'password': ['credentials', 'password'],
         'account': ['mobile', 'email', 'account for'],
       });
-  bool _pendingVerification = false;
-
   Future<void> _login() async {
     if (!_checkFields()) return;
     setState(() {
       _busy = true;
       _error = null;
-      _pendingVerification = false;
     });
     try {
       await api.post('/auth/provider/login', {
@@ -69,14 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) Navigator.of(context).pushReplacementNamed('/dashboard');
     } catch (e) {
       if (!mounted) return;
-      final message = e.toString();
       final field = _fieldFor(e);
       setState(() {
-        _pendingVerification = message.contains('pending verification');
-        if (_pendingVerification) {
-          _error =
-              'Your account is still pending verification. You can log in once an admin approves your ID proof.';
-        } else if (field != null) {
+        if (field != null) {
           _fieldErrors[field] = userMessage(e);
         } else {
           _error = 'Could not log in. ${userMessage(e)}';
@@ -134,9 +126,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Text(
                                     _error!,
                                     style: TextStyle(
-                                        color: _pendingVerification
-                                            ? context.statusWarning
-                                            : context.statusDanger),
+                                        color: context.statusDanger),
                                   ),
                                 ),
                               const FieldLabel('MOBILE NUMBER OR EMAIL',

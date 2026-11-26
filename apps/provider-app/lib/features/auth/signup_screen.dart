@@ -691,7 +691,7 @@ class _SuccessStep extends StatelessWidget {
               style: OneHubTextStyles.pageHeading(textPrimary)),
           const SizedBox(height: 8),
           Text(
-            'Your account is pending verification. You can log in once an admin approves your ID proof.',
+            'Your account is ready. Log in to set up your business and start getting requests. We will check your ID proof soon.',
             textAlign: TextAlign.center,
             style: OneHubTextStyles.bodyText(textSecondary),
           ),

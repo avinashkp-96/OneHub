@@ -1279,6 +1279,20 @@ browser: signup step 1 passed with the on-screen test code, and step 2 shows
 both categories ticked with a services grid for each. Tests: API 347 (100%
 lines), provider 206 (96.2%).
 
+2026-11-26 (pending providers can log in): a new provider was created as
+PENDING_VERIFICATION and refused at login and token renewal, with no approval
+flow to release them. Per the user, approval comes later and login must not be
+blocked; they chose to treat new providers as active meanwhile. Provider signup
+now creates the provider ACTIVE with `idProofNeedsReview` true (Profile shows
+ID UNDER REVIEW), login and refresh no longer refuse a pending provider, and
+migration `20261126120000_activate_pending_providers` makes existing pending
+providers active with their ID flagged. The provider signup success text now
+says the account is ready; the login screen's pending branch is gone. When the
+approval flow is built, decide whether new providers start hidden again.
+Checked live through the gateway: a new provider with services in two
+categories signed up ACTIVE, logged in at once, shows the ID under review, and
+appears in customer search. Tests: API 347 (100% lines), provider 206.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

@@ -106,14 +106,15 @@ describe('AuthService.signupProvider', () => {
     await expect(service.signupProvider(providerDto)).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('creates the provider as pending verification with its sub-services', async () => {
+  it('creates the provider as active, ID under review, with its sub-services', async () => {
     const { service, prisma } = build();
 
     const result = await service.signupProvider(providerDto);
 
     const data = prisma.user.create.mock.calls[0][0].data;
     expect(data.role).toBe('PROVIDER');
-    expect(data.provider.create.status).toBe('PENDING_VERIFICATION');
+    expect(data.provider.create.status).toBe('ACTIVE');
+    expect(data.provider.create.idProofNeedsReview).toBe(true);
     expect(data.provider.create.subServices.create).toEqual([
       { subServiceId: 's1' },
       { subServiceId: 's2' },
@@ -140,14 +141,13 @@ describe('AuthService.login', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('blocks a provider whose account is still pending verification', async () => {
+  it('lets a provider still pending verification log in', async () => {
     compare.mockResolvedValue(true);
     const { service } = build({
       loginUser: { id: 'u1', role: 'PROVIDER', passwordHash: 'h', provider: { status: 'PENDING_VERIFICATION' } },
     });
-    await expect(
-      service.login({ mobileOrEmail: '9876543210', password: 'ok' }),
-    ).rejects.toThrow('account is pending verification');
+    const result = await service.login({ mobileOrEmail: '9876543210', password: 'ok' });
+    expect(result.accessToken).toBe('signed-token');
   });
 
   it('signs a token carrying the user id and role', async () => {

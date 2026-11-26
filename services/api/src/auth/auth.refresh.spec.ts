@@ -104,9 +104,9 @@ describe('refresh tokens', () => {
     expect(prisma.refreshToken.create).not.toHaveBeenCalled();
   });
 
-  it('refuses a provider whose account went back to pending verification', async () => {
+  it('renews a provider still pending verification too', async () => {
     const { service } = build(live({ user: { role: 'PROVIDER', provider: { status: 'PENDING_VERIFICATION' } } }));
-    await expect(service.refresh('t')).rejects.toThrow('account is pending verification');
+    expect((await service.refresh('t')).accessToken).toBe('access');
   });
 
   it('logout revokes only that token, and is fine with an unknown one', async () => {

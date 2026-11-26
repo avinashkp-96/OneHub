@@ -91,7 +91,11 @@ export class AuthService {
             coverageRadiusKm: dto.coverageRadiusKm,
             idProofUrl: dto.idProofUrl,
             bankOrUpiDetails: dto.bankOrUpiDetails,
-            status: 'PENDING_VERIFICATION',
+            // Active straight away, with the ID proof flagged for review: there
+            // is no approval flow yet (docx 2.3/2.4 asks for one), and until
+            // there is, a new provider can log in, be found and get requests.
+            status: 'ACTIVE',
+            idProofNeedsReview: true,
             subServices: {
               create: dto.subServiceIds.map((subServiceId) => ({ subServiceId })),
             },
@@ -101,7 +105,6 @@ export class AuthService {
       include: { provider: true },
     });
 
-    // Status starts PENDING_VERIFICATION until admin approves ID proof — docx 2.3/2.4.
     return { userId: user.id, status: user.provider?.status };
   }
 
@@ -116,10 +119,8 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('invalid credentials');
 
-    if (user.role === 'PROVIDER' && user.provider?.status === 'PENDING_VERIFICATION') {
-      throw new UnauthorizedException('account is pending verification');
-    }
-
+    // A provider still pending verification may log in: there is no
+    // approval flow yet.
     return this.issueToken(user.id, user.role);
   }
 
@@ -168,9 +169,6 @@ export class AuthService {
       throw new UnauthorizedException('sign-in expired');
     }
     if (stored.expiresAt <= new Date()) throw new UnauthorizedException('sign-in expired');
-    if (stored.user.role === 'PROVIDER' && stored.user.provider?.status === 'PENDING_VERIFICATION') {
-      throw new UnauthorizedException('account is pending verification');
-    }
 
     await this.prisma.refreshToken.update({ where: { id: stored.id }, data: { revokedAt: new Date() } });
     return this.issueToken(stored.userId, stored.user.role);
