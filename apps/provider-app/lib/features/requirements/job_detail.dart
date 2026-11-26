@@ -124,7 +124,7 @@ const _months = [
   'Dec',
 ];
 
-/// When a job is due, for the home page's Next job card: "Today",
+/// When a job is due, for the home page's Upcoming job card: "Today",
 /// "Tomorrow", else "5 Nov". Null when the customer picked no date.
 String? preferredDateLabel(DateTime? preferred, DateTime now) {
   if (preferred == null) return null;

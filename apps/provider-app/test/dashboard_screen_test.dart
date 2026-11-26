@@ -450,7 +450,7 @@ void main() {
     });
   });
 
-  group('Next job', () {
+  group('Upcoming job', () {
     final now = DateTime(2026, 11, 3, 10);
 
     Map<String, dynamic> request(
@@ -536,13 +536,13 @@ void main() {
         request('lost', status: 'CONFIRMED', myResponse: 'ACCEPTED', bid: true),
       ]);
 
-      expect(find.text('Next job'), findsNothing);
+      expect(find.text('Upcoming job'), findsNothing);
       expect(find.text('New requests'), findsNothing);
       expect(find.text('Job new'), findsNothing);
       expect(find.text('Send price'), findsNothing);
     });
 
-    testWidgets('Next job is the selected job due soonest, undated ones last',
+    testWidgets('Upcoming job is the selected job due soonest, undated ones last',
         (tester) async {
       await pumpWith(tester, [
         selected('undated', null),
@@ -550,7 +550,7 @@ void main() {
         selected('soon', DateTime(2026, 11, 4, 9)),
       ]);
 
-      expect(find.text('Next job'), findsOneWidget);
+      expect(find.text('Upcoming job'), findsOneWidget);
       expect(find.text('Job soon'), findsOneWidget);
       expect(find.text('Job later'), findsNothing);
       expect(find.text('Job undated'), findsNothing);

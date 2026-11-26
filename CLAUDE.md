@@ -1308,6 +1308,10 @@ number in the provider app gets the wrong-password message, and the demo
 provider's Home and Profile load fully. Tests: API 349 (100% lines), shared 171,
 customer 190, provider 206.
 
+2026-11-26 (Upcoming job): the provider home page heading "Next job" now reads
+"Upcoming job", per the user; nothing else on the card changed. Tests: provider
+206.
+
 Semantic success/warning/danger colors stay separate from the Material
 color slots (there's no built-in success/warning concept). Full-width
 48px-tall primary CTAs for outdoor/gloved-hand use are kept from the

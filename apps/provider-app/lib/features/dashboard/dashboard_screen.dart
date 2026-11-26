@@ -18,7 +18,7 @@ import '../requirements/job_detail.dart';
 //
 // Real data: the name (GET /providers/me), the plan on the wallet card (GET
 // /providers/:id/subscription), and, from one GET /requirements/incoming, the
-// Your work counts, jobs done and Next job (the selected job due soonest).
+// Your work counts, jobs done and Upcoming job (the selected job due soonest).
 // The Add more services banner is a fixed message that opens Business details.
 // The rating comes from GET /ratings/mine. Still explicit dummy data, as
 // agreed when the redesign was scoped, because no endpoint exists yet: the
@@ -34,7 +34,7 @@ class DashboardScreen extends StatefulWidget {
   /// Optional, like the other provider screens, so tests can use a fake API.
   final ApiClient? client;
 
-  /// Fixes "now" for the Next job due date in tests.
+  /// Fixes "now" for the Upcoming job due date in tests.
   final DateTime? now;
   const DashboardScreen({super.key, this.onOpenTab, this.client, this.now});
 
@@ -167,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               // Hidden until the customer has chosen this provider for a job.
               if (nextJob != null) ...[
                 const SizedBox(height: 26),
-                _SectionTitle('Next job', color: textPrimary),
+                _SectionTitle('Upcoming job', color: textPrimary),
                 const SizedBox(height: 12),
                 _NextJobCard(
                     job: nextJob, now: now, onOpen: () => _openNextJob(nextJob)),
